@@ -1,0 +1,26 @@
+# env / secrets
+.env
+.env.*
+!.env.example
+*.keystore
+!**/debug.keystore
+keys/
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/*/31337/
+contracts/broadcast/**/dry-run/
+
+# node
+node_modules/
+dist/
+.next/
+.vercel/
+.expo/
+*.log
+
+# os / editors
+.DS_Store
+.idea/
+.vscode/
