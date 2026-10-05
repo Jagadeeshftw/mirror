@@ -427,30 +427,30 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
 
     /// @dev Updates the day's starting equity and the high-water mark, then applies both stops.
     function _checkLossStops() internal returns (BlockReason, uint256, uint256) {
-        uint256 equity = _equity();
+        uint256 eq = _equity();
         uint32 today = uint32(block.timestamp / 1 days);
         uint128 dayStart = dayStartEquity;
         uint128 hwm = highWaterEquity;
         if (today != riskDay) {
             riskDay = today;
-            dayStart = uint128(equity);
+            dayStart = uint128(eq);
             dayStartEquity = dayStart;
         }
-        if (equity > hwm) {
-            hwm = uint128(equity);
+        if (eq > hwm) {
+            hwm = uint128(eq);
             highWaterEquity = hwm;
         }
-        emit RiskUpdated(today, dayStart, hwm, equity);
+        emit RiskUpdated(today, dayStart, hwm, eq);
 
         uint256 dl = dailyLossBps;
         if (dl != 0) {
             uint256 floor = Math.mulDiv(dayStart, BPS - dl, BPS);
-            if (equity < floor) return (BlockReason.DailyLossStop, floor, equity);
+            if (eq < floor) return (BlockReason.DailyLossStop, floor, eq);
         }
         uint256 dd = drawdownBps;
         if (dd != 0) {
             uint256 floor = Math.mulDiv(hwm, BPS - dd, BPS);
-            if (equity < floor) return (BlockReason.DrawdownStop, floor, equity);
+            if (eq < floor) return (BlockReason.DrawdownStop, floor, eq);
         }
         return (BlockReason.None, 0, 0);
     }
