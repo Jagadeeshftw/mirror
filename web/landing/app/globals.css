@@ -1,0 +1,161 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens — from design-brief.md (use exactly; both themes).
+ * Brief names  -> CSS vars:
+ *   bg -> --background, surface -> --card, surface-2 -> --muted,
+ *   text -> --foreground, text-muted -> --muted-foreground, border -> --border,
+ *   accent -> --brand (also --primary), accent-soft -> --brand-soft (also shadcn --accent),
+ *   positive / negative / warning -> same names.
+ */
+:root {
+  --radius: 0.875rem; /* 14px cards */
+
+  --background: #f6f6f3;
+  --foreground: #0e0f12;
+  --card: #ffffff;
+  --card-foreground: #0e0f12;
+  --popover: #ffffff;
+  --popover-foreground: #0e0f12;
+  --muted: #efefea;
+  --muted-foreground: #5b606b;
+  --border: #e3e3de;
+  --input: #e3e3de;
+  --ring: #4b3bff;
+
+  --brand: #4b3bff;
+  --brand-soft: #eceaff;
+  --primary: #4b3bff;
+  --primary-foreground: #ffffff;
+  --secondary: #efefea;
+  --secondary-foreground: #0e0f12;
+  --accent: #eceaff;
+  --accent-foreground: #4b3bff;
+
+  --positive: #11914b;
+  --negative: #d93a40;
+  --warning: #b7791f;
+  --destructive: #d93a40;
+
+  /* phone hardware (mockups) */
+  --device: #0e0f12;
+
+  --shadow-brand-var:
+    0 1px 0 0 rgba(255, 255, 255, 0.25) inset,
+    0 8px 24px -8px rgba(75, 59, 255, 0.55);
+  --shadow-float-var:
+    0 1px 2px rgba(14, 15, 18, 0.06), 0 12px 32px -12px rgba(14, 15, 18, 0.18),
+    0 40px 80px -40px rgba(14, 15, 18, 0.25);
+}
+
+.dark {
+  --background: #0a0b0e;
+  --foreground: #f2f3f5;
+  --card: #14161b;
+  --card-foreground: #f2f3f5;
+  --popover: #14161b;
+  --popover-foreground: #f2f3f5;
+  --muted: #1b1e24;
+  --muted-foreground: #9097a3;
+  --border: #262a31;
+  --input: #262a31;
+  --ring: #8b7dff;
+
+  --brand: #8b7dff;
+  --brand-soft: #221f3d;
+  --primary: #8b7dff;
+  --primary-foreground: #0a0b0e;
+  --secondary: #1b1e24;
+  --secondary-foreground: #f2f3f5;
+  --accent: #221f3d;
+  --accent-foreground: #8b7dff;
+
+  --positive: #3dd68c;
+  --negative: #ff6369;
+  --warning: #ffb224;
+  --destructive: #ff6369;
+
+  --device: #2a2e36;
+
+  --shadow-brand-var:
+    0 1px 0 0 rgba(255, 255, 255, 0.2) inset,
+    0 8px 28px -8px rgba(139, 125, 255, 0.6);
+  --shadow-float-var:
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -12px rgba(0, 0, 0, 0.6),
+    0 40px 80px -40px rgba(0, 0, 0, 0.8);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --color-device: var(--device);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, SFMono-Regular, monospace;
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 2px);
+
+  --shadow-brand: var(--shadow-brand-var);
+  --shadow-float: var(--shadow-float-var);
+
+  /* infinite-moving-cards (Aceternity, free registry) */
+  --animate-scroll: scroll var(--animation-duration, 40s)
+    var(--animation-direction, forwards) linear infinite;
+  @keyframes scroll {
+    to {
+      transform: translate(calc(-50% - 0.5rem));
+    }
+  }
+}
+
+html {
+  scroll-padding-top: 5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "cv11", "ss03";
+  }
+  ::selection {
+    background: var(--brand-soft);
+    color: var(--foreground);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
