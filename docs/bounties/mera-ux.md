@@ -14,3 +14,10 @@ clearly scoped session"; "stateless test": identity rebuilds from the passkey on
 | 4 | One-prompt onboarding | Single passkey prompt creates account | todo |
 | 5 | Scoped signing session, prompt-free signing | `createSecp256k1SigningSession` scoped to the action set; session ended after use | todo |
 | 6 | Stateless test: fresh-device restore | Restore flow on a second device; video timestamp | todo (needs Google-signed-in device) |
+
+## Asked for at submission (official, from the bounty page, read 6 Oct 2026)
+
+- Describe how your project meaningfully integrates Mera as the entire account layer
+- Submit an optional demo video (up to 2 mins) showing how Mera is integrated into your app, focusing on UX elements
+
+Answers: `docs/submission.md` (source `docs/submission/fields/11-bounties.md`).

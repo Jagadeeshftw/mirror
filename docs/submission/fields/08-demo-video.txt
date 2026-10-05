@@ -1,0 +1,8 @@
+PENDING. Not recorded yet; it needs the live app and mainnet contracts. Planned 3-minute cut:
+1. Install the APK and create an account with one passkey prompt.
+2. AUSD balance and the leaderboard.
+3. Leader profile and follow sheet; fund 10 AUSD with a signed permit.
+4. Demo leader trades on Perpl; the copy lands with latency and tx links.
+5. A 10x leader trade is blocked by a 3x rule, with its own tx link.
+6. Close all and withdraw, gasless.
+7. Restore the same account on a second phone.

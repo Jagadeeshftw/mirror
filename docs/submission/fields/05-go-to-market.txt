@@ -1,0 +1,52 @@
+FIRST USERS
+Active Perpl traders. Perpl is the fully onchain perpetuals exchange on Monad:
+- 5,406 accounts have been created on its mainnet Exchange contract (numberOfAccounts at block 110,853,526, 5 Oct 2026).
+- About $1.56M of open interest sits across its 11 markets.
+- These traders already hold AUSD on Monad, Perpl's only collateral. Funding a MirrorAccount needs no bridge and no on-ramp.
+
+Within them we target two groups:
+1. Traders who want exposure while away from the screen.
+2. Smaller accounts who want to follow proven traders but will not hand keys or custody to a platform.
+
+CHANNELS
+- Perpl's community on Discord and X, where these traders already are. Perpl is a Metropolis sponsor.
+- Building in public on X. Every post carries transaction links for real copies and real "blocked by your rule" events.
+- Leader profiles. Every leaderboard entry is a shareable page, and leaders have a reason to share that they are being followed.
+- Monad's Discord and community, for Android users who already use passkeys.
+Status: none of these channels has been used yet. Outreach starts once the app and the mainnet contracts are live.
+
+FROM INSTALL TO FIRST FUNDED ACTION
+1. Download the APK from the site.
+2. One passkey prompt creates the account. No seed phrase.
+3. Pick a leader from the leaderboard, ranked from onchain Perpl data.
+4. Open the follow sheet. Defaults are suggested from the leader's history.
+5. Fund the account: send AUSD to the shown Monad address, then one signed permit moves it into the MirrorAccount. No MON is needed. Minimum 10 AUSD (Perpl's account minimum), maximum 25 AUSD (beta cap while unaudited).
+6. The first copy lands the next time the leader trades, with a push notification.
+Target: under 3 minutes from install to a funded follow.
+
+NUMBERS MEASURED SO FAR (ONCHAIN)
+Mirror has no mainnet users yet, because the contracts are not deployed. As of 6 Oct 2026:
+- 0 MirrorAccounts
+- 0 AUSD deposited
+- 0 copies executed
+The Perpl figures above are read directly from Perpl's mainnet contracts.
+
+The public stats page (pending) will show these metrics, read from our Envio indexer, and this section will be updated from it:
+- accounts created
+- funded accounts
+- net AUSD deposited
+- copies executed
+- copies blocked, per rule
+- median leader-to-copy latency
+- followers active in the last 7 days
+
+Targets before judging:
+- demo leader and demo follower live on mainnet, with real copies and tx links
+- the public APK
+- 10 external funded followers
+Our own capital is capped at 30 USD in total. External users fund their own accounts.
+
+PATH TO A BUSINESS
+- Revenue: a fee on copied volume, charged as a Perpl builder fee on each copied order. Perpl supports builder fees of up to 0.1% of notional. Registration needs Perpl's approval and has not been requested yet. For illustration only: at 5 bps, $10M of copied volume a month is $5,000 a month.
+- Growth: raise the per-account cap after an audit. Followers bring capital, and leaders bring their audiences.
+- Expansion: the same pattern works on any fully onchain order book, starting with other Monad venues. The pattern is an owned venue account, policy checked onchain on every order, and a keeper that cannot withdraw.

@@ -10,3 +10,10 @@ exposing raw data." Excerpt: wallet intelligence "as part of a core product feat
 | 1 | Powered by Nansen data/API | Nansen API via x402 pay-per-call (USDC on Monad) | todo (coverage check blocked on funding) |
 | 2 | Beyond raw data: core feature | Nansen labels and wallet intelligence feed the leader ranking score, not only display | todo |
 | 3 | Monad coverage verified | One paid call against a Monad leader address; response saved in repo | todo (needs funding) |
+
+## Asked for at submission (official, from the bounty page, read 6 Oct 2026)
+
+- Describe how your project meaningfully integrates Nansen API endpoint, MCP tool, and/or the Nansen CLI
+- Submit an optional demo video (up to 2 mins) showing how Nansen API endpoint, MCP tool, and/or the Nansen CLI are meaningfully integrated in your app.
+
+Answers: `docs/submission.md` (source `docs/submission/fields/11-bounties.md`).

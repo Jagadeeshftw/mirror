@@ -1,0 +1,1 @@
+Copy the best traders on Perpl with your limits enforced onchain: your own contract checks every copied order and can trade for you but never withdraw. Built on Monad.

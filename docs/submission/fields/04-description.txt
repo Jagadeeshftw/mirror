@@ -1,0 +1,48 @@
+Mirror lets anyone copy the best traders on Perpl, the fully onchain perpetuals exchange on Monad, without handing money or keys to a copy-trading platform.
+
+THE PROBLEM
+Copy trading is one of the most popular retail trading behaviours, but today it means trusting a platform with your funds or your keys. The platform can trade outside what you agreed to, and you find out afterwards. Onchain perps venues make every trader's positions public, yet a follower has no safe way to mirror them.
+
+THE SOLUTION
+Each follower gets their own smart contract account, a MirrorAccount. It owns its own Perpl account and holds the follower's AUSD collateral. The follower sets a policy once, and the contract checks it on every copied order:
+- which leaders to follow, and a sizing ratio of each leader's position
+- max leverage
+- allowed markets, and max notional per market
+- max slippage against the mark price
+- a daily loss stop and a high-water-mark drawdown stop
+- an expiry date
+
+A keeper watches leader fills and submits the copies. The keeper can trade through the account but can never withdraw: no code path sends collateral to anyone except the owner. A copy can never be larger than the sizing ratio times the leader's current position on the same side, so the keeper cannot open exposure the leader does not hold. When a copy would break a rule, the contract does not trade. Instead it emits a Blocked event naming the rule and the numbers, so "blocked by your rule" has its own transaction hash. Reducing a position is always allowed, even when paused or expired.
+
+The owner is the follower's passkey, through Mera: one fingerprint or face prompt, no seed phrase, no extension. Every owner action (set policy, pause, close all, withdraw) can be signed and relayed by anyone. Deposits use AUSD permit or ERC-3009, so the follower never needs MON for gas. Withdrawals always go to the owner.
+
+WHAT IS BUILT TODAY
+- Contracts: MirrorAccount, MirrorAccountFactory (non-upgradeable EIP-1167 clones) and KeeperRegistry, in Solidity 0.8.30 with OpenZeppelin. Written from scratch against Perpl's published Exchange ABI, with no Perpl code reused.
+- 73 passing tests:
+  - 58 unit tests.
+  - 5 fuzz tests, 1,000 runs each.
+  - 8 invariants: keepers and strangers never receive collateral; hostile calls always fail; no exposure increase while paused; deposits stay within the cap; collateral is conserved.
+  - 2 fork tests against the live Perpl Exchange and AUSD on Monad mainnet.
+- On the mainnet fork:
+  - A gasless AUSD permit deposit opened a Perpl account owned by the contract.
+  - A 10x copy was blocked onchain by a 3x rule.
+  - A compliant 1-lot BTC copy filled on Perpl's live order book.
+  - The keeper's withdrawal attempt reverted.
+  - A signed close-all, relayed by a third party, closed the position, and the owner withdrew.
+  - Fees for the round trip: 0.0006 AUSD.
+
+PENDING (NOT BUILT YET)
+- Mainnet deployment and verified contract addresses
+- Copy engine and relayer
+- Envio indexer with leader stats and follower PnL attribution
+- Nansen wallet intelligence in the leader ranking
+- Android app (Expo, Mera passkeys) and the public stats page
+- Landing page and docs
+
+WHY MONAD
+- Speed is the product. Copy slippage grows with the delay between the leader's fill and the follower's copy. We measured Monad mainnet blocks at about 290 ms, and the Finalized commit state about 550 ms after Proposed. Monad's real-time monadLogs subscription delivers a leader's fill at the Proposed stage.
+- Checking every order is affordable. A copied open with every policy check uses about 278k gas, roughly $0.001 at current prices, so the follower's rules are enforced onchain on every order instead of being trusted offchain.
+- Parallel execution. Each follower's copy touches only that follower's account state, so many followers mirroring one trade are independent transactions.
+- The venue. Perpl's order book and positions are fully onchain, which is what lets a contract read the leader's current position and enforce the sizing rule.
+
+Deposits are capped at 25 AUSD per account while the contracts are unaudited.

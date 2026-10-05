@@ -15,3 +15,10 @@ three integrations together".
 | 4 | Executes trades through Perpl | MirrorAccount `execOrder` on Perpl Exchange `0x34B6…2a6F`; mainnet tx hashes | in progress (fork-tested: `contracts/test/fork/PerplMainnetFork.t.sol`) |
 | 5 | Demo shows at least one Perpl trade | Demo video timestamp + tx link | todo |
 | 6 | Creative use of the three together | Copy trading: passkey owner, AUSD collateral, leader fills on Perpl mirrored under onchain rules | todo |
+
+## Asked for at submission (official, from the bounty page, read 6 Oct 2026)
+
+- Describe the core features of your trading app.
+- Submit a demo video (up to 2 mins) showing a user logging in via passkey, funding or viewing an AUSD balance, and placing at least one trade on Perpl in your app
+
+Answers: `docs/submission.md` (source `docs/submission/fields/11-bounties.md`).
