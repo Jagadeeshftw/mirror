@@ -6,6 +6,10 @@ import { ausdBalance } from "../lib/chain";
 import { toBig } from "../lib/format";
 import type { Address, AppConfig, FeedEvent, LeaderSummary, MarketConfig, MirrorAccount } from "../lib/types";
 import { useSession } from "./session";
+import shared from "../lib/shared-config.json";
+
+// Bundled market list (symbol and decimals), used until /v1/config has loaded.
+const BUNDLED_MARKETS = shared.networks.mainnet.markets as unknown as MarketConfig[];
 
 export function useConfig() {
   return useQuery({ queryKey: ["config"], queryFn: api.config, staleTime: 5 * 60_000, retry: 2 });
@@ -15,9 +19,9 @@ export function useMarkets(cfg: AppConfig | undefined) {
   return useMemo(() => {
     const bySymbol = new Map<string, MarketConfig>();
     const byPerp = new Map<number, MarketConfig>();
-    for (const m of cfg?.markets ?? []) {
-      bySymbol.set(m.symbol, m);
-      byPerp.set(m.perpId, m);
+    for (const m of [...BUNDLED_MARKETS, ...(cfg?.markets ?? [])]) {
+      bySymbol.set(m.symbol, { ...byPerp.get(m.perpId), ...m });
+      byPerp.set(m.perpId, { ...byPerp.get(m.perpId), ...m });
     }
     return { bySymbol, byPerp };
   }, [cfg]);
@@ -31,6 +35,7 @@ export function useOwner() {
     queryFn: () => api.ownerAccounts(owner!),
     enabled: !!owner,
     refetchInterval: 15_000,
+    retry: 3,
   });
 }
 

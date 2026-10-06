@@ -71,7 +71,7 @@ if want("positions"):
     s.link("/positions"); s.wait_for("portfolio.screen"); time.sleep(2)
     s.shot("10-positions")
     s.scroll(1500); s.shot("10-positions-scrolled")
-    s.tap("portfolio.closeAll"); s.wait_for("closeAll.dialog"); time.sleep(0.8)
+    s.tap_scroll("portfolio.closeAll"); s.wait_for("closeAll.dialog"); time.sleep(0.8)
     s.shot("11-close-all-confirm")
     s.tap("closeAll.cancel"); time.sleep(0.8)
 
@@ -141,6 +141,17 @@ if want("empty"):
     s.shot("13-empty-home")
     s.mock("/__mock/scenario", {"owner": O, "scenario": "funded"})
 
+if want("offline"):
+    s.link("/feed"); s.wait_for("activity.screen"); time.sleep(2)
+    subprocess.run("lsof -ti:8787 | xargs kill", shell=True)
+    time.sleep(1)
+    s.tap("feed.filter.all"); time.sleep(1)
+    s.link("/positions"); time.sleep(1); s.link("/feed"); time.sleep(34)
+    s.shot("13-offline-feed")
+    subprocess.Popen("node dev-mock/server.mjs >> /tmp/mirror-mock.log 2>&1", shell=True, cwd=__file__.rsplit("/", 2)[0])
+    s.wait_health()
+    s.link("/home"); time.sleep(3)
+
 if want("restore"):
     s.link("/settings"); s.wait_for("settings.screen"); time.sleep(1)
     s.tap("settings.signOut"); s.tap("settings.signOut.confirm"); s.wait_for("onboarding.screen")
@@ -149,4 +160,5 @@ if want("restore"):
     s.wait_for("restore.welcome.back", 30); time.sleep(1)
     s.shot("02-restore-welcome-back")
     s.tap("restore.go.home"); time.sleep(2)
-print("done")
+open(f"{sys.argv[2]}/checks.txt", "w").write("\n".join(s.ISSUES) + "\n")
+print(f"done; {len(s.ISSUES)} layout issues -> {sys.argv[2]}/checks.txt")

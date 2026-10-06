@@ -10,19 +10,27 @@ Monad RPC for reads. It never sends transactions itself: the user signs, the rel
 cd app
 npm install
 npm run mock                        # dev mock of docs/api.md on :8787 (dev-mock/server.mjs)
-EXPO_PUBLIC_API_BASE=http://localhost:8787 scripts/build-apk.sh
-adb reverse tcp:8787 tcp:8787 && adb install -r android/app/build/outputs/apk/release/app-release.apk
+scripts/build-apk.sh --devtools     # dist/mirror-<ver>-devtools.apk, points at http://localhost:8787
+adb reverse tcp:8787 tcp:8787 && adb install -r dist/mirror-0.9.2-devtools.apk
+EXPO_PUBLIC_API_BASE=https://<engine> scripts/build-apk.sh   # dist/mirror-<ver>-release.apk
+python3 scripts/capture-all.py <serial> screenshots          # every screen, light + dark, + layout checks
 npm test                            # jest: EIP-712, permit/3009, policy encoding, formatting, keys, SSE
 ```
 
-`scripts/build-apk.sh` is a local Gradle build (no EAS). It signs with
-`keys/mirror-release.keystore` when `keys/mirror-release.env` exists and falls back to the
-debug keystore otherwise. `ARCHS` defaults to `arm64-v8a`.
+`scripts/build-apk.sh` is a local Gradle build (no EAS) with R8 minification and resource
+shrinking. It signs with `keys/mirror-release.keystore` when `keys/mirror-release.env` exists
+and falls back to the debug keystore otherwise. `ARCHS` defaults to `arm64-v8a`.
 
-The backend URL is baked in from `EXPO_PUBLIC_API_BASE` (default `https://api.mirror.0xo.in`)
-and can be changed at runtime: long-press the logo on the Welcome screen, or Settings →
-Developer. Cleartext HTTP is allowed only to `localhost`, `127.0.0.1` and `10.0.2.2`
-(network security config); every other host must be HTTPS.
+Two variants:
+- **release** (default): requires an https `EXPO_PUBLIC_API_BASE`, always uses Mera passkeys,
+  and has no backend switch. The dev tools are behind a module-local
+  `__DEV__ || process.env.EXPO_PUBLIC_MIRROR_DEV_TOOLS === "1"` constant that folds to `false`,
+  so the minifier removes them. A string check on the bundle confirms the simulator, the
+  override storage key and both developer UIs are absent. There is no cleartext exception.
+- **devtools** (`--devtools`, or any `__DEV__` build): adds the passkey simulator (active
+  against a local http mock), the backend switch (long-press the Welcome logo, Settings →
+  Developer) and cleartext to `localhost`, `127.0.0.1` and `10.0.2.2` only. For emulators
+  without a Google account. Never ship it.
 
 ## Accounts: Mera passkeys only
 
@@ -38,10 +46,9 @@ Developer. Cleartext HTTP is allowed only to `localhost`, `127.0.0.1` and `10.0.
 - **Recovery phrase**: not shown during onboarding. Settings → "Export recovery phrase" asks
   for the passkey and shows the 24 words in a dialog. They are never written to storage.
 - **Emulators**: passkeys need a Google account on the device and `assetlinks.json` on
-  `mirror.0xo.in` that lists the signing certificate. When the app points at a local http
-  mock, a passkey simulator takes over (random 32-byte secret in SecureStore, the same
-  derivation) so every other flow can be tested. Against any https backend the app always
-  uses Mera.
+  `mirror.0xo.in` that lists the signing certificate. In devtools builds pointed at a local
+  http mock, a passkey simulator takes over (random 32-byte secret in SecureStore, the same
+  derivation) so every other flow can be tested. Release builds have no simulator.
 
 ## One passkey, many keys: the notification key
 

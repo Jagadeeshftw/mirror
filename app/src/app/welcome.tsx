@@ -10,6 +10,9 @@ import { Icon } from "../ui/icons";
 import { BrandMark, Button, Dialog, Identicon, NansenLabel, Note, Press, Row, Scroll, Side, T } from "../ui/kit";
 import { fonts, useColors } from "../ui/theme";
 
+// Module-local so the minifier folds it to false in release builds and drops dev-only UI.
+const DEV_TOOLS = __DEV__ || process.env.EXPO_PUBLIC_MIRROR_DEV_TOOLS === "1";
+
 export default function Welcome() {
   const c = useColors();
   const insets = useSafeAreaInsets();
@@ -37,7 +40,7 @@ export default function Welcome() {
   return (
     <View testID="onboarding.screen" style={{ flex: 1, backgroundColor: c.bg, paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <Scroll contentStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 12, gap: 18, flexGrow: 1 }}>
-        <Press onLongPress={() => setApiOpen(true)} delayLongPress={600} testID="onboarding.brand" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <Press onLongPress={DEV_TOOLS ? () => setApiOpen(true) : undefined} delayLongPress={600} testID="onboarding.brand" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <BrandMark size={32} />
           <T size={20} w={700} style={{ letterSpacing: -0.2 }}>
             Mirror
@@ -128,9 +131,10 @@ export default function Welcome() {
         </View>
         <T size={12} color="mu" center lh={17}>
           One passkey. No seed phrase, no extension.{"\n"}Passkeys by Mera · Built on Monad · Trades on Perpl
-          {devPasskeyActive() ? "\nDev build: passkey simulator" : ""}
+          {DEV_TOOLS && devPasskeyActive() ? "\nDev build: passkey simulator" : ""}
         </T>
       </Scroll>
+      {DEV_TOOLS ? (
       <Dialog visible={apiOpen} onClose={() => setApiOpen(false)} testID="onboarding.apiDialog">
         <T size={17} w={600}>
           Backend
@@ -159,6 +163,7 @@ export default function Welcome() {
           />
         </Row>
       </Dialog>
+      ) : null}
     </View>
   );
 }

@@ -23,12 +23,18 @@ import type {
 export const DEFAULT_API_BASE: string =
   process.env.EXPO_PUBLIC_API_BASE || Constants.expoConfig?.extra?.apiBase || "https://api.mirror.0xo.in";
 const OVERRIDE_KEY = "mirror.apiBase.override";
+// Dev tools (passkey simulator, backend switch) exist only in debug builds or builds made with
+// EXPO_PUBLIC_MIRROR_DEV_TOOLS=1. Release builds leave it unset, so this folds to `false` and
+// the minifier drops every dev-only branch.
+const DEV_TOOLS = __DEV__ || process.env.EXPO_PUBLIC_MIRROR_DEV_TOOLS === "1";
+export const API_OVERRIDE_ALLOWED = DEV_TOOLS;
 let apiBase = DEFAULT_API_BASE;
 
 export function getApiBase(): string {
   return apiBase;
 }
 export async function loadApiBaseOverride(): Promise<string> {
+  if (!DEV_TOOLS) return apiBase;
   try {
     const v = await AsyncStorage.getItem(OVERRIDE_KEY);
     if (v) apiBase = v;
@@ -36,6 +42,7 @@ export async function loadApiBaseOverride(): Promise<string> {
   return apiBase;
 }
 export async function setApiBaseOverride(v: string | null): Promise<void> {
+  if (!DEV_TOOLS) return;
   apiBase = v || DEFAULT_API_BASE;
   if (v) await AsyncStorage.setItem(OVERRIDE_KEY, v);
   else await AsyncStorage.removeItem(OVERRIDE_KEY);

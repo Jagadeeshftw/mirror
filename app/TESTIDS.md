@@ -54,7 +54,7 @@ List indexes start at 0 = newest / top.
 | Area | testIDs |
 |---|---|
 | Navigation | `nav.back`, `nav.account` (avatar → Account), `nav.balance` (balance chip) |
-| Welcome | `onboarding.brand` (long-press: backend URL dialog), `onboarding.apiBase.input`, `onboarding.apiBase.save`, `onboarding.error` |
+| Welcome | `onboarding.brand`, `onboarding.error`; devtools builds only: long-press `onboarding.brand` → `onboarding.apiBase.input`, `onboarding.apiBase.save` |
 | Restore | `restore.title`, `step.<passkey|located|rules|balances>.<pending|now|done|failed>`, `restore.progress`, `restore.retry`, `restore.error`, `restore.welcome.back`, `restore.go.home` |
 | Home | `home.equity`, `home.kv.balance`, `home.kv.upnl`, `home.kv.rpnl`, `home.addFunds`, `home.beta.cap`, `home.manage`, `follow.row.<accountAddress>`, `recent.<eventId>`, `home.feed.link`, `home.demo`, `home.empty`, `home.browseLeaders`, `home.empty.addFunds`, `suggest.<leaderId>`, `home.offline` |
 | Leaders | `leaders.screen`, `leaders.window.<7d|30d|90d>`, `leaders.filter.dd`, `leaders.filter.market`, `leaders.filter.nansen`, `leaders.sort`, `leaders.market.<SYM>`, `leaders.sort.<score|pnl|drawdown>`, `leaders.demo` |
@@ -68,5 +68,5 @@ List indexes start at 0 = newest / top.
 | Withdraw | `withdraw.screen`, `withdraw.account.<address>`, `withdraw.pct.25`, `withdraw.pct.50`, `withdraw.max`, `withdraw.toMine`, `withdraw.key.<0-9|.|x>`, `withdraw.continue`, `withdraw.sheet`, `withdraw.error`, `withdraw.tx`, `withdraw.done` |
 | Send AUSD | `send.screen`, `send.address.input`, `send.paste`, `send.amount.input`, `send.max`, `send.confirm`, `send.status`, `send.error`, `send.done` |
 | Notifications | `notifications.screen`, `notifications.filter.<all|copies|blocked|account>`, `notifications.item.<n>` |
-| Settings | `settings.screen`, `settings.signOut`, `settings.signOut.confirm`, `settings.notifyKey`, `settings.notifyKey.fingerprint`, `settings.exportPhrase`, `settings.phrase`, `settings.phrase.hide`, `settings.theme.<system|light|dark>`, `settings.apiBase.input`, `settings.apiBase.save` |
+| Settings | `settings.screen`, `settings.signOut`, `settings.signOut.confirm`, `settings.notifyKey`, `settings.notifyKey.fingerprint`, `settings.exportPhrase`, `settings.phrase`, `settings.phrase.hide`, `settings.theme.<system|light|dark>`, `settings.apiBase.input`, `settings.apiBase.save` (devtools builds only) |
 | Demo | `demo.screen`, `demo.live`, `demo.account`, `demo.balance`, `demo.equity`, `demo.realised`, `demo.position.<n>`, `demo.runTrade`, `demo.runBlocked`, `demo.error`, `demo.cycle.<id>`, `demo.cycle.status`, `demo.step.<key>.<status>`, `demo.latency.<key>`, `demo.tx.<key>`, `demo.feed.<n>` |

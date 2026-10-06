@@ -19,7 +19,7 @@ export default function Restore() {
   const [error, setError] = useState<{ title: string; detail: string } | null>(null);
   const [done, setDone] = useState(false);
   const started = useRef(false);
-  const { totals, isLoading } = useTotals();
+  const { totals, isLoading, isError, refetch } = useTotals();
   const feed = useFeedAll();
 
   const run = async () => {
@@ -44,6 +44,12 @@ export default function Restore() {
   }, []);
 
   const accountsLoaded = phase === "found" && !!totals;
+  // Keep asking until the accounts load (the service may be waking up or briefly unreachable).
+  useEffect(() => {
+    if (phase !== "found" || totals) return;
+    const t = setInterval(() => refetch(), 3000);
+    return () => clearInterval(t);
+  }, [phase, !!totals]);
   useEffect(() => {
     if (accountsLoaded && !feed.isLoading) {
       const t = setTimeout(() => setDone(true), 400);
@@ -163,6 +169,11 @@ export default function Restore() {
         </View>
         <Checklist items={steps as any} />
         <Meter parts={[{ frac, color: c.ac }]} height={6} />
+        {phase === "found" && isError && !totals ? (
+          <Note tone="warn" icon="wifioff" testID="restore.offline">
+            Can't reach Mirror right now. Your passkey worked; retrying every few seconds.
+          </Note>
+        ) : null}
         {error ? (
           <Note tone="neg" icon="warn" testID="restore.error">
             <T size={13} w={600}>

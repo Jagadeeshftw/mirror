@@ -22,13 +22,17 @@ import { getApiBase } from "./api";
 
 export const RP_ID: string = Constants.expoConfig?.extra?.rpId ?? "mirror.0xo.in";
 export const BRAND: string = Constants.expoConfig?.extra?.brand ?? "Mirror";
+// Dev tools (passkey simulator, backend switch) exist only in debug builds or builds made with
+// EXPO_PUBLIC_MIRROR_DEV_TOOLS=1. Release builds leave it unset, so this folds to `false` and
+// the minifier drops every dev-only branch.
+const DEV_TOOLS = __DEV__ || process.env.EXPO_PUBLIC_MIRROR_DEV_TOOLS === "1";
 /**
- * Dev-only passkey simulator for emulators without a Google account. Active only when the
- * build sets EXPO_PUBLIC_DEV_PASSKEY=1 or the app is pointed at a local cleartext mock
- * (http://localhost, 127.0.0.1, 10.0.2.2). Against any real (https) backend the app always
- * uses Mera passkeys.
+ * Dev-only passkey simulator for emulators without a Google account. Never present in
+ * release builds (DEV_TOOLS is false there). In dev builds it is active when
+ * EXPO_PUBLIC_DEV_PASSKEY=1 or the app points at a local cleartext mock.
  */
 export function devPasskeyActive(): boolean {
+  if (!DEV_TOOLS) return false;
   return process.env.EXPO_PUBLIC_DEV_PASSKEY === "1" || /^http:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:|\/|$)/.test(getApiBase());
 }
 
@@ -47,6 +51,7 @@ export interface StoredAccount {
 
 // ---------- dev passkey simulator ----------
 async function devPrf(create: boolean): Promise<{ credentialId: string; prfOutput: Uint8Array }> {
+  if (!DEV_TOOLS) throw new Error("unavailable");
   let secret = await SecureStore.getItemAsync(DEV_SECRET_KEY);
   if (!secret) {
     if (!create) throw Object.assign(new Error("No passkey for mirror.0xo.in on this device"), { code: "NO_CREDENTIAL" });
@@ -94,7 +99,7 @@ export async function signOutDevice(): Promise<void> {
 export async function createAccount(deviceName?: string): Promise<StoredAccount> {
   let credentialId: string;
   let prfOutput: Uint8Array;
-  if (devPasskeyActive()) {
+  if (DEV_TOOLS && devPasskeyActive()) {
     ({ credentialId, prfOutput } = await devPrf(true));
   } else {
     const created = await createPasskeyWithPrfOutput({
@@ -118,7 +123,7 @@ export async function createAccount(deviceName?: string): Promise<StoredAccount>
 export async function restoreAccount(deviceName?: string): Promise<StoredAccount> {
   let credentialId: string;
   let prfOutput: Uint8Array;
-  if (devPasskeyActive()) {
+  if (DEV_TOOLS && devPasskeyActive()) {
     ({ credentialId, prfOutput } = await devPrf(false));
   } else {
     const got = await getPasskeyPrfOutput({ rpId: RP_ID, webAuthnClient: reactNativeWebAuthnClient });
@@ -141,7 +146,7 @@ export async function restoreAccount(deviceName?: string): Promise<StoredAccount
 }
 
 async function assertPrf(stored: StoredAccount): Promise<Uint8Array> {
-  if (devPasskeyActive()) return (await devPrf(false)).prfOutput;
+  if (DEV_TOOLS && devPasskeyActive()) return (await devPrf(false)).prfOutput;
   const got = await getPasskeyPrfOutput({
     rpId: RP_ID,
     credential: { credentialId: stored.credentialId },

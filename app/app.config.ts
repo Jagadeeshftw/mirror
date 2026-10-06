@@ -5,6 +5,7 @@ const BRAND = "Mirror";
 const rpId = process.env.MERA_RP_ID ?? "mirror.0xo.in";
 const applicationId = "com.zeroxo.mirror";
 const apiBase = process.env.EXPO_PUBLIC_API_BASE ?? "";
+const devTools = process.env.EXPO_PUBLIC_MIRROR_DEV_TOOLS === "1";
 
 const config: ExpoConfig = {
   name: BRAND,
@@ -63,11 +64,24 @@ const config: ExpoConfig = {
     ],
     [
       "expo-build-properties",
-      { android: { minSdkVersion: 28 } },
+      {
+        android: {
+          minSdkVersion: 28,
+          enableMinifyInReleaseBuilds: true,
+          enableShrinkResourcesInReleaseBuilds: true,
+          // Credential Manager loads the Play Services provider reflectively.
+          extraProguardRules: [
+            "-if class androidx.credentials.CredentialManager",
+            "-keep class androidx.credentials.playservices.** { *; }",
+            "-keep class com.reactnativepasskey.** { *; }",
+          ].join("\n"),
+        },
+      },
     ],
     "./plugins/withReleaseSigning.js",
     "./plugins/withNoAnimations.js",
-    "./plugins/withLocalCleartext.js",
+    // Cleartext to the local mock only exists in dev-tools builds.
+    ...(devTools ? ["./plugins/withLocalCleartext.js"] : []),
   ],
   experiments: { typedRoutes: false },
   extra: {

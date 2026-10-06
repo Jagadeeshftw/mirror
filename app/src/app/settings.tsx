@@ -16,6 +16,9 @@ import { Icon, type IconName } from "../ui/icons";
 import { Button, Card, Dialog, Lbl, Note, Press, Row, Screen, Scroll, Seg, T } from "../ui/kit";
 import { fonts, useColors, useTheme, type ThemePref } from "../ui/theme";
 
+// Module-local so the minifier folds it to false in release builds and drops dev-only UI.
+const DEV_TOOLS = __DEV__ || process.env.EXPO_PUBLIC_MIRROR_DEV_TOOLS === "1";
+
 function SetRow({ icon, title, sub, right, onPress, testID }: { icon: IconName; title: string; sub?: React.ReactNode; right?: React.ReactNode; onPress?: () => void; testID?: string }) {
   const c = useColors();
   const body = (
@@ -75,7 +78,7 @@ export default function Settings() {
       <Scroll contentStyle={{ paddingHorizontal: 20, paddingTop: 4, gap: 10 }} testID="settings.screen">
         <Lbl style={{ marginTop: 8 }}>Security</Lbl>
         <Card list>
-          <SetRow icon="fp" title="Passkey" sub={`${devPasskeyActive() ? "Dev passkey simulator (emulator build)" : "Synced by Google Password Manager"} · ${RP_ID} · ${account.restored ? "restored" : "created"} ${dateShort(account.createdAt)}`} />
+          <SetRow icon="fp" title="Passkey" sub={`${DEV_TOOLS && devPasskeyActive() ? "Dev passkey simulator (emulator build)" : "Synced by Google Password Manager"} · ${RP_ID} · ${account.restored ? "restored" : "created"} ${dateShort(account.createdAt)}`} />
           <SetRow
             icon="phone"
             title={account.device ?? "This phone"}
@@ -167,6 +170,8 @@ export default function Settings() {
           <SetRow icon="info" title="Mirror 0.9.2 (beta)" sub="Balance in AUSD by Agora · Passkeys by Mera · Labels by Nansen" />
         </Card>
 
+        {DEV_TOOLS ? (
+        <>
         <Lbl style={{ marginTop: 8 }}>Developer</Lbl>
         <Card style={{ padding: 14, gap: 8 }}>
           <T size={12} color="mu">
@@ -203,6 +208,8 @@ export default function Settings() {
             />
           </Row>
         </Card>
+        </>
+        ) : null}
       </Scroll>
 
       <Dialog visible={!!phrase} onClose={() => setPhrase(null)} testID="settings.phrase">
