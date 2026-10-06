@@ -30,7 +30,7 @@ const FACTS = [
     icon: IconCoin,
     value: "~$0.001",
     title: "Per copied open",
-    text: "About 279k gas with every policy check, so your rules run onchain on every order. The relayer pays, so you never hold MON.",
+    text: "About 278k gas with every policy check, so your rules run onchain on every order. The relayer pays, so you never hold MON.",
   },
 ];
 

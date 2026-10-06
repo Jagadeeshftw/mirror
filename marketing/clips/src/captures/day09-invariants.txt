@@ -1,0 +1,306 @@
+No files changed, compilation skipped
+Warning: Failure from "/Users/jagadeesh/personal/projects/grants/monad/mirror/contracts/cache/invariant/failures/MirrorInvariantTest/invariant_depositsWithinCap" file was ignored because test contract bytecode has changed.
+Warning: Failure from "/Users/jagadeesh/personal/projects/grants/monad/mirror/contracts/cache/invariant/failures/MirrorInvariantTest/invariant_noPolicyViolation" file was ignored because test contract bytecode has changed.
+Warning: Failure from "/Users/jagadeesh/personal/projects/grants/monad/mirror/contracts/cache/invariant/failures/MirrorInvariantTest/invariant_keeperNeverReceivesCollateral" file was ignored because test contract bytecode has changed.
+Warning: Failure from "/Users/jagadeesh/personal/projects/grants/monad/mirror/contracts/cache/invariant/failures/MirrorInvariantTest/invariant_collateralConserved" file was ignored because test contract bytecode has changed.
+Warning: Failure from "/Users/jagadeesh/personal/projects/grants/monad/mirror/contracts/cache/invariant/failures/MirrorInvariantTest/invariant_hostileCallsAlwaysFail" file was ignored because test contract bytecode has changed.
+Warning: Failure from "/Users/jagadeesh/personal/projects/grants/monad/mirror/contracts/cache/invariant/failures/MirrorInvariantTest/invariant_noExposureIncreaseWhilePaused" file was ignored because test contract bytecode has changed.
+Warning: Failure from "/Users/jagadeesh/personal/projects/grants/monad/mirror/contracts/cache/invariant/failures/MirrorInvariantTest/invariant_ownerIsFixed" file was ignored because test contract bytecode has changed.
+
+Ran 9 tests for test/MirrorAccount.invariant.t.sol:MirrorInvariantTest
+[PASS] invariant_callSummary() (runs: 256, calls: 16384, reverts: 0)
+
+╭---------------+------------------------+-------+---------+----------╮
+| Contract      | Selector               | Calls | Reverts | Discards |
++=====================================================================+
+| MirrorHandler | keeperMirror           | 1278  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorAgain      | 1264  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorOnceMore   | 1204  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperTriesToExtract   | 1262  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | leaderTrades           | 1298  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | markMoves              | 1281  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerDeposits          | 1230  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerMatchesNow        | 1271  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerPauses            | 1280  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerWithdraws         | 1357  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerForgesAction   | 1164  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerTriesToExtract | 1188  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | warp                   | 1307  | 0       | 0        |
+╰---------------+------------------------+-------+---------+----------╯
+
+Logs:
+  mirrors executed 4
+  mirrors blocked  15
+  owner withdrawn  13174927
+
+[PASS] invariant_collateralConserved() (runs: 256, calls: 16384, reverts: 0)
+
+╭---------------+------------------------+-------+---------+----------╮
+| Contract      | Selector               | Calls | Reverts | Discards |
++=====================================================================+
+| MirrorHandler | keeperMirror           | 1239  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorAgain      | 1246  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorOnceMore   | 1312  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperTriesToExtract   | 1265  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | leaderTrades           | 1285  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | markMoves              | 1260  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerDeposits          | 1249  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerMatchesNow        | 1277  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerPauses            | 1210  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerWithdraws         | 1239  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerForgesAction   | 1283  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerTriesToExtract | 1275  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | warp                   | 1244  | 0       | 0        |
+╰---------------+------------------------+-------+---------+----------╯
+
+[PASS] invariant_depositsWithinCap() (runs: 256, calls: 16384, reverts: 0)
+
+╭---------------+------------------------+-------+---------+----------╮
+| Contract      | Selector               | Calls | Reverts | Discards |
++=====================================================================+
+| MirrorHandler | keeperMirror           | 1220  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorAgain      | 1287  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorOnceMore   | 1277  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperTriesToExtract   | 1270  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | leaderTrades           | 1268  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | markMoves              | 1289  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerDeposits          | 1288  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerMatchesNow        | 1252  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerPauses            | 1262  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerWithdraws         | 1202  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerForgesAction   | 1271  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerTriesToExtract | 1266  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | warp                   | 1232  | 0       | 0        |
+╰---------------+------------------------+-------+---------+----------╯
+
+[PASS] invariant_hostileCallsAlwaysFail() (runs: 256, calls: 16384, reverts: 0)
+
+╭---------------+------------------------+-------+---------+----------╮
+| Contract      | Selector               | Calls | Reverts | Discards |
++=====================================================================+
+| MirrorHandler | keeperMirror           | 1268  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorAgain      | 1230  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorOnceMore   | 1268  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperTriesToExtract   | 1251  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | leaderTrades           | 1259  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | markMoves              | 1284  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerDeposits          | 1311  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerMatchesNow        | 1280  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerPauses            | 1266  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerWithdraws         | 1299  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerForgesAction   | 1206  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerTriesToExtract | 1244  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | warp                   | 1218  | 0       | 0        |
+╰---------------+------------------------+-------+---------+----------╯
+
+[PASS] invariant_keeperNeverReceivesCollateral() (runs: 256, calls: 16384, reverts: 0)
+
+╭---------------+------------------------+-------+---------+----------╮
+| Contract      | Selector               | Calls | Reverts | Discards |
++=====================================================================+
+| MirrorHandler | keeperMirror           | 1320  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorAgain      | 1259  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorOnceMore   | 1323  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperTriesToExtract   | 1333  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | leaderTrades           | 1205  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | markMoves              | 1217  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerDeposits          | 1288  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerMatchesNow        | 1215  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerPauses            | 1259  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerWithdraws         | 1191  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerForgesAction   | 1261  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerTriesToExtract | 1274  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | warp                   | 1239  | 0       | 0        |
+╰---------------+------------------------+-------+---------+----------╯
+
+[PASS] invariant_noExposureIncreaseWhilePaused() (runs: 256, calls: 16384, reverts: 0)
+
+╭---------------+------------------------+-------+---------+----------╮
+| Contract      | Selector               | Calls | Reverts | Discards |
++=====================================================================+
+| MirrorHandler | keeperMirror           | 1280  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorAgain      | 1194  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorOnceMore   | 1245  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperTriesToExtract   | 1259  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | leaderTrades           | 1320  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | markMoves              | 1257  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerDeposits          | 1228  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerMatchesNow        | 1320  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerPauses            | 1269  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerWithdraws         | 1236  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerForgesAction   | 1217  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerTriesToExtract | 1295  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | warp                   | 1264  | 0       | 0        |
+╰---------------+------------------------+-------+---------+----------╯
+
+[PASS] invariant_noPolicyViolation() (runs: 256, calls: 16384, reverts: 0)
+
+╭---------------+------------------------+-------+---------+----------╮
+| Contract      | Selector               | Calls | Reverts | Discards |
++=====================================================================+
+| MirrorHandler | keeperMirror           | 1228  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorAgain      | 1271  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorOnceMore   | 1164  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperTriesToExtract   | 1286  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | leaderTrades           | 1321  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | markMoves              | 1208  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerDeposits          | 1241  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerMatchesNow        | 1256  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerPauses            | 1297  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerWithdraws         | 1296  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerForgesAction   | 1282  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerTriesToExtract | 1251  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | warp                   | 1283  | 0       | 0        |
+╰---------------+------------------------+-------+---------+----------╯
+
+[PASS] invariant_onlyOwnerChangesPolicy() (runs: 256, calls: 16384, reverts: 0)
+
+╭---------------+------------------------+-------+---------+----------╮
+| Contract      | Selector               | Calls | Reverts | Discards |
++=====================================================================+
+| MirrorHandler | keeperMirror           | 1268  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorAgain      | 1312  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorOnceMore   | 1273  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperTriesToExtract   | 1278  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | leaderTrades           | 1319  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | markMoves              | 1281  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerDeposits          | 1262  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerMatchesNow        | 1201  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerPauses            | 1286  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerWithdraws         | 1208  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerForgesAction   | 1224  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerTriesToExtract | 1256  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | warp                   | 1216  | 0       | 0        |
+╰---------------+------------------------+-------+---------+----------╯
+
+[PASS] invariant_ownerIsFixed() (runs: 256, calls: 16384, reverts: 0)
+
+╭---------------+------------------------+-------+---------+----------╮
+| Contract      | Selector               | Calls | Reverts | Discards |
++=====================================================================+
+| MirrorHandler | keeperMirror           | 1231  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorAgain      | 1283  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperMirrorOnceMore   | 1248  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | keeperTriesToExtract   | 1312  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | leaderTrades           | 1222  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | markMoves              | 1243  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerDeposits          | 1222  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerMatchesNow        | 1284  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerPauses            | 1226  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | ownerWithdraws         | 1294  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerForgesAction   | 1237  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | strangerTriesToExtract | 1300  | 0       | 0        |
+|---------------+------------------------+-------+---------+----------|
+| MirrorHandler | warp                   | 1282  | 0       | 0        |
+╰---------------+------------------------+-------+---------+----------╯
+
+Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 2.48s (16.78s CPU time)
+
+Ran 1 test suite in 2.49s (2.48s CPU time): 9 tests passed, 0 failed, 0 skipped (9 total tests)

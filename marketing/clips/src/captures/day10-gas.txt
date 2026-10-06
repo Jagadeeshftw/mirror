@@ -1,0 +1,10 @@
+No files changed, compilation skipped
+
+Ran 1 test for test/fork/PerplMainnetFork.t.sol:PerplMainnetForkTest
+[PASS] test_fork_keeperCopyGasProfile() (gas: 725402)
+Logs:
+  gas used by one copied open 277559
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 11.81s (2.35s CPU time)
+
+Ran 1 test suite in 11.81s (11.81s CPU time): 1 tests passed, 0 failed, 0 skipped (1 total tests)

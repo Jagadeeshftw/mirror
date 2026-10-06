@@ -5,7 +5,7 @@ Fields are in the portal's order. Character counts use the portal's counting (UT
 Anything not built yet is marked PENDING. The portal has no final submit: what is saved at the deadline
 (14 Oct 2026, 03:59 UTC) is the entry, so keep the saved form in sync with this file.
 
-Last built: 2026-10-06 15:45 UTC
+Last built: 2026-10-06 15:50 UTC
 
 ## Primary track
 
@@ -82,7 +82,7 @@ PENDING
 
 WHY MONAD
 - Speed is the product. Copy slippage grows with the delay between the leader's fill and the follower's copy. We measured Monad mainnet blocks at about 300 ms, and the Finalized commit state about 550 ms after Proposed. Monad's real-time monadLogs subscription delivers a leader's fill at the Proposed stage.
-- Checking every order is affordable. A copied open with every policy check uses about 279k gas, roughly $0.001 at current prices, so the follower's rules are enforced onchain on every order instead of being trusted offchain.
+- Checking every order is affordable. A copied open with every policy check uses about 278k gas, roughly $0.001 at current prices, so the follower's rules are enforced onchain on every order instead of being trusted offchain.
 - Parallel execution. Each follower's copy touches only that follower's account state, so many followers mirroring one trade are independent transactions.
 - The venue. Perpl's order book and positions are fully onchain, which is what lets a contract read the leader's current position and enforce the sizing rule.
 

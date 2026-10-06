@@ -55,7 +55,7 @@ From the repository root:
 node scripts/measure-monad.mjs
 ```
 
-It samples public Monad mainnet RPC for 30 seconds and prints the average block time and how long after a block is first seen as Proposed it is reported Voted and Finalized. On 6 October 2026: 307 ms average block time over 60 seconds, Finalized about 550 ms after Proposed.
+It samples public Monad mainnet RPC for 30 seconds and prints the average block time and how long after a block is first seen as Proposed it is reported Voted and Finalized. On 6 October 2026: 302 to 311 ms average block time across runs (307 ms over 60 seconds), Finalized 548 to 563 ms after Proposed.
 
 Gas for one fully checked copied open on the mainnet fork:
 
@@ -64,7 +64,7 @@ cd contracts
 MONAD_RPC_URL=https://rpc.monad.xyz forge test --mc PerplMainnetFork --mt test_fork_keeperCopyGasProfile -vv
 ```
 
-On 6 October 2026: 279,014 gas. At 102 gwei and MON at about $0.029 that is about $0.0008, roughly $0.001 once the 1.2x gas limit Monad charges is included.
+On 6 October 2026 it ranged from 277,559 to 279,014 gas between runs (it depends on the live order book): about 278k. At 102 gwei and MON at about $0.029 that is about $0.0008, roughly $0.001 once the 1.2x gas limit Monad charges is included.
 
 ## Everything
 

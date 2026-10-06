@@ -1,0 +1,5 @@
+sampling Monad mainnet for 30 s via https://rpc.monad.xyz and wss://rpc.monad.xyz ...
+blocks          100 in 30.2 s (111077937 -> 111078037)
+block time      302 ms average
+voted after     287 ms median (99 blocks)
+finalized after 557 ms median after first seen as Proposed (98 blocks)

@@ -54,7 +54,7 @@ export const CONTRACTS: { name: string; address: string | null; note: string }[]
 export const MEASURED = {
   blockMs: 300,
   finalityAfterProposedMs: 550,
-  gasPerCopiedOpen: "279k",
+  gasPerCopiedOpen: "278k",
   usdPerCopiedOpen: "$0.001",
   tests: 91,
 };

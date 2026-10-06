@@ -29,7 +29,7 @@ One Next.js 16 app in `web/` (Tailwind 4, Motion on the landing page only), depl
   (or commit the copied file) after the fingerprints change.
 - **Team-run addresses**: come from `/v1/config` (`teamRun.*`) and `/v1/demo`; docs page
   `content/docs/team-run-accounts.md` says "pending" until filled in by hand.
-- **Measured numbers** (300 ms, 550 ms, 279k gas, 91 tests): `web/lib/site.ts` `MEASURED` and the docs.
+- **Measured numbers** (300 ms, 550 ms, 278k gas, 91 tests): `web/lib/site.ts` `MEASURED` and the docs.
 
 ## `/v1/stats` shape the page reads
 
