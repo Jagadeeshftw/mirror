@@ -7,8 +7,8 @@ The ops wallet is `0x299E77E58DD37607e4890C761924D829F8ACe82C`. Its key is in `m
 | # | Step | Who | Command / action |
 |---|---|---|---|
 | 1 | Fund the ops wallet per `docs/funding.md` | Jagadeesh | Exchange withdrawal / CCTP / swap |
-| 2 | Deploy and verify KeeperRegistry, MirrorAccountFactory (+ MirrorAccount implementation), register the ops EOA as keeper | Claude | `cd contracts && WRITE_DEPLOYMENT=true KEEPERS=<ops> forge script script/Deploy.s.sol --rpc-url $MONAD_RPC_URL --private-key $OPS_PRIVATE_KEY --broadcast --gas-estimate-multiplier 115 --verify --verifier sourcify` (writes `deployments/143.json`) |
-| 3 | Open the team-run demo leader's Perpl account with 10.00 AUSD | Jagadeesh | `cd contracts && forge script script/DemoLeaderSetup.s.sol --rpc-url https://rpc.monad.xyz --private-key $OPS_PRIVATE_KEY --broadcast --gas-estimate-multiplier 120` |
+| 2 | Deploy and verify KeeperRegistry, MirrorAccountFactory (+ MirrorAccount implementation), register the ops EOA as keeper. Only on the owner's explicit go. | Claude | Plan first, sending nothing: `cd scripts && node deploy-contracts.mjs --network mainnet --cap 25 --keepers <ops>`. Then the same with `--send --expect-nonce <n> --confirm-mainnet`. Every gas limit comes from Monad's `eth_estimateGas` × 1.15 (never forge's simulation). Writes `contracts/deployments/143.json` and prints the `forge verify-contract` commands (no transaction). |
+| 3 | Open the team-run demo leader's Perpl account with 10.00 AUSD | Jagadeesh | **Done 7 Oct 2026:** Perpl account 5416, see `docs/funding-ledger.md`. |
 | 4 | Deploy the engine to Railway (EU region) with the ops key as keeper, relayer and demo leader; deploy the indexer | Claude | `engine/README.md`, `indexer/README.md` |
 | 5 | Team-run demo follower: in the app, create the account (passkey), send 10.00 AUSD to the shown address, deposit, and follow the demo leader with match now | Jagadeesh (in the app) | App |
 | 6 | First live demo cycle: tap "Run demo trade" and "Run blocked trade" | Jagadeesh (in the app) | App |

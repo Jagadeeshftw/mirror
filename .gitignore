@@ -24,3 +24,6 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+
+# Local-fork deployments made by scripts/deploy-contracts.mjs --network local
+contracts/deployments/local-*.json

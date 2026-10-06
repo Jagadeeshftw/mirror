@@ -1,0 +1,9 @@
+{
+  "name": "@mirror/scripts",
+  "private": true,
+  "type": "module",
+  "description": "Operational scripts: Monad measurements and the Monad-estimator contract deployer",
+  "dependencies": {
+    "viem": "^2.57.3"
+  }
+}
