@@ -128,12 +128,16 @@ contract PerplMainnetForkTest is Test {
         });
         vm.prank(keeper);
         assertFalse(account.mirror(o));
+        (IPerplExchange.PositionInfoV2 memory pos,,) = EXCHANGE.getPositionV2(BTC, acct);
+        assertEq(pos.lotLNS, 0);
+        console.log("10x copy vs a 3x rule: BLOCKED onchain (LeverageTooHigh), position still", pos.lotLNS, "lots");
 
         // 3. A compliant copy fills against Perpl's live BTC book (IOC, bounded by slippage).
         o.leverageHdths = 200;
         vm.prank(keeper);
         assertTrue(account.mirror(o));
-        (IPerplExchange.PositionInfoV2 memory pos,,) = EXCHANGE.getPositionV2(BTC, acct);
+        (pos,,) = EXCHANGE.getPositionV2(BTC, acct);
+        console.log("2x copy, 1 lot BTC: FILLED on Perpl's live order book, position now", pos.lotLNS, "lot");
         console.log("lots after open", pos.lotLNS, "deposit", pos.depositCNS);
         assertEq(pos.positionType, 0);
         assertLe(pos.lotLNS, 1);
@@ -142,6 +146,7 @@ contract PerplMainnetForkTest is Test {
         vm.prank(keeper);
         vm.expectRevert(MirrorAccount.NotOwner.selector);
         account.withdraw(1e6);
+        console.log("keeper tries to withdraw: REVERTED (NotOwner)");
 
         // 5. Owner closes everything with a signed action relayed by a third party, then withdraws.
         MirrorAccount.Action memory a = MirrorAccount.Action({

@@ -30,7 +30,7 @@ Mirror is in beta and is being built in the open for Monad's Metropolis hackatho
 
 | Component | Status |
 |---|---|
-| Contracts (MirrorAccount, factory, KeeperRegistry) | Built. 90 passing tests, including fork tests against the live Perpl Exchange and AUSD. |
+| Contracts (MirrorAccount, factory, KeeperRegistry) | Built. 91 passing tests, including fork tests against the live Perpl Exchange and AUSD. |
 | Mainnet deployment | Coming. Addresses will be listed on [Contracts](/docs/contracts). |
 | Copy engine, relayer, API | In progress. |
 | Envio indexer | In progress. |

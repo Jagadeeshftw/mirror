@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const FACTS = [
   {
     icon: IconBolt,
-    value: "~290 ms",
+    value: "~300 ms",
     title: "Block time",
     text: "Measured on mainnet. A leader's fill arrives at the Proposed stage through monadLogs, so the copy can follow within a couple of blocks.",
   },
@@ -30,7 +30,7 @@ const FACTS = [
     icon: IconCoin,
     value: "~$0.001",
     title: "Per copied open",
-    text: "About 278k gas with every policy check, so your rules run onchain on every order. The relayer pays, so you never hold MON.",
+    text: "About 279k gas with every policy check, so your rules run onchain on every order. The relayer pays, so you never hold MON.",
   },
 ];
 

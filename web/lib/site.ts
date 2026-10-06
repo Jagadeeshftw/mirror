@@ -50,11 +50,11 @@ export const CONTRACTS: { name: string; address: string | null; note: string }[]
   { name: "AUSD (collateral)", address: "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a", note: "Third party, live, 6 decimals" },
 ];
 
-/** Measured on Monad mainnet (see docs/why-monad). */
+/** Measured on Monad mainnet on 6 Oct 2026 (node scripts/measure-monad.mjs; fork gas profile). See docs/why-monad. */
 export const MEASURED = {
-  blockMs: 290,
+  blockMs: 300,
   finalityAfterProposedMs: 550,
-  gasPerCopiedOpen: "278k",
+  gasPerCopiedOpen: "279k",
   usdPerCopiedOpen: "$0.001",
-  tests: 90,
+  tests: 91,
 };

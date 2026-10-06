@@ -9,7 +9,7 @@ How the three integrations work together:
 - AUSD is the balance. The follower's AUSD, which is Perpl's collateral, sits in their own MirrorAccount.
 - Perpl is the venue. Every copy is an immediate-or-cancel order on Perpl's onchain order book.
 
-Built and tested (90 tests, including fork tests against live Perpl and AUSD on Monad mainnet):
+Built and tested (91 tests, including fork tests against live Perpl and AUSD on Monad mainnet):
 - per-follower contract that owns its own Perpl account
 - onchain policy: leaders, sizing ratio, max leverage, allowed markets, max notional per market, max slippage, daily loss stop, drawdown stop, expiry
 - "blocked by your rule" recorded as an onchain event

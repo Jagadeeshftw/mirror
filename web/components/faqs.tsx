@@ -29,7 +29,7 @@ const QUESTIONS = [
   {
     question: "How fast are copies?",
     answer:
-      "Built to land within about a second of the leader's fill: we measured Monad blocks at about 290 ms and finality about 550 ms after a block is proposed. Every copy shows its measured latency, its commit state (Proposed, Voted, Finalized) and a link to the transaction on MonadVision.",
+      "Built to land within about a second of the leader's fill: we measured Monad blocks at about 300 ms and finality about 550 ms after a block is proposed. Every copy shows its measured latency, its commit state (Proposed, Voted, Finalized) and a link to the transaction on MonadVision.",
   },
   {
     question: "How are leaders ranked?",

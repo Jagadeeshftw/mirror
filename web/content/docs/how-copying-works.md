@@ -88,4 +88,4 @@ Monad blocks move through three commit states, and the app shows each copy's sta
 | Voted | A quorum has voted on it. |
 | Finalized | It is final. We measured this at about 550 ms after Proposed. |
 
-With blocks at about 290 ms, a copy can land within a couple of blocks of the leader's fill. Measured figures are on [Why Monad](/docs/why-monad).
+With blocks at about 300 ms, a copy can land within a couple of blocks of the leader's fill. Measured figures are on [Why Monad](/docs/why-monad).

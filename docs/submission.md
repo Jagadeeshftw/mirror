@@ -5,7 +5,7 @@ Fields are in the portal's order. Character counts use the portal's counting (UT
 Anything not built yet is marked PENDING. The portal has no final submit: what is saved at the deadline
 (14 Oct 2026, 03:59 UTC) is the entry, so keep the saved form in sync with this file.
 
-Last built: 2026-10-06 08:22 UTC
+Last built: 2026-10-06 15:45 UTC
 
 ## Primary track
 
@@ -32,7 +32,7 @@ Copy the best traders on Perpl with your limits enforced onchain: your own contr
 ```
 
 ### Description *
-Characters: 5,399 / 8,000.
+Characters: 5,481 / 8,000.
 
 ```text
 Mirror lets anyone copy the best traders on Perpl, the fully onchain perpetuals exchange on Monad, without handing money or keys to a copy-trading platform.
@@ -57,10 +57,10 @@ The owner is the follower's passkey, through Mera: one fingerprint or face promp
 
 WHAT IS BUILT TODAY
 - Contracts: MirrorAccount, MirrorAccountFactory (non-upgradeable EIP-1167 clones) and KeeperRegistry, in Solidity 0.8.30 with OpenZeppelin. Written from scratch against Perpl's published Exchange ABI, with no Perpl code reused.
-- 90 passing tests:
+- 91 passing tests:
   - 73 unit tests.
   - 6 fuzz tests, 1,000 runs each.
-  - 8 invariants: keepers and strangers never receive collateral; hostile calls always fail; no exposure increase while paused; deposits stay within the cap; collateral is conserved.
+  - 8 invariant properties (plus a call summary): keepers and strangers never receive collateral; hostile calls always fail; no exposure increase while paused; deposits stay within the cap; collateral is conserved; only the owner changes the policy or pause state.
   - 3 fork tests against the live Perpl Exchange and AUSD on Monad mainnet.
 - On the mainnet fork:
   - A gasless AUSD permit deposit opened a Perpl account owned by the contract.
@@ -81,8 +81,8 @@ PENDING
 - Android app (Expo, Mera passkeys), public stats page, landing page and docs
 
 WHY MONAD
-- Speed is the product. Copy slippage grows with the delay between the leader's fill and the follower's copy. We measured Monad mainnet blocks at about 290 ms, and the Finalized commit state about 550 ms after Proposed. Monad's real-time monadLogs subscription delivers a leader's fill at the Proposed stage.
-- Checking every order is affordable. A copied open with every policy check uses about 278k gas, roughly $0.001 at current prices, so the follower's rules are enforced onchain on every order instead of being trusted offchain.
+- Speed is the product. Copy slippage grows with the delay between the leader's fill and the follower's copy. We measured Monad mainnet blocks at about 300 ms, and the Finalized commit state about 550 ms after Proposed. Monad's real-time monadLogs subscription delivers a leader's fill at the Proposed stage.
+- Checking every order is affordable. A copied open with every policy check uses about 279k gas, roughly $0.001 at current prices, so the follower's rules are enforced onchain on every order instead of being trusted offchain.
 - Parallel execution. Each follower's copy touches only that follower's account state, so many followers mirroring one trade are independent transactions.
 - The venue. Perpl's order book and positions are fully onchain, which is what lets a contract read the leader's current position and enforce the sizing rule.
 
@@ -185,7 +185,7 @@ PENDING. Not recorded yet. Planned 2-minute cut: who I am (solo builder); the pr
 ```
 
 ### Judge access instructions (optional)
-Characters: 3,659 / 8,000. Private to the team, judges and organizers.
+Characters: 3,702 / 8,000. Private to the team, judges and organizers.
 
 ```text
 STATUS RIGHT NOW (6 Oct 2026)
@@ -193,7 +193,7 @@ Not yet usable on a phone. The Android app is not finished; the copy engine and 
 
 What a judge can verify today (needs a computer with Foundry):
 1. Clone https://github.com/Jagadeeshftw/mirror
-2. Run: git submodule update --init --recursive && cd contracts && forge test   (87 tests; the 3 fork tests need the next step)
+2. Run: git submodule update --init --recursive && cd contracts && forge test   (91 tests; the 3 fork tests only touch mainnet state when MONAD_RPC_URL is set, next step)
 3. Run the fork tests against the live Perpl Exchange and AUSD on Monad mainnet: MONAD_RPC_URL=https://rpc.monad.xyz forge test --mc PerplMainnetFork -vv
    This runs a gasless deposit, a blocked copy, a real fill on Perpl's live order book, a keeper withdrawal that reverts, a signed close-all, a follow with match now and an owner withdrawal, all against a fork of mainnet state.
 
@@ -237,7 +237,7 @@ How the three integrations work together:
 - AUSD is the balance. The follower's AUSD, which is Perpl's collateral, sits in their own MirrorAccount.
 - Perpl is the venue. Every copy is an immediate-or-cancel order on Perpl's onchain order book.
 
-Built and tested (90 tests, including fork tests against live Perpl and AUSD on Monad mainnet):
+Built and tested (91 tests, including fork tests against live Perpl and AUSD on Monad mainnet):
 - per-follower contract that owns its own Perpl account
 - onchain policy: leaders, sizing ratio, max leverage, allowed markets, max notional per market, max slippage, daily loss stop, drawdown stop, expiry
 - "blocked by your rule" recorded as an onchain event

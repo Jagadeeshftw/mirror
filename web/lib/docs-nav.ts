@@ -26,6 +26,7 @@ export const DOC_GROUPS: DocGroup[] = [
       { slug: "contracts", title: "Contracts" },
       { slug: "api-reference", title: "API reference" },
       { slug: "indexer", title: "Indexer" },
+      { slug: "run-the-tests", title: "Run the tests" },
     ],
   },
   {

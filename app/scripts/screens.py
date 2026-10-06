@@ -116,7 +116,6 @@ def check(name):
         cls, txt, rid = n.get("class", ""), n.get("text", ""), n.get("resource-id", "")
         if x2 - x1 <= 0 or y2 - y1 <= 0:
             continue
-        in_hscroll = False
         if (x1 < 0 or x2 > W) and not in_hscroll(n):
             ISSUES.append(f"{name}: outside viewport {cls.split('.')[-1]} [{x1},{x2}] text={txt[:40]!r} id={rid}")
         if cls.endswith("TextView") and txt and x2 >= W - 2 and x1 > 2 and not in_hscroll(n):

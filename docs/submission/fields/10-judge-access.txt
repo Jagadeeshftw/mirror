@@ -3,7 +3,7 @@ Not yet usable on a phone. The Android app is not finished; the copy engine and 
 
 What a judge can verify today (needs a computer with Foundry):
 1. Clone https://github.com/Jagadeeshftw/mirror
-2. Run: git submodule update --init --recursive && cd contracts && forge test   (87 tests; the 3 fork tests need the next step)
+2. Run: git submodule update --init --recursive && cd contracts && forge test   (91 tests; the 3 fork tests only touch mainnet state when MONAD_RPC_URL is set, next step)
 3. Run the fork tests against the live Perpl Exchange and AUSD on Monad mainnet: MONAD_RPC_URL=https://rpc.monad.xyz forge test --mc PerplMainnetFork -vv
    This runs a gasless deposit, a blocked copy, a real fill on Perpl's live order book, a keeper withdrawal that reverts, a signed close-all, a follow with match now and an owner withdrawal, all against a fork of mainnet state.
 

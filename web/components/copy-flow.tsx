@@ -76,7 +76,7 @@ export const CopyFlow = () => {
                 ))}
               </div>
               <p className="mt-3 font-mono text-[11px] text-muted-foreground">
-                MirrorAccount.mirror() · ~278k gas · ≈ $0.001
+                MirrorAccount.mirror() · ~279k gas · ≈ $0.001
               </p>
             </Node>
 

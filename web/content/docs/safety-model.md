@@ -25,7 +25,7 @@ There is no admin, no upgrade path and no pause switch outside the owner. Accoun
 
 ## Invariants under test
 
-The contracts ship with 90 passing tests: 73 unit tests, 6 fuzz tests (1,000 runs each), 8 invariants and 3 fork tests against the live Perpl Exchange and AUSD on Monad mainnet. The invariants assert that:
+The contracts ship with 91 passing tests: 73 unit tests, 6 fuzz tests (1,000 runs each), 8 invariant properties plus a call summary, and 3 fork tests against the live Perpl Exchange and AUSD on Monad mainnet. The invariants assert that:
 
 - keepers and strangers never receive collateral,
 - hostile calls from keepers and strangers always fail,

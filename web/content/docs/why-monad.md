@@ -9,9 +9,9 @@ Copy trading has one enemy: delay. Every millisecond between the leader's fill a
 
 | Metric | Measured | Why it matters |
 |---|---|---|
-| Block time | **~290 ms** on Monad mainnet | A copy can land within a couple of blocks of the leader's fill. |
+| Block time | **~300 ms** on Monad mainnet (307 ms average over 60 s on 6 Oct 2026) | A copy can land within a couple of blocks of the leader's fill. |
 | Finality | **~550 ms** from Proposed to Finalized | Copies are final in about half a second, and the app shows each state. |
-| Gas per copied open | **~278k gas**, about **$0.001** at current prices | Every policy check runs onchain on every order, instead of being trusted offchain. |
+| Gas per copied open | **~279k gas**, about **$0.001** at current prices | Every policy check runs onchain on every order, instead of being trusted offchain. |
 | Perpl fees for a 1-lot BTC copy round trip | 0.0006 AUSD, on the mainnet fork | Small copies stay worth making. |
 
 The block-time and finality figures were measured on Monad mainnet; the gas and fee figures come from the fork tests against the live Perpl Exchange and AUSD.

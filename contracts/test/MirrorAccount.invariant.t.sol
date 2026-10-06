@@ -32,6 +32,7 @@ contract MirrorHandler is Test {
     uint256 public mirrorsExecuted;
     uint256 public mirrorsBlocked;
     uint256 public ownerWithdrawn;
+    bool public expectedPaused;
 
     constructor(
         MirrorAccount account_,
@@ -215,6 +216,7 @@ contract MirrorHandler is Test {
     function ownerPauses(bool p) external {
         vm.prank(owner);
         account.setPaused(p);
+        expectedPaused = p;
     }
 
     function warp(uint32 secs) external {
@@ -267,6 +269,7 @@ contract MirrorHandler is Test {
 
 contract MirrorInvariantTest is MirrorBase {
     MirrorHandler internal handler;
+    uint40 internal policyExpiry;
 
     function setUp() public override {
         super.setUp();
@@ -277,6 +280,7 @@ contract MirrorInvariantTest is MirrorBase {
         p.dailyLossBps = 300;
         p.drawdownBps = 800;
         p.expiry = uint40(block.timestamp + 365 days);
+        policyExpiry = p.expiry;
         vm.prank(owner);
         account.setPolicy(p);
 
@@ -320,6 +324,24 @@ contract MirrorInvariantTest is MirrorBase {
     function invariant_collateralConserved() public view {
         uint256 accounted = ausd.balanceOf(owner) + ausd.balanceOf(address(account)) + ausd.balanceOf(address(ex));
         assertEq(accounted, ausd.totalSupply());
+    }
+
+    /// Only the owner changes the policy or the pause state: every rule and the pause flag are exactly
+    /// what the owner last set, whatever keepers, strangers and forged signatures attempted.
+    function invariant_onlyOwnerChangesPolicy() public view {
+        assertEq(account.paused(), handler.expectedPaused(), "pause state changed by a non-owner");
+        assertEq(account.maxLeverageHdths(), 500);
+        assertEq(account.maxSlippageBps(), 50);
+        assertEq(account.dailyLossBps(), 300);
+        assertEq(account.drawdownBps(), 800);
+        assertEq(account.expiry(), policyExpiry);
+        MirrorAccount.LeaderRule[] memory ls = account.leaders();
+        assertEq(ls.length, 1);
+        assertEq(ls[0].accountId, LEADER);
+        assertEq(ls[0].ratioBps, 100);
+        assertEq(account.marketIds().length, 2);
+        (,,, uint64 btcCap) = account.markets(BTC);
+        assertEq(btcCap, 15e6);
     }
 
     /// Logged so a run shows the copy path was exercised (executed and blocked copies, owner withdrawals).
