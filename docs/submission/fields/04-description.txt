@@ -34,13 +34,14 @@ WHAT IS BUILT TODAY
   - Fees for the round trip: 0.0006 AUSD.
   - A signed follow with match now, relayed by a third party, set the policy and filled the leader-matching order on the live book in the same transaction.
 
-PENDING (NOT BUILT YET)
+- Copy engine and relayer (TypeScript, viem): watches Perpl position events at Monad's Proposed stage, plans copies with the contract's own sizing rule, simulates, then submits with explicit gas limits; tracks Proposed, Voted and Finalized commit states and leader-to-copy latency; relays users' signed actions gaslessly; uses Perpl's REST and WebSocket API for market config, marks, order book and trades. Passes a 20-check end-to-end run on a local fork of Monad mainnet (match-now follow, copied trade, blocked trade, stats excluding team-run accounts). Not deployed yet.
+- Envio HyperIndex indexer over Perpl and Mirror events: leader stats with 7d/30d/90d windows, equity curves, decoded blocked copies, follower PnL attributed per leader. 24 tests; a live sync of recent mainnet blocks decoded 1,700 real Perpl position events. Not deployed yet.
+
+PENDING
 - Mainnet deployment and verified contract addresses
-- Copy engine and relayer
-- Envio indexer with leader stats and follower PnL attribution
-- Nansen wallet intelligence in the leader ranking
-- Android app (Expo, Mera passkeys) and the public stats page
-- Landing page and docs
+- Engine and indexer hosting
+- Nansen data in the live ranking (client built; no paid calls made yet)
+- Android app (Expo, Mera passkeys), public stats page, landing page and docs
 
 WHY MONAD
 - Speed is the product. Copy slippage grows with the delay between the leader's fill and the follower's copy. We measured Monad mainnet blocks at about 290 ms, and the Finalized commit state about 550 ms after Proposed. Monad's real-time monadLogs subscription delivers a leader's fill at the Proposed stage.

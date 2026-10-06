@@ -5,7 +5,7 @@ Fields are in the portal's order. Character counts use the portal's counting (UT
 Anything not built yet is marked PENDING. The portal has no final submit: what is saved at the deadline
 (14 Oct 2026, 03:59 UTC) is the entry, so keep the saved form in sync with this file.
 
-Last built: 2026-10-06 06:49 UTC
+Last built: 2026-10-06 07:29 UTC
 
 ## Primary track
 
@@ -32,7 +32,7 @@ Copy the best traders on Perpl with your limits enforced onchain: your own contr
 ```
 
 ### Description *
-Characters: 4,608 / 8,000.
+Characters: 5,399 / 8,000.
 
 ```text
 Mirror lets anyone copy the best traders on Perpl, the fully onchain perpetuals exchange on Monad, without handing money or keys to a copy-trading platform.
@@ -71,13 +71,14 @@ WHAT IS BUILT TODAY
   - Fees for the round trip: 0.0006 AUSD.
   - A signed follow with match now, relayed by a third party, set the policy and filled the leader-matching order on the live book in the same transaction.
 
-PENDING (NOT BUILT YET)
+- Copy engine and relayer (TypeScript, viem): watches Perpl position events at Monad's Proposed stage, plans copies with the contract's own sizing rule, simulates, then submits with explicit gas limits; tracks Proposed, Voted and Finalized commit states and leader-to-copy latency; relays users' signed actions gaslessly; uses Perpl's REST and WebSocket API for market config, marks, order book and trades. Passes a 20-check end-to-end run on a local fork of Monad mainnet (match-now follow, copied trade, blocked trade, stats excluding team-run accounts). Not deployed yet.
+- Envio HyperIndex indexer over Perpl and Mirror events: leader stats with 7d/30d/90d windows, equity curves, decoded blocked copies, follower PnL attributed per leader. 24 tests; a live sync of recent mainnet blocks decoded 1,700 real Perpl position events. Not deployed yet.
+
+PENDING
 - Mainnet deployment and verified contract addresses
-- Copy engine and relayer
-- Envio indexer with leader stats and follower PnL attribution
-- Nansen wallet intelligence in the leader ranking
-- Android app (Expo, Mera passkeys) and the public stats page
-- Landing page and docs
+- Engine and indexer hosting
+- Nansen data in the live ranking (client built; no paid calls made yet)
+- Android app (Expo, Mera passkeys), public stats page, landing page and docs
 
 WHY MONAD
 - Speed is the product. Copy slippage grows with the delay between the leader's fill and the follower's copy. We measured Monad mainnet blocks at about 290 ms, and the Finalized commit state about 550 ms after Proposed. Monad's real-time monadLogs subscription delivers a leader's fill at the Proposed stage.
@@ -184,11 +185,11 @@ PENDING. Not recorded yet. Planned 2-minute cut: who I am (solo builder); the pr
 ```
 
 ### Judge access instructions (optional)
-Characters: 3,619 / 8,000. Private to the team, judges and organizers.
+Characters: 3,659 / 8,000. Private to the team, judges and organizers.
 
 ```text
 STATUS RIGHT NOW (6 Oct 2026)
-Not yet usable on a phone. The Android app, copy engine and indexer are not built, and the contracts are not deployed on mainnet. The steps marked PENDING below describe the judge path once those ship; this section will be updated with real links, addresses and tx hashes.
+Not yet usable on a phone. The Android app is not finished; the copy engine and indexer are built and tested but not deployed; the contracts are not deployed on mainnet. The steps marked PENDING below describe the judge path once those ship; this section will be updated with real links, addresses and tx hashes.
 
 What a judge can verify today (needs a computer with Foundry):
 1. Clone https://github.com/Jagadeeshftw/mirror
@@ -263,10 +264,10 @@ PENDING. Needs the app and the mainnet contracts. The planned cut shows exactly 
 ### Perpl: Best use of Perpl's API
 
 #### Q1. Submit a demo video (up to 2 mins) showing your trading bot or automation system on Perpl with demonstrated real on-chain activity.
-Characters: 213.
+Characters: 295.
 
 ```text
-PENDING. The copy engine is not built yet. The planned video shows:
+PENDING (video). The copy engine is built and passes an end-to-end run on a local fork of Monad mainnet; it is not deployed yet. The video will show:
 - a leader fill arriving
 - the policy pre-check
 - the copied order landing on Perpl mainnet, with latency and tx links
@@ -274,12 +275,12 @@ PENDING. The copy engine is not built yet. The planned video shows:
 ```
 
 #### Q2. Link to your trading bot or automation system on Perpl with demonstrated real on-chain activity.
-Characters: 405.
+Characters: 522.
 
 ```text
-PENDING. Planned: the public stats page listing every copy the engine has executed, with MonadVision links and the keeper address.
+PENDING (link). Planned: the public stats page listing every copy the engine has executed, with MonadVision links and the keeper address.
 
-The engine will use Perpl's public REST context and WebSocket market data (marks, order books, trades) to price and pre-check copies. It then executes onchain through each follower's MirrorAccount.
+Built: the engine uses Perpl's public REST context (market config, minimum sizes) and WebSocket market data (marks, best bid and ask, recent trades) to price, size and pre-check every copy and every match-now quote, and exposes them at /v1/markets. It executes onchain through each follower's MirrorAccount.
 
 Open question for Perpl: does this hybrid count as API use? Not yet asked.
 ```
@@ -338,10 +339,10 @@ PENDING.
 ### Nansen AI: Best use of Nansen
 
 #### Q1. Describe how your project meaningfully integrates Nansen API endpoint, MCP tool, and/or the Nansen CLI
-Characters: 337.
+Characters: 464.
 
 ```text
-PENDING. Not integrated yet. The plan is for Nansen wallet intelligence on each leader's address to feed the leaderboard's ranking score, not just to be displayed. The calls would be paid per call with x402 in USDC on Monad.
+PENDING (live data). The engine's Nansen module is built: an x402 client that pays per call in USDC on Monad, and leader enrichment (Monad PnL summary and Hyperliquid positions for the same address) that adjusts the leaderboard's ranking score rather than only being displayed. It is tested against a mock 402 server; no paid calls have been made yet.
 
 Nansen's coverage of Monad wallets has not been verified yet. The first paid call is waiting on wallet funding.
 ```
@@ -356,10 +357,10 @@ PENDING.
 ### Envio: Best Use of Envio
 
 #### Q1. Describe how your project meaningfully uses Envio's HyperIndex, HyperSync or HyperRPC to power real on-chain data in your app — not just installed, but actually driving a feature.
-Characters: 315.
+Characters: 631.
 
 ```text
-PENDING. Not built. The plan is a HyperIndex indexer over Perpl Exchange events and our Mirror events, from Perpl's mainnet deploy block 54,773,010. It would power:
+Built, not deployed yet. A HyperIndex indexer over Perpl Exchange position events and Mirror events, from Perpl's mainnet deploy block 54,773,010, with Mirror accounts registered dynamically from the factory. It derives leader stats with 7d, 30d and 90d windows, equity curves, decoded blocked copies and follower PnL attributed to each leader by FIFO. 24 handler tests pass, and a live sync of recent mainnet blocks decoded 1,700 real Perpl position events. In the app it powers:
 - the leaderboard
 - leader profiles, with derived PnL, drawdown, win rate and consistency
 - follower PnL attributed per leader

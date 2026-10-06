@@ -35,7 +35,7 @@ PENDING. Needs the app and the mainnet contracts. The planned cut shows exactly 
 
 ### Q1. Submit a demo video (up to 2 mins) showing your trading bot or automation system on Perpl with demonstrated real on-chain activity.
 <!--answer-->
-PENDING. The copy engine is not built yet. The planned video shows:
+PENDING (video). The copy engine is built and passes an end-to-end run on a local fork of Monad mainnet; it is not deployed yet. The video will show:
 - a leader fill arriving
 - the policy pre-check
 - the copied order landing on Perpl mainnet, with latency and tx links
@@ -44,9 +44,9 @@ PENDING. The copy engine is not built yet. The planned video shows:
 
 ### Q2. Link to your trading bot or automation system on Perpl with demonstrated real on-chain activity.
 <!--answer-->
-PENDING. Planned: the public stats page listing every copy the engine has executed, with MonadVision links and the keeper address.
+PENDING (link). Planned: the public stats page listing every copy the engine has executed, with MonadVision links and the keeper address.
 
-The engine will use Perpl's public REST context and WebSocket market data (marks, order books, trades) to price and pre-check copies. It then executes onchain through each follower's MirrorAccount.
+Built: the engine uses Perpl's public REST context (market config, minimum sizes) and WebSocket market data (marks, best bid and ask, recent trades) to price, size and pre-check every copy and every match-now quote, and exposes them at /v1/markets. It executes onchain through each follower's MirrorAccount.
 
 Open question for Perpl: does this hybrid count as API use? Not yet asked.
 <!--/answer-->
@@ -98,7 +98,7 @@ PENDING.
 
 ### Q1. Describe how your project meaningfully integrates Nansen API endpoint, MCP tool, and/or the Nansen CLI
 <!--answer-->
-PENDING. Not integrated yet. The plan is for Nansen wallet intelligence on each leader's address to feed the leaderboard's ranking score, not just to be displayed. The calls would be paid per call with x402 in USDC on Monad.
+PENDING (live data). The engine's Nansen module is built: an x402 client that pays per call in USDC on Monad, and leader enrichment (Monad PnL summary and Hyperliquid positions for the same address) that adjusts the leaderboard's ranking score rather than only being displayed. It is tested against a mock 402 server; no paid calls have been made yet.
 
 Nansen's coverage of Monad wallets has not been verified yet. The first paid call is waiting on wallet funding.
 <!--/answer-->
@@ -112,7 +112,7 @@ PENDING.
 
 ### Q1. Describe how your project meaningfully uses Envio's HyperIndex, HyperSync or HyperRPC to power real on-chain data in your app — not just installed, but actually driving a feature.
 <!--answer-->
-PENDING. Not built. The plan is a HyperIndex indexer over Perpl Exchange events and our Mirror events, from Perpl's mainnet deploy block 54,773,010. It would power:
+Built, not deployed yet. A HyperIndex indexer over Perpl Exchange position events and Mirror events, from Perpl's mainnet deploy block 54,773,010, with Mirror accounts registered dynamically from the factory. It derives leader stats with 7d, 30d and 90d windows, equity curves, decoded blocked copies and follower PnL attributed to each leader by FIFO. 24 handler tests pass, and a live sync of recent mainnet blocks decoded 1,700 real Perpl position events. In the app it powers:
 - the leaderboard
 - leader profiles, with derived PnL, drawdown, win rate and consistency
 - follower PnL attributed per leader

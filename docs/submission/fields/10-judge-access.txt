@@ -1,5 +1,5 @@
 STATUS RIGHT NOW (6 Oct 2026)
-Not yet usable on a phone. The Android app, copy engine and indexer are not built, and the contracts are not deployed on mainnet. The steps marked PENDING below describe the judge path once those ship; this section will be updated with real links, addresses and tx hashes.
+Not yet usable on a phone. The Android app is not finished; the copy engine and indexer are built and tested but not deployed; the contracts are not deployed on mainnet. The steps marked PENDING below describe the judge path once those ship; this section will be updated with real links, addresses and tx hashes.
 
 What a judge can verify today (needs a computer with Foundry):
 1. Clone https://github.com/Jagadeeshftw/mirror
