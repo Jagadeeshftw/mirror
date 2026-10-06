@@ -186,4 +186,132 @@ contract PerplMainnetForkTest is Test {
         account.mirror(o);
         console.log("gas used by one copied open", g - gasleft());
     }
+
+    function _leaderOrder(uint256 mark, uint8 t, uint256 lots, uint256 lev)
+        internal
+        pure
+        returns (IPerplExchange.OrderDesc memory d)
+    {
+        bool bid = t == 0 || t == 3;
+        d.orderDescId = uint256(keccak256(abi.encode(t, lots, lev)));
+        d.perpId = BTC;
+        d.orderType = t;
+        d.pricePNS = bid ? mark * 10_050 / 10_000 : mark * 9_950 / 10_000;
+        d.lotLNS = lots;
+        d.immediateOrCancel = true;
+        d.leverageHdths = lev;
+        d.maxNegPnlCollatBPS = 1000;
+    }
+
+    /// Follow with match now against the live Perpl book, plus the gas of every transaction type the
+    /// relayer, keeper and demo leader send (used to size the MON budget).
+    function test_fork_followMatchNowAndGasProfile() public {
+        if (!forked) return;
+        require(leader != 0, "no suitable live leader found");
+        uint256 g;
+
+        g = gasleft();
+        MirrorAccount acc2 = factory.createAccount(owner, bytes32("gas"));
+        console.log("gas factory.createAccount        ", g - gasleft());
+
+        // deposit with permit on the new account
+        account = acc2;
+        g = gasleft();
+        _depositWithRealPermit(11e6);
+        console.log("gas depositWithPermit (first)    ", g - gasleft());
+
+        (, uint256 mark,) = EXCHANGE.getPositionV2(BTC, account.perplAccountId());
+        uint256 target = leaderLots * 100 / 10_000; // ratio 1%
+        if (target == 0) target = 1;
+        uint256 lots = target > 3 ? 3 : target; // keep the notional tiny
+        MirrorAccount.MirrorOrder[] memory m = new MirrorAccount.MirrorOrder[](1);
+        m[0] = MirrorAccount.MirrorOrder({
+            leaderAccountId: leader,
+            perpId: uint32(BTC),
+            orderType: 0,
+            lotLNS: uint64(lots),
+            pricePNS: uint64(mark * 10_060 / 10_000),
+            leverageHdths: 200,
+            maxMatches: 50,
+            leaderRef: bytes32(0)
+        });
+        MirrorAccount.Action memory a = MirrorAccount.Action({
+            kind: account.ACTION_FOLLOW(),
+            data: abi.encode(_policy(), m),
+            nonce: account.actionNonce(),
+            deadline: block.timestamp + 10 minutes
+        });
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerKey, account.actionDigest(a));
+        g = gasleft();
+        bytes memory res = account.execute(a, abi.encodePacked(r, s, v));
+        console.log("gas execute(follow + match now)  ", g - gasleft());
+        bool[] memory ok = abi.decode(res, (bool[]));
+        assertTrue(ok[0], "match now was blocked");
+        (IPerplExchange.PositionInfoV2 memory pos,,) = EXCHANGE.getPositionV2(BTC, account.perplAccountId());
+        console.log("lots after match now", pos.lotLNS, "of", lots);
+        assertEq(pos.positionType, 0);
+        assertGt(pos.lotLNS, 0, "match now did not fill on the live book");
+
+        // keeper: blocked copy (leverage above policy)
+        MirrorAccount.MirrorOrder memory o = m[0];
+        o.lotLNS = 1;
+        o.leverageHdths = 1000;
+        vm.prank(keeper);
+        g = gasleft();
+        account.mirror(o);
+        console.log("gas mirror (blocked)             ", g - gasleft());
+
+        // keeper: close one lot
+        o.orderType = 2;
+        o.pricePNS = uint64(mark * 9_940 / 10_000);
+        o.leverageHdths = 0;
+        vm.prank(keeper);
+        g = gasleft();
+        account.mirror(o);
+        console.log("gas mirror (close)               ", g - gasleft());
+
+        // owner: close all, then withdraw (both relayed)
+        a = MirrorAccount.Action({
+            kind: account.ACTION_CLOSE_ALL(),
+            data: abi.encode(uint16(100)),
+            nonce: account.actionNonce(),
+            deadline: block.timestamp + 10 minutes
+        });
+        (v, r, s) = vm.sign(ownerKey, account.actionDigest(a));
+        g = gasleft();
+        account.execute(a, abi.encodePacked(r, s, v));
+        console.log("gas execute(closeAll)            ", g - gasleft());
+
+        uint256 eq = account.equity();
+        a = MirrorAccount.Action({
+            kind: account.ACTION_WITHDRAW(),
+            data: abi.encode(eq),
+            nonce: account.actionNonce(),
+            deadline: block.timestamp + 10 minutes
+        });
+        (v, r, s) = vm.sign(ownerKey, account.actionDigest(a));
+        g = gasleft();
+        account.execute(a, abi.encodePacked(r, s, v));
+        console.log("gas execute(withdraw)            ", g - gasleft());
+        console.log("equity returned (AUSD units)", eq);
+
+        // demo leader: a plain EOA account on Perpl
+        address demoLeader = makeAddr("demo-leader");
+        vm.prank(address(EXCHANGE));
+        AUSD.transfer(demoLeader, 11e6);
+        vm.startPrank(demoLeader);
+        g = gasleft();
+        AUSD.approve(address(EXCHANGE), 11e6);
+        console.log("gas leader approve               ", g - gasleft());
+        g = gasleft();
+        EXCHANGE.createAccount(11e6);
+        console.log("gas leader createAccount         ", g - gasleft());
+        g = gasleft();
+        EXCHANGE.execOrder(_leaderOrder(mark, 0, 1, 200));
+        console.log("gas leader open 1 lot            ", g - gasleft());
+        g = gasleft();
+        EXCHANGE.execOrder(_leaderOrder(mark, 2, 1, 0));
+        console.log("gas leader close 1 lot           ", g - gasleft());
+        vm.stopPrank();
+    }
 }

@@ -64,6 +64,12 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
     uint8 public constant ACTION_WITHDRAW = 4;
     uint8 public constant ACTION_EXCHANGE_CALL = 5;
     uint8 public constant ACTION_SWEEP = 6;
+    uint8 public constant ACTION_FOLLOW = 7;
+    uint8 public constant ACTION_MATCH_NOW = 8;
+
+    /// leaderRef recorded on orders the owner places with match-now, so indexers can tell them apart.
+    bytes32 public constant MATCH_NOW_REF = keccak256("MIRROR_MATCH_NOW");
+    uint256 public constant MAX_MATCH_ORDERS = 16;
 
     bytes32 public constant ACTION_TYPEHASH =
         keccak256("Action(uint8 kind,bytes data,uint256 nonce,uint256 deadline)");
@@ -142,7 +148,8 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         ExceedsLeaderTarget,
         ExceedsMaxNotional,
         DailyLossStop,
-        DrawdownStop
+        DrawdownStop,
+        LeverageTooLow
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -228,6 +235,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
     event ExchangeCalled(bytes data, bytes result);
     event Swept(address indexed token, uint256 amount);
     event ActionExecuted(uint8 indexed kind, uint256 nonce);
+    event Followed(uint256 matchOrders, uint256 matchesExecuted);
     event RiskUpdated(uint32 day, uint128 dayStartEquity, uint128 highWaterEquity, uint256 equity);
 
     // ---------------------------------------------------------------------------------------------
@@ -252,6 +260,8 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
     error BadSignature();
     error UnknownAction(uint8 kind);
     error ExchangeCallFailed(bytes result);
+    error MatchNowOpensOnly();
+    error TooManyMatchOrders();
 
     // ---------------------------------------------------------------------------------------------
     // Construction
@@ -306,6 +316,12 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
     /// @return executed True when the order was sent to Perpl; false when a policy rule blocked it (a
     ///         {Blocked} event records which rule and the numbers).
     function mirror(MirrorOrder calldata o) external nonReentrant onlyKeeper returns (bool executed) {
+        return _copy(o, msg.sender);
+    }
+
+    /// @dev The single copy path shared by keeper copies and owner match-now orders. Every rule is checked
+    ///      the same way regardless of who submits the order.
+    function _copy(MirrorOrder memory o, address actor) internal returns (bool) {
         uint256 acct = perplAccountId;
         if (acct == 0) revert NoPerplAccount();
         if (o.orderType > CLOSE_SHORT) revert InvalidOrderType();
@@ -319,7 +335,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
                 _checkOpen(o, side, lotsBefore, mark, markValid);
             if (reason != BlockReason.None) {
                 emit Blocked(
-                    msg.sender, o.leaderAccountId, o.perpId, reason, o.orderType, o.lotLNS, limit, actual, o.leaderRef
+                    actor, o.leaderAccountId, o.perpId, reason, o.orderType, o.lotLNS, limit, actual, o.leaderRef
                 );
                 return false;
             }
@@ -329,14 +345,14 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
             if (o.lotLNS > lotsBefore) revert CloseExceedsPosition();
             if (!markValid) {
                 emit Blocked(
-                    msg.sender, o.leaderAccountId, o.perpId, BlockReason.StaleMark, o.orderType, o.lotLNS, 0, 0, o.leaderRef
+                    actor, o.leaderAccountId, o.perpId, BlockReason.StaleMark, o.orderType, o.lotLNS, 0, 0, o.leaderRef
                 );
                 return false;
             }
             (bool ok, uint256 bound) = _priceWithinSlippage(o.orderType, o.pricePNS, mark, maxSlippageBps);
             if (!ok) {
                 emit Blocked(
-                    msg.sender,
+                    actor,
                     o.leaderAccountId,
                     o.perpId,
                     BlockReason.SlippageTooHigh,
@@ -370,7 +386,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         }
 
         emit Mirrored(
-            msg.sender,
+            actor,
             o.leaderAccountId,
             o.perpId,
             o.orderType,
@@ -385,7 +401,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
     }
 
     /// @dev Every rule an opening (exposure-increasing) order must satisfy before it is sent.
-    function _checkOpen(MirrorOrder calldata o, uint8 side, uint256 lotsBefore, uint256 mark, bool markValid)
+    function _checkOpen(MirrorOrder memory o, uint8 side, uint256 lotsBefore, uint256 mark, bool markValid)
         internal
         returns (BlockReason, uint256, uint256)
     {
@@ -400,7 +416,10 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         (bool leaderAllowed,) = _leaderRatio(o.leaderAccountId);
         if (!leaderAllowed) return (BlockReason.LeaderNotAllowed, 0, o.leaderAccountId);
 
-        if (o.leverageHdths == 0 || o.leverageHdths > maxLeverageHdths) {
+        if (o.leverageHdths < MIN_LEVERAGE_HDTHS) {
+            return (BlockReason.LeverageTooLow, MIN_LEVERAGE_HDTHS, o.leverageHdths);
+        }
+        if (o.leverageHdths > maxLeverageHdths) {
             return (BlockReason.LeverageTooHigh, maxLeverageHdths, o.leverageHdths);
         }
         if (lotsBefore != 0 && side != orderSide) return (BlockReason.FlipNotAllowed, 0, lotsBefore);
@@ -518,6 +537,23 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         _setPolicy(p);
     }
 
+    /// @notice Set the policy, resume copying, and immediately bring the account to the leaders' current
+    ///         positions ("match now"). Each match order goes through exactly the same checks as a keeper
+    ///         copy, so it can never exceed ratio x the leader's current same-side position.
+    function follow(Policy calldata p, MirrorOrder[] calldata matches)
+        external
+        onlyOwner
+        nonReentrant
+        returns (bool[] memory executed)
+    {
+        return _follow(p, matches);
+    }
+
+    /// @notice Bring the account to the leaders' current positions under the existing policy.
+    function matchNow(MirrorOrder[] calldata matches) external onlyOwner nonReentrant returns (bool[] memory executed) {
+        return _matchNow(matches);
+    }
+
     function setPaused(bool p) external onlyOwner nonReentrant {
         _setPaused(p);
     }
@@ -563,6 +599,11 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
             result = _exchangeCall(abi.decode(a.data, (bytes)));
         } else if (a.kind == ACTION_SWEEP) {
             _sweep(abi.decode(a.data, (address)));
+        } else if (a.kind == ACTION_FOLLOW) {
+            (Policy memory p, MirrorOrder[] memory m) = abi.decode(a.data, (Policy, MirrorOrder[]));
+            result = abi.encode(_follow(p, m));
+        } else if (a.kind == ACTION_MATCH_NOW) {
+            result = abi.encode(_matchNow(abi.decode(a.data, (MirrorOrder[]))));
         } else {
             revert UnknownAction(a.kind);
         }
@@ -627,6 +668,28 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         emit PolicyUpdated(
             p.maxLeverageHdths, p.maxSlippageBps, p.dailyLossBps, p.drawdownBps, p.expiry, p.leaders, p.markets
         );
+    }
+
+    function _follow(Policy memory p, MirrorOrder[] memory matches) internal returns (bool[] memory executed) {
+        _setPolicy(p);
+        if (paused) _setPaused(false);
+        executed = _matchNow(matches);
+        uint256 n;
+        for (uint256 i; i < executed.length; ++i) {
+            if (executed[i]) ++n;
+        }
+        emit Followed(matches.length, n);
+    }
+
+    function _matchNow(MirrorOrder[] memory matches) internal returns (bool[] memory executed) {
+        if (matches.length > MAX_MATCH_ORDERS) revert TooManyMatchOrders();
+        executed = new bool[](matches.length);
+        for (uint256 i; i < matches.length; ++i) {
+            MirrorOrder memory o = matches[i];
+            if (o.orderType != OPEN_LONG && o.orderType != OPEN_SHORT) revert MatchNowOpensOnly();
+            o.leaderRef = MATCH_NOW_REF;
+            executed[i] = _copy(o, owner);
+        }
     }
 
     function _setPaused(bool p) internal {

@@ -357,7 +357,8 @@ contract MirrorTest is MirrorBase {
 
     function test_blocked_leverageTooHigh() public {
         _expectBlocked(_order(OPEN_LONG, BTC, 10, 859_000, 2000), MirrorAccount.BlockReason.LeverageTooHigh);
-        _expectBlocked(_order(OPEN_LONG, BTC, 10, 859_000, 0), MirrorAccount.BlockReason.LeverageTooHigh);
+        _expectBlocked(_order(OPEN_LONG, BTC, 10, 859_000, 0), MirrorAccount.BlockReason.LeverageTooLow);
+        _expectBlocked(_order(OPEN_LONG, BTC, 10, 859_000, 99), MirrorAccount.BlockReason.LeverageTooLow);
     }
 
     function test_blocked_slippage_bidAboveBound() public {

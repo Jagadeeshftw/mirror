@@ -56,7 +56,7 @@ contract MirrorFuzzTest is MirrorBase {
             if (opening) {
                 uint8 want = orderType == OPEN_LONG ? LONG : SHORT;
                 assertLe(lev, account.maxLeverageHdths(), "leverage above max");
-                assertGt(lev, 0);
+                assertGe(lev, 100);
                 if (lotsAfter != 0) assertEq(sideAfter, want, "flipped side");
                 assertLe(lotsAfter, account.targetLots(perp, want), "above leader target");
                 (,,, uint64 cap) = account.markets(perp);

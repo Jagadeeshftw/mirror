@@ -124,7 +124,7 @@ contract MirrorHandler is Test {
             if (opening) {
                 uint8 want = orderType == 0 ? 0 : 1;
                 if (pausedBefore && lotsAfter > lotsBefore) ++increasesWhilePaused;
-                if (lev == 0 || lev > account.maxLeverageHdths()) ++policyViolations;
+                if (lev < 100 || lev > account.maxLeverageHdths()) ++policyViolations;
                 if (lotsAfter != 0 && sideAfter != want) ++policyViolations;
                 if (lotsAfter > account.targetLots(perp, want)) ++policyViolations;
                 (,,, uint64 cap) = account.markets(perp);
@@ -134,6 +134,44 @@ contract MirrorHandler is Test {
                 if (lotsAfter > lotsBefore) ++policyViolations;
                 if (lotsAfter != 0 && sideAfter != sideBefore) ++policyViolations;
             }
+        } catch {
+            (, uint256 lotsAfter) = _pos(perp);
+            if (lotsAfter != lotsBefore) ++policyViolations;
+        }
+    }
+
+    /// The owner's match-now goes through the same checks; its outcome must satisfy the same invariant.
+    function ownerMatchesNow(uint256 perpSeed, uint64 lots, int16 offsetBps, uint16 lev) external {
+        uint256 perp = perps[perpSeed % 2];
+        (IPerplExchange.PositionInfoV2 memory lp,,) = IPerplExchange(address(ex)).getPositionV2(perp, LEADER);
+        uint8 side = lp.lotLNS == 0 ? 0 : lp.positionType;
+        (, , uint256 mark, ,) = ex.perps(perp);
+        offsetBps = int16(bound(offsetBps, -100, 100));
+        MirrorAccount.MirrorOrder[] memory m = new MirrorAccount.MirrorOrder[](1);
+        m[0] = MirrorAccount.MirrorOrder({
+            leaderAccountId: LEADER,
+            perpId: uint32(perp),
+            orderType: side,
+            lotLNS: uint64(bound(lots, 1, 30)),
+            pricePNS: uint64(uint256(int256(mark) + int256(mark) * offsetBps / 10_000)),
+            leverageHdths: uint16(bound(lev, 50, 800)),
+            maxMatches: 0,
+            leaderRef: bytes32(0)
+        });
+        (uint8 sideBefore, uint256 lotsBefore) = _pos(perp);
+        vm.prank(owner);
+        try account.matchNow(m) returns (bool[] memory ok) {
+            (uint8 sideAfter, uint256 lotsAfter) = _pos(perp);
+            if (!ok[0]) {
+                ++mirrorsBlocked;
+                if (lotsAfter != lotsBefore) ++policyViolations;
+                return;
+            }
+            ++mirrorsExecuted;
+            if (account.paused() && lotsAfter > lotsBefore) ++increasesWhilePaused;
+            if (lotsAfter != 0 && sideAfter != side) ++policyViolations;
+            if (lotsAfter > account.targetLots(perp, side)) ++policyViolations;
+            sideBefore;
         } catch {
             (, uint256 lotsAfter) = _pos(perp);
             if (lotsAfter != lotsBefore) ++policyViolations;
