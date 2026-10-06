@@ -15,6 +15,9 @@ contract MockPerplExchange {
         uint256 mark;
         bool markValid;
         string symbol;
+        uint256 oracle;
+        uint256 oracleTs;
+        bool ignOracle;
     }
 
     struct Pos {
@@ -27,6 +30,9 @@ contract MockPerplExchange {
     IERC20 public immutable token;
     uint256 public minAccountOpen = 10e6;
     uint256 public fillBps = 10_000;
+    /// Taker fee on notional, charged to the free balance on every fill.
+    uint256 public feeBps;
+    uint256 public refPriceMaxAgeSec = 60;
     uint256 public nextAccountId = 100;
 
     mapping(address => uint256) public accountOf;
@@ -46,11 +52,34 @@ contract MockPerplExchange {
     // ---- test helpers --------------------------------------------------------------------------
 
     function addPerp(uint256 perpId, string calldata symbol, uint8 lotDec, uint8 priceDec, uint256 mark) external {
-        perps[perpId] = Perp(lotDec, priceDec, mark, true, symbol);
+        perps[perpId] = Perp(lotDec, priceDec, mark, true, symbol, 0, 0, true);
     }
 
     function setMark(uint256 perpId, uint256 mark) external {
         perps[perpId].mark = mark;
+    }
+
+    /// Sets the Chainlink price; it counts as fresh for refPriceMaxAgeSec after `ts`.
+    function setOracle(uint256 perpId, uint256 price, uint256 ts) external {
+        perps[perpId].oracle = price;
+        perps[perpId].oracleTs = ts;
+        perps[perpId].ignOracle = false;
+    }
+
+    function setFeeBps(uint256 bps) external {
+        feeBps = bps;
+    }
+
+    /// Leader-style position with an explicit entry price.
+    function setPositionAt(uint256 perpId, uint256 accountId, uint8 side, uint256 lots, uint256 entry) external {
+        _pos[perpId][accountId] = Pos(side, lots, entry, _notional(perpId, lots, entry) / 5);
+        _setBit(accountId, perpId, lots != 0);
+    }
+
+    /// Simulates a liquidation: the position disappears without an order from the account.
+    function wipePosition(uint256 perpId, uint256 accountId) external {
+        delete _pos[perpId][accountId];
+        _setBit(accountId, perpId, false);
     }
 
     function setMarkValid(uint256 perpId, bool valid) external {
@@ -113,6 +142,9 @@ contract MockPerplExchange {
         if (!crosses) return IPerplExchange.OrderSignature(0, 0);
         uint256 lots = d.lotLNS * fillBps / 10_000;
         if (lots == 0) return IPerplExchange.OrderSignature(0, 0);
+        uint256 fee = _notional(d.perpId, lots, p.mark) * feeBps / 10_000;
+        require(balanceOf[id] >= fee, "fee");
+        balanceOf[id] -= fee;
 
         if (d.orderType == 0 || d.orderType == 1) {
             uint8 side = d.orderType == 0 ? 0 : 1;
@@ -186,6 +218,10 @@ contract MockPerplExchange {
         info.lotDecimals = p.lotDecimals;
         info.priceDecimals = p.priceDecimals;
         info.markPNS = p.mark;
+        info.oraclePNS = p.oracle;
+        info.oracleTimestampSec = p.oracleTs;
+        info.refPriceMaxAgeSec = refPriceMaxAgeSec;
+        info.ignOracle = p.ignOracle;
     }
 
     function getMinAccountOpenCNS() external view returns (uint256) {

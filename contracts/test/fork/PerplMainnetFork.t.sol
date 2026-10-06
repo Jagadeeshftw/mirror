@@ -71,8 +71,10 @@ contract PerplMainnetForkTest is Test {
         p.dailyLossBps = 500;
         p.drawdownBps = 1500;
         p.expiry = uint40(block.timestamp + 7 days);
+        p.stopSlippageBps = 200;
+        p.flattenOnStop = true;
         p.leaders = new MirrorAccount.LeaderRule[](1);
-        p.leaders[0] = MirrorAccount.LeaderRule({accountId: leader, ratioBps: 100});
+        p.leaders[0] = MirrorAccount.LeaderRule({accountId: leader, ratioBps: 100, budgetCNS: 10e6, lossStopBps: 5000});
         p.markets = new MirrorAccount.MarketRule[](1);
         p.markets[0] = MirrorAccount.MarketRule({perpId: uint32(BTC), maxNotionalCNS: 10e6});
     }
@@ -124,7 +126,8 @@ contract PerplMainnetForkTest is Test {
             pricePNS: uint64(mark * 10_060 / 10_000),
             leverageHdths: 1000, // 10x > 3x max
             maxMatches: 50,
-            leaderRef: bytes32("leader-fill")
+            leaderRef: bytes32("leader-fill"),
+            leaderFillPNS: uint64(mark)
         });
         vm.prank(keeper);
         assertFalse(account.mirror(o));
@@ -184,7 +187,8 @@ contract PerplMainnetForkTest is Test {
             pricePNS: uint64(mark * 10_060 / 10_000),
             leverageHdths: 200,
             maxMatches: 50,
-            leaderRef: bytes32("x")
+            leaderRef: bytes32("x"),
+            leaderFillPNS: 0
         });
         vm.prank(keeper);
         uint256 g = gasleft();
@@ -238,7 +242,8 @@ contract PerplMainnetForkTest is Test {
             pricePNS: uint64(mark * 10_060 / 10_000),
             leverageHdths: 200,
             maxMatches: 50,
-            leaderRef: bytes32(0)
+            leaderRef: bytes32(0),
+            leaderFillPNS: 0
         });
         MirrorAccount.Action memory a = MirrorAccount.Action({
             kind: account.ACTION_FOLLOW(),
@@ -318,5 +323,125 @@ contract PerplMainnetForkTest is Test {
         EXCHANGE.execOrder(_leaderOrder(mark, 2, 1, 0));
         console.log("gas leader close 1 lot           ", g - gasleft());
         vm.stopPrank();
+    }
+
+    function _copyOrder(uint8 t, uint256 lots, uint256 price, uint256 lev)
+        internal
+        view
+        returns (MirrorAccount.MirrorOrder memory)
+    {
+        return MirrorAccount.MirrorOrder({
+            leaderAccountId: leader,
+            perpId: uint32(BTC),
+            orderType: t,
+            lotLNS: uint64(lots),
+            pricePNS: uint64(price),
+            leverageHdths: uint16(lev),
+            maxMatches: 50,
+            leaderRef: bytes32("fork-copy"),
+            leaderFillPNS: 0
+        });
+    }
+
+    /// Contract changes 1-4 against the live Perpl Exchange: Perpl's average entry and per-position margin
+    /// (which the entry guard, fill proof, budget and leader PnL rely on), the entry guard on a real leader,
+    /// a stop-loss / take-profit level triggered by a stranger, and the leader loss stop refusing to fire early.
+    function test_fork_newRulesAgainstLivePerpl() public {
+        if (!forked) return;
+        require(leader != 0, "no suitable live leader found");
+        _depositWithRealPermit(12e6);
+        uint256 acct = account.perplAccountId();
+        (IPerplExchange.PositionInfoV2 memory lp, uint256 mark,) = EXCHANGE.getPositionV2(BTC, leader);
+        console.log("leader entry", lp.pricePNS, "mark", mark);
+
+        // Entry guard: a bound tighter than the leader's current distance from entry blocks the copy.
+        uint256 gapBps = (mark > lp.pricePNS ? mark - lp.pricePNS : 0) * 10_000 / lp.pricePNS;
+        MirrorAccount.Policy memory p = _policy();
+        if (gapBps >= 2) {
+            p.maxEntryDeviationBps = uint16(gapBps / 2);
+            vm.prank(owner);
+            account.setPolicy(p);
+            vm.recordLogs();
+            vm.prank(keeper);
+            assertFalse(account.mirror(_copyOrder(0, 1, mark * 10_060 / 10_000, 200)));
+            Vm.Log[] memory logs = vm.getRecordedLogs();
+            bool sawEntry;
+            for (uint256 i; i < logs.length; ++i) {
+                if (logs[i].topics[0] == MirrorAccount.Blocked.selector) {
+                    (MirrorAccount.BlockReason r,,,,,,,) = abi.decode(
+                        logs[i].data, (MirrorAccount.BlockReason, uint8, uint64, uint256, uint256, bytes32, uint64, uint64)
+                    );
+                    sawEntry = r == MirrorAccount.BlockReason.EntryTooFar;
+                }
+            }
+            assertTrue(sawEntry, "entry guard did not block");
+            console.log("entry guard: copy BLOCKED, mark is", gapBps, "bps above the leader's entry");
+        } else {
+            console.log("leader is at or above mark; entry guard block case skipped on this block");
+        }
+
+        // A compliant copy: Perpl's average entry gives the follower's fill, and its deposit is the margin.
+        p.maxEntryDeviationBps = 0;
+        vm.prank(owner);
+        account.setPolicy(p);
+        vm.recordLogs();
+        vm.prank(keeper);
+        assertTrue(account.mirror(_copyOrder(0, 1, mark * 10_060 / 10_000, 200)));
+        (IPerplExchange.PositionInfoV2 memory pos,,) = EXCHANGE.getPositionV2(BTC, acct);
+        require(pos.lotLNS == 1, "copy did not fill on the live book");
+        Vm.Log[] memory l2 = vm.getRecordedLogs();
+        MirrorAccount.CopyProof memory proof;
+        for (uint256 i; i < l2.length; ++i) {
+            if (l2[i].topics[0] == MirrorAccount.Mirrored.selector) {
+                (,,,,,,, proof) = abi.decode(
+                    l2[i].data, (uint8, uint64, uint64, uint16, uint256, uint256, bytes32, MirrorAccount.CopyProof)
+                );
+            }
+        }
+        console.log("follower fill (from Perpl avg entry)", proof.fillPNS, "position entry", pos.pricePNS);
+        console.log("leader entry in proof", proof.leaderEntryPNS, "deviation bps");
+        console.logInt(proof.entryDeviationBps);
+        assertEq(proof.fillPNS, pos.pricePNS, "fill of a first open equals Perpl's entry price");
+        assertLe(proof.fillPNS, mark * 10_060 / 10_000, "filled above the limit");
+        assertEq(proof.leaderEntryPNS, lp.pricePNS);
+        (uint256 margin,, int256 realized,) = account.leaderBook(leader);
+        console.log("leader margin (Perpl position deposit)", margin);
+        console.logInt(realized);
+        assertEq(margin, pos.depositCNS);
+        assertGt(margin, 0);
+        assertLe(realized, 0, "an open can only cost fees");
+
+        // Leader loss stop is far from hit: a stranger cannot trigger it.
+        vm.prank(makeAddr("stranger"));
+        vm.expectRevert(MirrorAccount.StopNotTriggered.selector);
+        account.triggerLeaderStop(leader);
+
+        // A take-profit already reached (long, TP below the mark): any caller can execute it, reduce-only.
+        (, uint256 mark2,) = EXCHANGE.getPositionV2(BTC, acct);
+        MirrorAccount.Level[] memory lv = new MirrorAccount.Level[](1);
+        lv[0] = MirrorAccount.Level({
+            perpId: uint32(BTC), side: 0, stopLossPNS: 0, takeProfitPNS: uint64(mark2 * 9_900 / 10_000), slippageBps: 100
+        });
+        vm.prank(owner);
+        account.setLevels(lv);
+        address anyone = makeAddr("anyone");
+        uint256 anyoneBal = AUSD.balanceOf(anyone);
+        vm.prank(anyone);
+        uint256 closed = account.triggerLevel(BTC);
+        (pos,,) = EXCHANGE.getPositionV2(BTC, acct);
+        console.log("take-profit triggered by a stranger: closed", closed, "lots; left", pos.lotLNS);
+        assertEq(closed, 1);
+        assertEq(pos.lotLNS, 0);
+        assertEq(AUSD.balanceOf(anyone), anyoneBal, "caller received collateral");
+        (, bool halted,,,) = account.markets(BTC);
+        assertTrue(halted, "market not halted after the level fired");
+        (,, realized,) = account.leaderBook(leader);
+        console.log("leader realised PnL after round trip (fees and price move)");
+        console.logInt(realized);
+
+        // Halted until the owner sets a policy again.
+        vm.recordLogs();
+        vm.prank(keeper);
+        assertFalse(account.mirror(_copyOrder(0, 1, mark2 * 10_060 / 10_000, 200)));
     }
 }

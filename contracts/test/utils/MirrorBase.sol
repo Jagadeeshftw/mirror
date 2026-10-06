@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {IPerplExchange} from "../../src/interfaces/IPerplExchange.sol";
 import {IAuthorizedToken} from "../../src/interfaces/IAuthorizedToken.sol";
@@ -73,8 +74,11 @@ abstract contract MirrorBase is Test {
         p.dailyLossBps = 0;
         p.drawdownBps = 0;
         p.expiry = uint40(block.timestamp + 30 days);
+        p.maxEntryDeviationBps = 0;
+        p.stopSlippageBps = 200;
+        p.flattenOnStop = false;
         p.leaders = new MirrorAccount.LeaderRule[](1);
-        p.leaders[0] = MirrorAccount.LeaderRule({accountId: LEADER, ratioBps: 100});
+        p.leaders[0] = MirrorAccount.LeaderRule({accountId: LEADER, ratioBps: 100, budgetCNS: 20e6, lossStopBps: 0});
         p.markets = new MirrorAccount.MarketRule[](2);
         p.markets[0] = MirrorAccount.MarketRule({perpId: uint32(BTC), maxNotionalCNS: 15e6});
         p.markets[1] = MirrorAccount.MarketRule({perpId: uint32(ETH), maxNotionalCNS: 15e6});
@@ -105,6 +109,31 @@ abstract contract MirrorBase is Test {
         o.leverageHdths = lev;
         o.maxMatches = 0;
         o.leaderRef = keccak256(abi.encode(orderType, perpId, lots));
+    }
+
+    function _leaderRule(uint32 id, uint32 ratioBps) internal pure returns (MirrorAccount.LeaderRule memory) {
+        return MirrorAccount.LeaderRule({accountId: id, ratioBps: ratioBps, budgetCNS: 20e6, lossStopBps: 0});
+    }
+
+    /// Decodes the reason from the first Blocked event in `logs` (reverts the test if there is none).
+    function _blockedReason(Vm.Log[] memory logs) internal pure returns (MirrorAccount.BlockReason r, bool found) {
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].topics[0] == MirrorAccount.Blocked.selector) {
+                (r,,,,,,,) = abi.decode(
+                    logs[i].data, (MirrorAccount.BlockReason, uint8, uint64, uint256, uint256, bytes32, uint64, uint64)
+                );
+                return (r, true);
+            }
+        }
+    }
+
+    function _expectBlocked(MirrorAccount.MirrorOrder memory o, MirrorAccount.BlockReason reason) internal {
+        vm.recordLogs();
+        bool executed = _mirror(o);
+        assertFalse(executed, "should be blocked");
+        (MirrorAccount.BlockReason r, bool found) = _blockedReason(vm.getRecordedLogs());
+        assertTrue(found, "no Blocked event");
+        assertEq(uint8(r), uint8(reason), "wrong block reason");
     }
 
     function _mirror(MirrorAccount.MirrorOrder memory o) internal returns (bool) {

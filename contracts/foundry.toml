@@ -10,6 +10,9 @@ optimizer = true
 optimizer_runs = 10000
 via_ir = true
 bytecode_hash = "none"
+# Monad accepts contract code above EIP-170's 24,576 bytes (checked against mainnet and testnet with
+# eth_estimateGas on a 64 KiB deployment); MirrorAccount is about 35 KiB.
+code_size_limit = 131072
 remappings = [
   "forge-std/=lib/forge-std/src/",
   "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",

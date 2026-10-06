@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import {Vm} from "forge-std/Vm.sol";
 
 import {MirrorBase} from "./utils/MirrorBase.sol";
 import {MirrorAccount} from "../src/MirrorAccount.sol";
@@ -65,6 +64,38 @@ contract DepositTest is MirrorBase {
         vm.prank(relayer);
         account.depositWithPermit(15e6, deadline, v, r, s);
         assertEq(account.netDeposits(), 15e6);
+    }
+
+    function test_depositWithPermit_junkSignatureCannotUseStandingAllowance() public {
+        vm.prank(owner);
+        ausd.approve(address(account), 20e6); // e.g. left over for a later direct deposit
+        vm.expectRevert(MirrorAccount.BadSignature.selector);
+        vm.prank(stranger);
+        account.depositWithPermit(15e6, block.timestamp + 1 hours, 27, bytes32(uint256(1)), bytes32(uint256(2)));
+        assertEq(account.netDeposits(), 0);
+    }
+
+    function test_depositWithPermit_frontRunPermitHonouredOnlyOnce() public {
+        vm.prank(owner);
+        ausd.approve(address(account), 50e6);
+        uint256 deadline = block.timestamp + 1 hours;
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(address(account), 12e6, deadline);
+        ausd.permit(owner, address(account), 12e6, deadline, v, r, s); // front-run
+        vm.prank(owner);
+        ausd.approve(address(account), 50e6); // owner tops up the allowance afterwards
+        account.depositWithPermit(12e6, deadline, v, r, s);
+        assertEq(account.netDeposits(), 12e6);
+        vm.expectRevert(MirrorAccount.BadSignature.selector);
+        account.depositWithPermit(12e6, deadline, v, r, s);
+        assertEq(account.netDeposits(), 12e6);
+    }
+
+    function test_depositWithPermit_frontRunPermitForAnotherAmountRejected() public {
+        uint256 deadline = block.timestamp + 1 hours;
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(address(account), 12e6, deadline);
+        ausd.permit(owner, address(account), 12e6, deadline, v, r, s);
+        vm.expectRevert(MirrorAccount.BadSignature.selector);
+        account.depositWithPermit(11e6, deadline, v, r, s);
     }
 
     function test_depositWithAuthorization() public {
@@ -134,8 +165,11 @@ contract PolicyTest is MirrorBase {
         assertEq(ls.length, 1);
         assertEq(ls[0].accountId, LEADER);
         assertEq(ls[0].ratioBps, 100);
-        (bool allowed, uint8 lotDec, uint8 priceDec, uint64 cap) = account.markets(BTC);
+        (bool allowed, bool halted, uint8 lotDec, uint8 priceDec, uint64 cap) = account.markets(BTC);
         assertTrue(allowed);
+        assertFalse(halted);
+        assertEq(ls[0].budgetCNS, 20e6);
+        assertEq(account.stopSlippageBps(), 200);
         assertEq(lotDec, 5);
         assertEq(priceDec, 1);
         assertEq(cap, 15e6);
@@ -149,8 +183,8 @@ contract PolicyTest is MirrorBase {
         p.markets[0] = MirrorAccount.MarketRule({perpId: uint32(SOL), maxNotionalCNS: 5e6});
         vm.prank(owner);
         account.setPolicy(p);
-        (bool btcAllowed,,,) = account.markets(BTC);
-        (bool solAllowed,,,) = account.markets(SOL);
+        (bool btcAllowed,,,,) = account.markets(BTC);
+        (bool solAllowed,,,,) = account.markets(SOL);
         assertFalse(btcAllowed);
         assertTrue(solAllowed);
         assertEq(account.marketIds().length, 1);
@@ -217,9 +251,26 @@ contract PolicyTest is MirrorBase {
 
         p = _defaultPolicy();
         p.leaders = new MirrorAccount.LeaderRule[](2);
-        p.leaders[0] = MirrorAccount.LeaderRule(LEADER, 100);
-        p.leaders[1] = MirrorAccount.LeaderRule(LEADER, 200);
+        p.leaders[0] = _leaderRule(LEADER, 100);
+        p.leaders[1] = _leaderRule(LEADER, 200);
         _expectInvalid(p, "leader.duplicate");
+
+        p = _defaultPolicy();
+        p.leaders[0].budgetCNS = 0;
+        _expectInvalid(p, "leader.budgetCNS");
+        p = _defaultPolicy();
+        p.leaders[0].lossStopBps = 10_001;
+        _expectInvalid(p, "leader.lossStopBps");
+
+        p = _defaultPolicy();
+        p.maxEntryDeviationBps = 5_001;
+        _expectInvalid(p, "maxEntryDeviationBps");
+
+        p = _defaultPolicy();
+        p.stopSlippageBps = 0;
+        _expectInvalid(p, "stopSlippageBps");
+        p.stopSlippageBps = 2_001;
+        _expectInvalid(p, "stopSlippageBps");
 
         p = _defaultPolicy();
         p.markets = new MirrorAccount.MarketRule[](0);
@@ -245,23 +296,6 @@ contract MirrorTest is MirrorBase {
     function setUp() public override {
         super.setUp();
         _setUpFunded();
-    }
-
-    function _expectBlocked(MirrorAccount.MirrorOrder memory o, MirrorAccount.BlockReason reason) internal {
-        vm.recordLogs();
-        bool executed = _mirror(o);
-        assertFalse(executed, "should be blocked");
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        bool found;
-        for (uint256 i; i < logs.length; ++i) {
-            if (logs[i].topics[0] == MirrorAccount.Blocked.selector) {
-                (MirrorAccount.BlockReason r,,,,,) =
-                    abi.decode(logs[i].data, (MirrorAccount.BlockReason, uint8, uint64, uint256, uint256, bytes32));
-                assertEq(uint8(r), uint8(reason), "wrong block reason");
-                found = true;
-            }
-        }
-        assertTrue(found, "no Blocked event");
     }
 
     function test_openLong_copiesWithinPolicy() public {
@@ -309,7 +343,16 @@ contract MirrorTest is MirrorBase {
     function test_mirror_emitsMirroredWithLotsBeforeAndAfter() public {
         MirrorAccount.MirrorOrder memory o = _order(OPEN_LONG, BTC, 6, 859_000, 500);
         vm.expectEmit(true, true, true, true, address(account));
-        emit MirrorAccount.Mirrored(keeper, LEADER, uint32(BTC), OPEN_LONG, 6, 859_000, 500, 0, 6, o.leaderRef);
+        o.leaderFillPNS = 855_100;
+        // The mock fills at mark (855,000) and the leader's entry is 855,000, so the follower paid 0 bps more.
+        MirrorAccount.CopyProof memory proof = MirrorAccount.CopyProof({
+            leaderFillPNS: 855_100,
+            leaderEntryPNS: 855_000,
+            markPNS: 855_000,
+            fillPNS: 855_000,
+            entryDeviationBps: 0
+        });
+        emit MirrorAccount.Mirrored(keeper, LEADER, uint32(BTC), OPEN_LONG, 6, 859_000, 500, 0, 6, o.leaderRef, proof);
         _mirror(o);
     }
 
@@ -402,7 +445,7 @@ contract MirrorTest is MirrorBase {
 
     function test_targetRoundsUpSoTinyLeadersAreCopyable() public {
         ex.setPosition(BTC, LEADER, LONG, 1); // 1 lot x 1% = 0.01 lots -> rounds up to 1
-        assertEq(account.targetLots(BTC, LONG), 1);
+        assertEq(account.targetLots(BTC, LEADER, LONG), 1);
         assertTrue(_mirror(_order(OPEN_LONG, BTC, 1, 859_000, 500)));
     }
 
@@ -444,6 +487,7 @@ contract MirrorTest is MirrorBase {
         assertTrue(_mirror(_order(OPEN_LONG, BTC, 10, 859_000, 500)));
         vm.prank(owner);
         account.setPaused(true);
+        ex.setPosition(BTC, LEADER, LONG, 600); // leader reduces: target 6 lots
         assertTrue(_mirror(_order(CLOSE_LONG, BTC, 4, 851_000, 0)));
         (, uint256 lots) = _lots(BTC);
         assertEq(lots, 6);
@@ -456,6 +500,7 @@ contract MirrorTest is MirrorBase {
         p.markets[0] = MirrorAccount.MarketRule(uint32(ETH), 15e6);
         vm.prank(owner);
         account.setPolicy(p);
+        ex.setPosition(BTC, LEADER, LONG, 0); // leader exits
         assertTrue(_mirror(_order(CLOSE_LONG, BTC, 10, 851_000, 0)));
         (, uint256 lots) = _lots(BTC);
         assertEq(lots, 0);
@@ -463,6 +508,7 @@ contract MirrorTest is MirrorBase {
 
     function test_close_slippageBounded() public {
         assertTrue(_mirror(_order(OPEN_LONG, BTC, 10, 859_000, 500)));
+        ex.setPosition(BTC, LEADER, LONG, 0);
         _expectBlocked(_order(CLOSE_LONG, BTC, 10, 850_000, 0), MirrorAccount.BlockReason.SlippageTooHigh);
     }
 
@@ -483,18 +529,42 @@ contract MirrorTest is MirrorBase {
         assertEq(lots, 5);
     }
 
-    function test_multipleLeadersTargetNetsOpposingPositions() public {
+    function test_close_cannotGoBelowLeaderTarget() public {
+        assertTrue(_mirror(_order(OPEN_LONG, BTC, 10, 859_000, 500)));
+        // Leader still holds 1000 lots: target 10, so a keeper cannot close anything.
+        _expectBlocked(_order(CLOSE_LONG, BTC, 1, 851_000, 0), MirrorAccount.BlockReason.CloseBelowTarget);
+        ex.setPosition(BTC, LEADER, LONG, 300); // target 3
+        _expectBlocked(_order(CLOSE_LONG, BTC, 8, 851_000, 0), MirrorAccount.BlockReason.CloseBelowTarget);
+        assertTrue(_mirror(_order(CLOSE_LONG, BTC, 7, 851_000, 0)));
+        (, uint256 lots) = _lots(BTC);
+        assertEq(lots, 3);
+    }
+
+    function test_close_onlyByTheLeaderHoldingTheMarket() public {
         MirrorAccount.Policy memory p = _defaultPolicy();
         p.leaders = new MirrorAccount.LeaderRule[](2);
-        p.leaders[0] = MirrorAccount.LeaderRule(LEADER, 100);
-        p.leaders[1] = MirrorAccount.LeaderRule(LEADER2, 100);
+        p.leaders[0] = _leaderRule(LEADER, 100);
+        p.leaders[1] = _leaderRule(LEADER2, 100);
         vm.prank(owner);
         account.setPolicy(p);
-        ex.setPosition(BTC, LEADER2, SHORT, 400);
-        // long target = ceil(10) - floor(4) = 6
-        assertEq(account.targetLots(BTC, LONG), 6);
-        _expectBlocked(_order(OPEN_LONG, BTC, 7, 859_000, 500), MirrorAccount.BlockReason.ExceedsLeaderTarget);
-        assertTrue(_mirror(_order(OPEN_LONG, BTC, 6, 859_000, 500)));
+        assertTrue(_mirror(_order(OPEN_LONG, BTC, 10, 859_000, 500)));
+        ex.setPosition(BTC, LEADER, LONG, 0);
+        MirrorAccount.MirrorOrder memory o = _order(CLOSE_LONG, BTC, 10, 851_000, 0);
+        o.leaderAccountId = LEADER2;
+        _expectBlocked(o, MirrorAccount.BlockReason.MarketHeldByOtherLeader);
+    }
+
+    function test_close_removedLeaderNoLongerManagesPosition() public {
+        // "Stop following but keep my positions": once a leader is removed, its exits are not copied.
+        assertTrue(_mirror(_order(OPEN_LONG, BTC, 10, 859_000, 500)));
+        MirrorAccount.Policy memory p = _defaultPolicy();
+        p.leaders[0] = _leaderRule(LEADER2, 100);
+        vm.prank(owner);
+        account.setPolicy(p);
+        ex.setPosition(BTC, LEADER, LONG, 0);
+        _expectBlocked(_order(CLOSE_LONG, BTC, 10, 851_000, 0), MirrorAccount.BlockReason.LeaderNotAllowed);
+        (, uint256 lots) = _lots(BTC);
+        assertEq(lots, 10);
     }
 }
 

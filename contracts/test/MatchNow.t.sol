@@ -33,8 +33,9 @@ contract MatchNowTest is MirrorBase {
         n = 0;
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].topics[0] == MirrorAccount.Blocked.selector) {
-                (MirrorAccount.BlockReason r,,,,,) =
-                    abi.decode(logs[i].data, (MirrorAccount.BlockReason, uint8, uint64, uint256, uint256, bytes32));
+                (MirrorAccount.BlockReason r,,,,,,,) = abi.decode(
+                    logs[i].data, (MirrorAccount.BlockReason, uint8, uint64, uint256, uint256, bytes32, uint64, uint64)
+                );
                 reasons[n++] = uint8(r);
             }
         }
@@ -53,7 +54,14 @@ contract MatchNowTest is MirrorBase {
     function test_follow_emitsMirroredWithOwnerAsActorAndMatchNowRef() public {
         bytes32 ref = account.MATCH_NOW_REF();
         vm.expectEmit(true, true, true, true, address(account));
-        emit MirrorAccount.Mirrored(owner, LEADER, uint32(BTC), OPEN_LONG, 10, 859_000, 500, 0, 10, ref);
+        MirrorAccount.CopyProof memory proof = MirrorAccount.CopyProof({
+            leaderFillPNS: 0,
+            leaderEntryPNS: 855_000,
+            markPNS: 855_000,
+            fillPNS: 855_000,
+            entryDeviationBps: 0
+        });
+        emit MirrorAccount.Mirrored(owner, LEADER, uint32(BTC), OPEN_LONG, 10, 859_000, 500, 0, 10, ref, proof);
         vm.prank(owner);
         account.follow(_defaultPolicy(), _match(OPEN_LONG, BTC, 10, 859_000, 500));
     }
@@ -193,7 +201,10 @@ contract MatchNowTest is MirrorBase {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].topics[0] == MirrorAccount.Mirrored.selector) {
-                (,,,,,, bytes32 ref) = abi.decode(logs[i].data, (uint8, uint64, uint64, uint16, uint256, uint256, bytes32));
+                (,,,,,, bytes32 ref,) = abi.decode(
+                    logs[i].data,
+                    (uint8, uint64, uint64, uint16, uint256, uint256, bytes32, MirrorAccount.CopyProof)
+                );
                 assertEq(ref, account.MATCH_NOW_REF());
             }
         }
@@ -216,7 +227,7 @@ contract MatchNowTest is MirrorBase {
         leaderLots = uint32(bound(leaderLots, 0, 6000));
         ex.setFillBps(bound(fillBps, 0, 10_000));
         ex.setPosition(perp, LEADER, short ? SHORT : LONG, leaderLots);
-        (,, uint256 mark,,) = ex.perps(perp);
+        (,, uint256 mark,,,,,) = ex.perps(perp);
         uint64 price = uint64(uint256(int256(mark) + int256(mark) * offsetBps / 10_000));
 
         uint8 t = short ? OPEN_SHORT : OPEN_LONG;
@@ -228,11 +239,11 @@ contract MatchNowTest is MirrorBase {
             return; // blocked, or an IOC that found nothing to fill
         }
         assertEq(side, short ? SHORT : LONG);
-        assertLe(after_, account.targetLots(perp, side));
+        assertLe(after_, account.targetLots(perp, LEADER, side));
         assertGe(lev, 100);
         assertLe(lev, account.maxLeverageHdths());
-        (,,, uint64 cap) = account.markets(perp);
-        (uint8 lotDec, uint8 priceDec,,,) = ex.perps(perp);
+        (,,,, uint64 cap) = account.markets(perp);
+        (uint8 lotDec, uint8 priceDec,,,,,,) = ex.perps(perp);
         assertLe(after_ * mark * 1e6 / 10 ** (uint256(lotDec) + priceDec), cap);
         if (!short) assertLe(uint256(price), mark * 10_050 / 10_000);
         else assertGe(uint256(price) * 10_000, mark * 9_950);

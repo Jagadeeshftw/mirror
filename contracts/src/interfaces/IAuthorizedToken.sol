@@ -21,4 +21,9 @@ interface IAuthorizedToken is IERC20 {
     ) external;
 
     function decimals() external view returns (uint8);
+
+    function nonces(address owner) external view returns (uint256);
+
+    // solhint-disable-next-line func-name-mixedcase
+    function DOMAIN_SEPARATOR() external view returns (bytes32);
 }

@@ -58,8 +58,8 @@ contract MirrorFuzzTest is MirrorBase {
                 assertLe(lev, account.maxLeverageHdths(), "leverage above max");
                 assertGe(lev, 100);
                 if (lotsAfter != 0) assertEq(sideAfter, want, "flipped side");
-                assertLe(lotsAfter, account.targetLots(perp, want), "above leader target");
-                (,,, uint64 cap) = account.markets(perp);
+                assertLe(lotsAfter, account.targetLots(perp, LEADER, want), "above leader target");
+                (,,,, uint64 cap) = account.markets(perp);
                 assertLe(_notionalOf(perp, lotsAfter, mark), cap, "above notional cap");
                 // The order price respected the slippage bound.
                 if (want == LONG) assertLe(uint256(price), mark * 10_050 / 10_000);
@@ -154,12 +154,118 @@ contract MirrorFuzzTest is MirrorBase {
     }
 
     function _perp(uint256 perp) internal view returns (uint8, uint8, uint8, uint256, bool, string memory) {
-        (uint8 lotDec, uint8 priceDec, uint256 mark, bool valid, string memory sym) = ex.perps(perp);
+        (uint8 lotDec, uint8 priceDec, uint256 mark, bool valid, string memory sym,,,) = ex.perps(perp);
         return (0, lotDec, priceDec, mark, valid, sym);
     }
 
     function _notionalOf(uint256 perp, uint256 lots, uint256 mark) internal view returns (uint256) {
         (, uint8 lotDec, uint8 priceDec,,,) = _perp(perp);
         return lots * mark * 1e6 / 10 ** (uint256(lotDec) + priceDec);
+    }
+}
+
+contract NewRulesFuzzTest is MirrorBase {
+    function setUp() public override {
+        super.setUp();
+        _fund(20e6);
+        ausd.mint(address(ex), 50e6);
+    }
+
+    /// Entry guard: any executed opening copy had both its limit and the mark within the bound of the leader's
+    /// onchain entry; nothing changes when it blocks.
+    function testFuzz_entryGuardBoundsEveryOpen(bool short, uint16 dev, int16 entryOffBps, int16 priceOffBps, uint64 lots)
+        public
+    {
+        dev = uint16(bound(dev, 1, 5000));
+        entryOffBps = int16(bound(entryOffBps, -1500, 1500));
+        priceOffBps = int16(bound(priceOffBps, -400, 400));
+        lots = uint64(bound(lots, 1, 10));
+        MirrorAccount.Policy memory p = _defaultPolicy();
+        p.maxEntryDeviationBps = dev;
+        p.maxSlippageBps = 1000;
+        vm.prank(owner);
+        account.setPolicy(p);
+        uint256 mark = 855_000;
+        uint256 entry = uint256(int256(mark) + int256(mark) * entryOffBps / 10_000);
+        ex.setPositionAt(BTC, LEADER, short ? SHORT : LONG, 1000, entry);
+        uint64 price = uint64(uint256(int256(mark) + int256(mark) * priceOffBps / 10_000));
+
+        bool ok = _mirror(_order(short ? OPEN_SHORT : OPEN_LONG, BTC, lots, price, 500));
+        (, uint256 after_) = _lots(BTC);
+        if (!ok) {
+            assertEq(after_, 0);
+            return;
+        }
+        if (!short) {
+            assertLe(uint256(price) * 10_000, entry * (10_000 + dev) + 10_000);
+            assertLe(mark * 10_000, entry * (10_000 + dev) + 10_000);
+        } else {
+            assertGe(uint256(price) * 10_000 + 10_000, entry * (10_000 - dev));
+            assertGe(mark * 10_000 + 10_000, entry * (10_000 - dev));
+        }
+    }
+
+    /// A level fires only when its condition is true onchain, only reduces, and pays the caller nothing.
+    function testFuzz_levelFiresOnlyWhenReached(
+        bool profit,
+        uint16 levelOffBps,
+        int16 markMoveBps,
+        int16 oracleGapBps,
+        bool oracleFresh,
+        address caller
+    ) public {
+        vm.assume(caller != owner && caller != address(account) && caller != address(ex));
+        vm.prank(owner);
+        account.setPolicy(_defaultPolicy());
+        assertTrue(_mirror(_order(OPEN_LONG, BTC, 10, 859_000, 500)));
+        levelOffBps = uint16(bound(levelOffBps, 1, 2000));
+        uint64 lvl = uint64(profit ? 855_000 * (10_000 + uint256(levelOffBps)) / 10_000 : 855_000 * (10_000 - uint256(levelOffBps)) / 10_000);
+        MirrorAccount.Level[] memory ls = new MirrorAccount.Level[](1);
+        ls[0] = MirrorAccount.Level({
+            perpId: uint32(BTC), side: LONG, stopLossPNS: profit ? 0 : lvl, takeProfitPNS: profit ? lvl : 0, slippageBps: 500
+        });
+        vm.prank(owner);
+        account.setLevels(ls);
+
+        markMoveBps = int16(bound(markMoveBps, -2500, 2500));
+        uint256 mark = uint256(int256(855_000) + int256(855_000) * markMoveBps / 10_000);
+        ex.setMark(BTC, mark);
+        oracleGapBps = int16(bound(oracleGapBps, -400, 400));
+        uint256 oracle = uint256(int256(mark) + int256(mark) * oracleGapBps / 10_000);
+        ex.setOracle(BTC, oracle, oracleFresh ? block.timestamp : block.timestamp - 120);
+
+        uint256 bal = ausd.balanceOf(caller);
+        vm.prank(caller);
+        try account.triggerLevel(BTC) returns (uint256 closed) {
+            bool markReached = profit ? mark >= lvl : mark <= lvl;
+            assertTrue(markReached, "fired before the mark reached the level");
+            if (oracleFresh) {
+                assertTrue(profit ? oracle >= lvl : oracle <= lvl, "fired before the oracle reached the level");
+                uint256 gap = mark > oracle ? mark - oracle : oracle - mark;
+                assertLe(gap * 10_000, oracle * 200, "fired on an untrusted mark");
+            }
+            assertLe(closed, 10);
+        } catch {}
+        (, uint256 after_) = _lots(BTC);
+        assertLe(after_, 10, "trigger increased the position");
+        assertEq(ausd.balanceOf(caller), bal, "caller received collateral");
+    }
+
+    /// Leader budget: margin held for a leader never exceeds its budget after an executed open.
+    function testFuzz_budgetNeverExceeded(uint64 budget, uint16 lev, uint64 lots, uint8 rounds) public {
+        budget = uint64(bound(budget, 1e6, 20e6));
+        lev = uint16(bound(lev, 100, 500));
+        rounds = uint8(bound(rounds, 1, 6));
+        MirrorAccount.Policy memory p = _defaultPolicy();
+        p.leaders[0].budgetCNS = budget;
+        p.markets[1].maxNotionalCNS = 1_000e6;
+        vm.prank(owner);
+        account.setPolicy(p);
+        ex.setPosition(ETH, LEADER, LONG, 100_000);
+        for (uint256 i; i < rounds; ++i) {
+            _mirror(_order(OPEN_LONG, ETH, uint64(bound(lots, 1, 20)), 271_000, lev));
+            (uint256 margin,,,) = account.leaderBook(LEADER);
+            assertLe(margin, budget);
+        }
     }
 }
