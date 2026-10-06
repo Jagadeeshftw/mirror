@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { IconBrandAndroid, IconMenu2, IconX } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
 import { ModeToggle } from "./mode-toggle";
-import { APK_URL, DOCS_URL } from "@/lib/site";
+import { DOCS_URL, DOWNLOAD_URL, STATS_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const navlinks = [
@@ -14,7 +14,7 @@ const navlinks = [
   { title: "Safety", href: "#safety" },
   { title: "Leaders", href: "#leaders" },
   { title: "Why Monad", href: "#monad" },
-  { title: "FAQ", href: "#faqs" },
+  { title: "Stats", href: STATS_URL },
   { title: "Docs", href: DOCS_URL },
 ];
 
@@ -52,6 +52,7 @@ export const MobileNavbar = () => {
         <button
           type="button"
           aria-label="Open menu"
+          aria-expanded={open}
           onClick={() => setOpen(!open)}
           className="size-9 rounded-full border border-border bg-card flex items-center justify-center"
         >
@@ -101,7 +102,7 @@ export const MobileNavbar = () => {
               </div>
             </div>
             <Button asChild size="lg" className="w-full shadow-brand">
-              <a href={APK_URL} onClick={() => setOpen(false)}>
+              <a href={DOWNLOAD_URL} onClick={() => setOpen(false)}>
                 <IconBrandAndroid /> Download for Android
               </a>
             </Button>
@@ -116,7 +117,7 @@ export const DesktopNavbar = () => {
   return (
     <Container className="h-16 items-center justify-between hidden lg:flex">
       <Logo />
-      <nav className="flex items-center gap-8">
+      <nav aria-label="Main" className="flex items-center gap-8">
         {navlinks.map((item) => (
           <a
             key={item.title}
@@ -130,7 +131,7 @@ export const DesktopNavbar = () => {
       <div className="flex items-center gap-3">
         <ModeToggle />
         <Button asChild className="shadow-brand">
-          <a href={APK_URL}>
+          <a href={DOWNLOAD_URL}>
             <IconBrandAndroid /> Download APK
           </a>
         </Button>

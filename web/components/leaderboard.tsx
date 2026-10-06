@@ -34,8 +34,8 @@ export const Leaderboard = () => {
           </div>
           <Subheading>
             Every public Perpl trader is scored on PnL, drawdown, win rate and
-            consistency, then enriched with Nansen wallet intelligence: labels,
-            fund status and cross-venue history.
+            consistency. Next: Nansen wallet intelligence for labels, fund
+            status and cross-venue history.
           </Subheading>
         </div>
 

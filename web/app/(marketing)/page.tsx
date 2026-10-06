@@ -1,6 +1,7 @@
 import { Hero } from "@/components/hero";
 import { CopyTicker } from "@/components/copy-ticker";
 import { HowItWorks } from "@/components/how-it-works";
+import { CopyFlow } from "@/components/copy-flow";
 import { Safety } from "@/components/safety";
 import { Stats } from "@/components/stats";
 import { Leaderboard } from "@/components/leaderboard";
@@ -11,10 +12,11 @@ import { CTA } from "@/components/cta";
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" id="top">
       <Hero />
       <CopyTicker />
       <HowItWorks />
+      <CopyFlow />
       <Safety />
       <Stats />
       <Leaderboard />

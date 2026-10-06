@@ -5,7 +5,7 @@ import { ModeToggle } from "./mode-toggle";
 import { IconBrandAndroid } from "@tabler/icons-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
-import { APK_URL, BETA_DEPOSIT_CAP, BRAND, CONTRACT_URL, DOCS_URL } from "@/lib/site";
+import { BETA_DEPOSIT_CAP, BRAND, CONTRACTS_URL, DOCS_URL, DOWNLOAD_URL, GITHUB_URL, STATS_URL } from "@/lib/site";
 
 export const Footer = () => {
   const product = [
@@ -14,12 +14,13 @@ export const Footer = () => {
     { title: "Leaderboard", href: "#leaders" },
     { title: "Why Monad", href: "#monad" },
     { title: "FAQ", href: "#faqs" },
+    { title: "Public stats", href: STATS_URL },
   ];
   const resources = [
     { title: "Docs", href: DOCS_URL },
-    { title: "Download APK", href: APK_URL },
-    { title: "Vault contract", href: CONTRACT_URL },
-    { title: "Built with", href: "#stack" },
+    { title: "Download APK", href: DOWNLOAD_URL },
+    { title: "Contracts", href: CONTRACTS_URL },
+    { title: "GitHub", href: GITHUB_URL },
   ];
 
   return (
@@ -31,7 +32,7 @@ export const Footer = () => {
             Copy the best onchain traders. Keep your limits.
           </p>
           <Button asChild className="shadow-brand">
-            <a href={APK_URL}>
+            <a href={DOWNLOAD_URL}>
               <IconBrandAndroid /> Download APK
             </a>
           </Button>
@@ -51,16 +52,16 @@ export const Footer = () => {
           {BRAND} is beta software. Smart contracts are unaudited and deposits
           are capped at {BETA_DEPOSIT_CAP} per account. Perpetual futures are
           leveraged and risky; copying a trader does not guarantee their
-          results. Nothing here is financial advice. Figures on this page are
-          illustrative.
+          results. Nothing here is financial advice. App screens, leaders and
+          copy feeds on this page are illustrative mockups; measured figures are
+          labelled as measured.
         </p>
         <div className="mt-6 flex flex-col-reverse items-start justify-between gap-4 sm:flex-row sm:items-center">
           <p className="text-sm text-muted-foreground">
             &copy; 2026 {BRAND}. All rights reserved.
           </p>
           <div className="flex items-center gap-5 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground">Privacy</a>
-            <a href="#" className="hover:text-foreground">Terms</a>
+            <a href="/docs/team-run-accounts" className="hover:text-foreground">Team-run disclosure</a>
             <ModeToggle />
           </div>
         </div>

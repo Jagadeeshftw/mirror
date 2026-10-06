@@ -34,7 +34,7 @@ export const Safety = () => {
           <Cell
             className="border-b border-border md:border-r"
             title="It can trade. It can never withdraw."
-            description="The keeper key can open and close positions inside your limits. Withdrawals, rule changes and revoking the keeper need your passkey."
+            description="The keeper can only submit copies that pass your rules. Withdrawals, rule changes, pausing and closing everything need your passkey."
           >
             <Permissions />
           </Cell>
@@ -94,10 +94,10 @@ const Cell = ({
 
 const Permissions = () => {
   const rows = [
-    { k: "Open & close positions", you: true, keeper: true },
+    { k: "Copy a leader within your rules", you: true, keeper: true },
     { k: "Change your rules", you: true, keeper: false },
+    { k: "Pause or close all", you: true, keeper: false },
     { k: "Withdraw funds", you: true, keeper: false },
-    { k: "Revoke the keeper", you: true, keeper: false },
   ];
   return (
     <div className="rounded-2xl border border-border bg-background">
@@ -145,14 +145,14 @@ const Mark = ({ ok }: { ok: boolean }) => (
 /* ---------- rule engine (template SkeletonFour pattern) ---------- */
 
 const RULES = [
-  { title: "Allocation", check: "open + copy ≤ 20.00 AUSD", now: "11.40 + 3.00 = 14.40" },
-  { title: "Sizing", check: "size = leader.size × 50%", now: "6.00 × 50% = 3.00 AUSD" },
-  { title: "Max leverage", check: "leverage ≤ 5x", now: "3x" },
-  { title: "Max notional", check: "notional(SOL) ≤ 10.00 AUSD", now: "3.00 AUSD" },
+  { title: "Allowed leader", check: "leader ∈ policy.leaders", now: "#4127 at 50%" },
   { title: "Allowed markets", check: "market ∈ {BTC, ETH, SOL, MON, HYPE}", now: "SOL" },
-  { title: "Daily loss stop", check: "pnl(today) > −5%", now: "+1.77%" },
-  { title: "High-water mark", check: "equity ≥ 85% × peak", now: "24.18 ≥ 20.89" },
-  { title: "Expiry", check: "now < 31 Dec 2026", now: "5 Oct 2026" },
+  { title: "Max leverage", check: "leverage ≤ 5x", now: "4x" },
+  { title: "Max slippage", check: "|limit − mark| ≤ 1% × mark", now: "0.20%" },
+  { title: "Leader target", check: "lots after ≤ 50% × leader lots", now: "3.0 ≤ 3.0" },
+  { title: "Max notional", check: "notional(SOL) ≤ 10.00 AUSD", now: "3.00 AUSD" },
+  { title: "Daily loss stop", check: "equity ≥ 95% × day start", now: "24.18 ≥ 22.57" },
+  { title: "Drawdown stop", check: "equity ≥ 85% × high-water mark", now: "24.18 ≥ 20.89" },
 ];
 
 const RuleEngine = () => {
@@ -199,7 +199,7 @@ const RuleEngine = () => {
       <div className="mt-5 rounded-2xl border border-border bg-background p-4">
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Order: copy SOL long 4x · rule {i + 1} of {RULES.length}
+            Illustrative order: copy SOL long 4x · check {i + 1} of {RULES.length}
           </p>
           <span className="flex items-center gap-1 rounded-full bg-positive/12 px-2 py-0.5 text-[11px] font-medium text-positive">
             <IconCircleCheckFilled className="size-3" /> pass
@@ -292,7 +292,7 @@ const BlockedFeed = () => (
 const Exits = () => {
   const actions = [
     { icon: IconPlayerPause, label: "Pause following", note: "Stops new copies" },
-    { icon: IconSquareX, label: "Close all positions", note: "Market close" },
+    { icon: IconSquareX, label: "Close all positions", note: "Bounded slippage" },
     { icon: IconWallet, label: "Withdraw 24.18 AUSD", note: "Gas covered", primary: true },
   ];
   return (

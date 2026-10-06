@@ -1,0 +1,4 @@
+screenshots
+.env*
+node_modules
+.next

@@ -15,13 +15,13 @@ import { DottedGlowBackground } from "./ui/dotted-glow-background";
 import { PhoneFrame } from "./phone/app-ui";
 import { HomeScreen } from "./phone/home-screen";
 import { FollowSheetScreen } from "./phone/follow-sheet";
-import { APK_URL, BRAND, DOCS_URL } from "@/lib/site";
+import { BRAND, DOCS_URL, DOWNLOAD_URL } from "@/lib/site";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
 export const Hero = () => {
   return (
-    <section id="top" className="relative overflow-hidden pt-8 md:pt-14 lg:pt-16 pb-16 md:pb-24">
+    <section className="relative overflow-hidden pt-8 md:pt-14 lg:pt-16 pb-16 md:pb-24">
       {/* soft accent wash */}
       <div
         aria-hidden
@@ -79,7 +79,7 @@ export const Hero = () => {
             className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
           >
             <Button asChild size="lg" className="shadow-brand">
-              <a href={APK_URL}>
+              <a href={DOWNLOAD_URL}>
                 <IconBrandAndroid className="size-5" />
                 Download for Android
                 <span className="rounded-full bg-white/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-wide dark:bg-black/15">

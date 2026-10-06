@@ -5,11 +5,11 @@ import { IconArrowRight, IconBrandAndroid } from "@tabler/icons-react";
 import { Container } from "./container";
 import { Button } from "./ui/button";
 import { DottedGlowBackground } from "./ui/dotted-glow-background";
-import { APK_URL, BETA_DEPOSIT_CAP, DOCS_URL } from "@/lib/site";
+import { BETA_DEPOSIT_CAP, DOCS_URL, DOWNLOAD_URL, MIN_DEPOSIT } from "@/lib/site";
 
 export const CTA = () => {
   return (
-    <section id="download" className="pb-20 md:pb-28">
+    <section id="get" className="pb-20 md:pb-28">
       <Container>
         <div className="relative overflow-hidden rounded-[2rem] border border-border bg-card px-6 py-16 text-center md:px-12 md:py-24">
           <DottedGlowBackground
@@ -38,11 +38,11 @@ export const CTA = () => {
             </h2>
             <p className="mx-auto mt-5 max-w-lg text-base text-muted-foreground md:text-lg">
               Install the beta, create your account with a fingerprint and fund
-              it with up to {BETA_DEPOSIT_CAP}.
+              it with {MIN_DEPOSIT} to {BETA_DEPOSIT_CAP}.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" className="w-full shadow-brand sm:w-auto">
-                <a href={APK_URL}>
+                <a href={DOWNLOAD_URL}>
                   <IconBrandAndroid className="size-5" /> Download the APK
                 </a>
               </Button>
@@ -53,7 +53,7 @@ export const CTA = () => {
               </Button>
             </div>
             <p className="mt-5 font-mono text-[11px] text-muted-foreground">
-              Android APK · Sideload install · Beta software
+              Android 9+ · Sideload install · Beta software
             </p>
           </motion.div>
         </div>

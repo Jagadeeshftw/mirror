@@ -1,20 +1,53 @@
 "use client";
-import React, { useEffect, useRef } from "react";
-import { animate, motion, useInView, useMotionValue, useTransform } from "motion/react";
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { IconArrowRight } from "@tabler/icons-react";
 import { Container } from "./container";
+import { NumberTicker } from "./ui/number-ticker";
+import { fetchStats, type Stats as LiveStats } from "@/lib/stats";
+import { API_CONFIGURED, MEASURED, STATS_URL } from "@/lib/site";
 
-const STATS = [
-  { value: 0.61, decimals: 2, prefix: "~", suffix: " s", label: "Median copy latency, leader fill to your fill" },
-  { value: 8, decimals: 0, prefix: "", suffix: "", label: "Rules checked onchain on every copied order" },
-  { value: 100, decimals: 0, prefix: "", suffix: "%", label: "Of orders pass through your contract first" },
-  { value: 0, decimals: 0, prefix: "", suffix: "", label: "Withdrawal rights held by the copy keeper" },
+type Item = { value: number; decimals: number; prefix?: string; suffix?: string; label: string };
+
+/** Real numbers only: measured chain and test figures until the live API answers, then live traction. */
+const MEASURED_ITEMS: Item[] = [
+  { value: MEASURED.blockMs, decimals: 0, prefix: "~", suffix: "ms", label: "Monad block time, measured on mainnet" },
+  { value: MEASURED.finalityAfterProposedMs, decimals: 0, prefix: "~", suffix: "ms", label: "From Proposed to Finalized, measured on mainnet" },
+  { value: 278, decimals: 0, prefix: "~", suffix: "k gas", label: "Per copied open with every policy check, about $0.001" },
+  { value: MEASURED.tests, decimals: 0, suffix: "", label: "Passing contract tests, incl. fork tests on live Perpl" },
 ];
 
+function liveItems(s: LiveStats): Item[] | null {
+  if (s.accountsCreated === null || s.copiesExecuted === null) return null;
+  const items: Item[] = [
+    { value: s.accountsCreated, decimals: 0, label: "Mirror accounts created (team-run excluded)" },
+    { value: s.copiesExecuted, decimals: 0, label: "Copies executed onchain" },
+    { value: s.copiesBlocked ?? 0, decimals: 0, label: "Copies blocked by a follower's rule, each with its own tx" },
+  ];
+  if (s.medianLatencyMs !== null)
+    items.push({ value: s.medianLatencyMs / 1000, decimals: 2, suffix: "s", label: "Median latency, leader fill to copy tx" });
+  else if (s.fundedAccounts !== null) items.push({ value: s.fundedAccounts, decimals: 0, label: "Funded accounts" });
+  return items;
+}
+
 export const Stats = () => {
+  const [live, setLive] = useState<Item[] | null>(null);
+
+  useEffect(() => {
+    if (!API_CONFIGURED) return;
+    const ac = new AbortController();
+    fetchStats({ limit: 1, signal: ac.signal })
+      .then((s) => setLive(liveItems(s)))
+      .catch(() => {});
+    return () => ac.abort();
+  }, []);
+
+  const items = live ?? MEASURED_ITEMS;
+
   return (
     <section aria-label="Key figures" className="border-y border-border bg-card">
       <Container className="grid grid-cols-2 lg:grid-cols-4">
-        {STATS.map((s, i) => (
+        {items.map((s, i) => (
           <div
             key={s.label}
             className={[
@@ -26,49 +59,31 @@ export const Stats = () => {
             ].join(" ")}
           >
             <p className="font-mono text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
-              <Counter {...s} />
+              {s.prefix && <span className="text-muted-foreground">{s.prefix}</span>}
+              <NumberTicker value={s.value} decimals={s.decimals} />
+              {s.suffix && (
+                <span className="ml-1 text-xl text-muted-foreground md:text-2xl">{s.suffix}</span>
+              )}
             </p>
-            <p className="mt-3 max-w-[16rem] text-sm leading-snug text-muted-foreground">
-              {s.label}
-            </p>
+            <p className="mt-3 max-w-[16rem] text-sm leading-snug text-muted-foreground">{s.label}</p>
           </div>
         ))}
       </Container>
       <Container>
-        <p className="border-t border-border py-3 font-mono text-[11px] text-muted-foreground">
-          Illustrative figures for the beta design. Live numbers will come from
-          the indexer.
-        </p>
+        <div className="flex flex-col gap-2 border-t border-border py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="font-mono text-[11px] text-muted-foreground">
+            {live
+              ? "Live from the Mirror indexer. Team-run demo accounts are excluded."
+              : "Measured on Monad mainnet and a mainnet fork. Live traction numbers appear here once the contracts are live."}
+          </p>
+          <Link
+            href={STATS_URL}
+            className="inline-flex items-center gap-1 font-mono text-[11px] text-brand hover:underline"
+          >
+            Public stats <IconArrowRight className="size-3" />
+          </Link>
+        </div>
       </Container>
     </section>
-  );
-};
-
-const Counter = ({
-  value,
-  decimals,
-  prefix,
-  suffix,
-}: {
-  value: number;
-  decimals: number;
-  prefix: string;
-  suffix: string;
-}) => {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
-  const mv = useMotionValue(0);
-  const text = useTransform(mv, (v) => v.toFixed(decimals));
-  useEffect(() => {
-    if (!inView) return;
-    const controls = animate(mv, value, { duration: 1.4, ease: [0.22, 1, 0.36, 1] });
-    return () => controls.stop();
-  }, [inView, mv, value]);
-  return (
-    <span ref={ref}>
-      {prefix && <span className="text-muted-foreground">{prefix}</span>}
-      <motion.span>{text}</motion.span>
-      {suffix && <span className="ml-0.5 text-2xl text-muted-foreground md:text-3xl">{suffix.trim()}</span>}
-    </span>
   );
 };

@@ -6,12 +6,12 @@ import { Eyebrow, Heading } from "./heading";
 import { GlowingEffect } from "./ui/glowing-effect";
 
 const STACK = [
-  { name: "Monad", role: "Chain", text: "Your vault contract lives here. Sub-second blocks and fast finality make onchain rule checks practical." },
+  { name: "Monad", role: "Chain", text: "Your contract account lives here. Sub-second blocks and fast finality make onchain rule checks on every order practical." },
   { name: "Perpl", role: "Exchange", text: "The onchain perpetuals exchange where leaders trade and your copies are filled." },
   { name: "AUSD by Agora", role: "Balance", text: "Your balance is held in AUSD, a dollar stablecoin, and is always visible in the app." },
   { name: "Mera", role: "Accounts", text: "Passkey accounts. One fingerprint or face prompt creates it. No seed phrase, no extension." },
-  { name: "Envio", role: "Indexing", text: "Streams leader trades in real time so copies are proposed within a block or two." },
-  { name: "Nansen", role: "Intelligence", text: "Wallet labels and cross-venue history that feed the leader rankings." },
+  { name: "Envio", role: "Indexing", text: "HyperIndex over Perpl and Mirror events: leader stats, follower PnL per leader and the public stats page." },
+  { name: "Nansen", role: "Intelligence · coming", text: "Wallet labels and cross-venue history that will feed the leader ranking score." },
 ];
 
 export const BuiltWith = () => {

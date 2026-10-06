@@ -10,15 +10,15 @@ import { cn } from "@/lib/utils";
 const FACTS = [
   {
     icon: IconBolt,
-    value: "~0.3 s",
+    value: "~290 ms",
     title: "Block time",
-    text: "A leader's fill is picked up and copied within a couple of blocks.",
+    text: "Measured on mainnet. A leader's fill arrives at the Proposed stage through monadLogs, so the copy can follow within a couple of blocks.",
   },
   {
     icon: IconRosetteDiscountCheck,
-    value: "~0.55 s",
+    value: "~550 ms",
     title: "Finality",
-    text: "Copies settle in about half a second: Proposed, Voted, Finalized.",
+    text: "Measured: Finalized arrives about 550 ms after Proposed. Every copy shows its commit state.",
   },
   {
     icon: IconGitMerge,
@@ -28,9 +28,9 @@ const FACTS = [
   },
   {
     icon: IconCoin,
-    value: "Cheap",
-    title: "Per-order checks",
-    text: "Eight onchain rule checks on every order only work when gas is cheap. We cover it, so you never hold MON.",
+    value: "~$0.001",
+    title: "Per copied open",
+    text: "About 278k gas with every policy check, so your rules run onchain on every order. The relayer pays, so you never hold MON.",
   },
 ];
 
@@ -103,7 +103,7 @@ const BlockStream = () => {
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-foreground">Monad blocks</p>
         <span className="font-mono text-[10px] text-muted-foreground">
-          slowed ~2× to be readable
+          illustrative · slowed ~2× to be readable
         </span>
       </div>
 

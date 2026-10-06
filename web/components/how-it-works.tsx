@@ -38,8 +38,8 @@ export const HowItWorks = () => {
               <CardTitle>Pick a leader</CardTitle>
               <CardDescription>
                 Any public Perpl trader, ranked from onchain PnL, drawdown, win
-                rate and consistency, with Nansen labels like Smart Trader or
-                Fund.
+                rate and consistency. Nansen labels like Smart Trader or Fund
+                are coming.
               </CardDescription>
             </CardContent>
           </Card>
@@ -51,8 +51,8 @@ export const HowItWorks = () => {
               <CardStep>02</CardStep>
               <CardTitle>Set your rules</CardTitle>
               <CardDescription>
-                Allocation, sizing, max leverage, per-market caps, allowed
-                markets, loss stops and an expiry date. One fingerprint signs
+                Sizing, max leverage, allowed markets, per-market caps,
+                slippage, loss stops and an expiry date. One fingerprint signs
                 them into your contract.
               </CardDescription>
             </CardContent>
@@ -63,11 +63,11 @@ export const HowItWorks = () => {
             </CardSkeleton>
             <CardContent>
               <CardStep>03</CardStep>
-              <CardTitle>Copies land in under a second</CardTitle>
+              <CardTitle>Copies land in about a second</CardTitle>
               <CardDescription>
                 When your leader trades, a copy is sized to your rules, checked
-                onchain and finalized on Monad. You see the latency and the tx
-                for every one.
+                onchain and finalized on Monad. You see the measured latency and
+                the tx for every one.
               </CardDescription>
             </CardContent>
           </Card>
@@ -242,7 +242,7 @@ const SkeletonLatency = () => {
       />
       <div className="relative z-10 w-full max-w-sm rounded-2xl border border-border bg-background/90 p-4 shadow-float backdrop-blur">
         <div className="flex items-baseline justify-between">
-          <p className="text-xs text-muted-foreground">Leader fill → your copy</p>
+          <p className="text-xs text-muted-foreground">Leader fill → your copy <span className="opacity-70">· illustrative</span></p>
           <p className="font-mono text-2xl font-semibold tracking-tight text-foreground">
             <motion.span>{label}</motion.span>
             <span className="ml-1 text-sm text-muted-foreground">s</span>

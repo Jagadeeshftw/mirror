@@ -10,7 +10,7 @@ import { BETA_DEPOSIT_CAP, BRAND } from "@/lib/site";
 const QUESTIONS = [
   {
     question: `Can ${BRAND} withdraw my money?`,
-    answer: `No. Your AUSD sits in your own vault contract. The copy keeper can only place orders that pass your rules; withdrawing, changing rules or revoking the keeper all require your passkey. A withdraw call from the keeper simply reverts.`,
+    answer: `No. Your AUSD sits in your own contract account. The copy keeper can only submit copies that pass your rules; withdrawing, changing rules, pausing and closing all require your passkey. There is no code path that sends collateral to anyone but you, and a withdraw call from the keeper reverts.`,
   },
   {
     question: "What happens when a leader's trade breaks one of my rules?",
@@ -19,7 +19,7 @@ const QUESTIONS = [
   {
     question: "Which rules can I set?",
     answer:
-      "Allocation in AUSD, sizing (a percentage of the leader's size or a fixed fraction of your allocation), max leverage, max notional per market, allowed markets, a daily loss stop, a high-water-mark stop and an expiry date. All of them are checked on every copied order.",
+      "Up to four leaders, each with a sizing ratio (a percentage of the leader's position), max leverage, allowed markets with a max notional per market, max slippage against the mark price, a daily loss stop, a high-water-mark drawdown stop and an expiry date. Your allocation is simply what you deposit. Every rule is checked onchain on every copied order.",
   },
   {
     question: "Do I need a seed phrase, a wallet extension or MON for gas?",
@@ -29,12 +29,12 @@ const QUESTIONS = [
   {
     question: "How fast are copies?",
     answer:
-      "Typically well under a second from the leader's fill to yours. Every copy shows its latency, its commit state (Proposed, Voted, Finalized) and a link to the transaction on MonadVision.",
+      "Built to land within about a second of the leader's fill: we measured Monad blocks at about 290 ms and finality about 550 ms after a block is proposed. Every copy shows its measured latency, its commit state (Proposed, Voted, Finalized) and a link to the transaction on MonadVision.",
   },
   {
     question: "How are leaders ranked?",
     answer:
-      "Automatically, from onchain Perpl data: PnL, drawdown, win rate and consistency. Nansen wallet intelligence adds labels like Smart Trader or Fund and cross-venue history.",
+      "Automatically, from onchain Perpl data: PnL, drawdown, win rate and consistency. Nansen wallet intelligence (coming) adds labels like Smart Trader or Fund and cross-venue history.",
   },
   {
     question: "Is the contract audited?",

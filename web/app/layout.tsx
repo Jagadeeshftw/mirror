@@ -2,24 +2,44 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
-import { BRAND } from "@/lib/site";
+import { BRAND, DESCRIPTION, SITE_URL, TAGLINE } from "@/lib/site";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 const mono = JetBrains_Mono({
   variable: "--font-mono-face",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: `${BRAND} — Copy the best onchain traders. Keep your limits.`,
-  description: `${BRAND} copies top Perpl traders from your Android phone. A smart contract on Monad checks your limits on every order — it can trade for you, never withdraw.`,
-  icons: { icon: "./favicon.ico" },
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${BRAND}: ${TAGLINE}`,
+    template: `%s · ${BRAND}`,
+  },
+  description: DESCRIPTION,
+  applicationName: BRAND,
+  keywords: ["copy trading", "Perpl", "Monad", "perpetuals", "AUSD", "passkeys", "onchain"],
+  openGraph: {
+    type: "website",
+    siteName: BRAND,
+    title: `${BRAND}: ${TAGLINE}`,
+    description: DESCRIPTION,
+    url: SITE_URL,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${BRAND}: ${TAGLINE}`,
+    description: DESCRIPTION,
+  },
+  alternates: { canonical: "/" },
 };
 
 export const viewport: Viewport = {
@@ -37,15 +57,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${mono.variable} antialiased`}>
+        <a
+          href="#content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+        >
+          Skip to content
+        </a>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <main className="bg-background text-foreground overflow-x-clip">
-            {children}
-          </main>
+          {children}
         </ThemeProvider>
       </body>
     </html>
