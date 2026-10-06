@@ -5,7 +5,7 @@ import { ModeToggle } from "./mode-toggle";
 import { IconBrandAndroid } from "@tabler/icons-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
-import { BETA_DEPOSIT_CAP, BRAND, CONTRACTS_URL, DOCS_URL, DOWNLOAD_URL, GITHUB_URL, STATS_URL } from "@/lib/site";
+import { BETA_DEPOSIT_CAP, BRAND, CONTRACTS_URL, DOCS_URL, DOWNLOAD_URL, GITHUB_URL, STATS_URL, X_HANDLE, X_URL } from "@/lib/site";
 
 export const Footer = () => {
   const product = [
@@ -21,6 +21,7 @@ export const Footer = () => {
     { title: "Download APK", href: DOWNLOAD_URL },
     { title: "Contracts", href: CONTRACTS_URL },
     { title: "GitHub", href: GITHUB_URL },
+    { title: `X ${X_HANDLE}`, href: X_URL },
   ];
 
   return (

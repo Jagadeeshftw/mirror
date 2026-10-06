@@ -107,6 +107,9 @@ def main() -> int:
             return f"### {question}\n{meta}\n\n```text\n{ans}\n```"
 
         block = re.sub(r"(?ms)^### (.*?)\n<!--answer-->\n(.*?)\n<!--/answer-->", repl, block)
+        helper = limits.get("_helper_text", {}).get(bname)
+        if helper:
+            block = block.replace(block.splitlines()[0], block.splitlines()[0] + f"\n\nHelper text (portal): {helper}", 1)
         block = re.sub(r"(?m)^## ", "### ", block)
         block = re.sub(r"(?m)^### Q", "#### Q", block)
         lines += [block.rstrip(), ""]

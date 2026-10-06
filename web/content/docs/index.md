@@ -45,3 +45,10 @@ Deposits are capped at **25 AUSD per account** while the contracts are unaudited
 - Want the details: [How copying works](/docs/how-copying-works) and [Safety model](/docs/safety-model).
 - Judging the project: [Judges guide](/docs/judges-guide).
 - Building against it: [Contracts](/docs/contracts) and [API reference](/docs/api-reference).
+- Checking a claim yourself: [Run the tests](/docs/run-the-tests).
+
+## Links
+
+- Source: [github.com/Jagadeeshftw/mirror](https://github.com/Jagadeeshftw/mirror) (MIT)
+- X: [@MirrorOnMonad](https://x.com/MirrorOnMonad)
+- Public stats: [mirror.0xo.in/stats](/stats)

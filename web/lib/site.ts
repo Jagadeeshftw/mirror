@@ -29,6 +29,8 @@ export const APK = {
 };
 
 export const GITHUB_URL = "https://github.com/Jagadeeshftw/mirror";
+export const X_HANDLE = "@MirrorOnMonad";
+export const X_URL = "https://x.com/MirrorOnMonad";
 
 /** Backend API (engine + relayer). Set NEXT_PUBLIC_API_BASE in Vercel. */
 export const API_BASE = (process.env.NEXT_PUBLIC_API_BASE ?? "").replace(/\/$/, "");
