@@ -72,7 +72,7 @@ event Blocked(address indexed keeper, uint32 indexed leaderAccountId, uint32 ind
               uint256 limit, uint256 actual, bytes32 leaderRef);
 ```
 
-`limit` and `actual` carry the numbers, so the app can say, for example, "Leader opened 20x BTC long. Your max leverage is 5x. Not copied." (`limit = 500`, `actual = 2000`, leverage in hundredths). Because the event is in a mined transaction, every block has its own tx hash on MonadVision.
+`limit` and `actual` carry the numbers, so the app can say, for example, "Leader opened 12x BTC long. Your max leverage is 5x. Not copied." (`limit = 500`, `actual = 1200`, leverage in hundredths). Because the event is in a mined transaction, every block has its own tx hash on MonadVision.
 
 After the order executes, the contract checks the result again (no flip, within target, within notional cap) and **reverts** with `PostTradeViolation` if anything is off. That is defence in depth: a fill that would break a rule never stands.
 

@@ -30,7 +30,7 @@ export type CopyEvent =
 export const COPY_EVENTS: CopyEvent[] = [
   { kind: "copied", id: "e1", market: "BTC", side: "Long", lev: "3x", size: "6.00", leader: "0x7a3e…41f3", latency: "0.61", tx: "0x3f9c…a21e" },
   { kind: "copied", id: "e2", market: "ETH", side: "Short", lev: "2x", size: "4.20", leader: "0xc19b…07de", latency: "0.58", tx: "0x81d2…4c90" },
-  { kind: "blocked", id: "e3", market: "BTC", side: "Long", lev: "20x", leader: "0x7a3e…41f3", rule: "Max leverage", detail: "Leader opened 20x BTC long. Your max leverage is 5x. Not copied." },
+  { kind: "blocked", id: "e3", market: "BTC", side: "Long", lev: "12x", leader: "0x7a3e…41f3", rule: "Max leverage", detail: "Leader opened 12x BTC long. Your max leverage is 5x. Not copied." },
   { kind: "copied", id: "e4", market: "SOL", side: "Long", lev: "4x", size: "3.00", leader: "0x7a3e…41f3", latency: "0.64", tx: "0x0b7e…f3a1" },
   { kind: "copied", id: "e5", market: "MON", side: "Long", lev: "2x", size: "2.50", leader: "0x5e02…9ab4", latency: "0.59", tx: "0xd4a0…13bc" },
   { kind: "blocked", id: "e6", market: "PUMP", side: "Long", lev: "3x", leader: "0xc19b…07de", rule: "Allowed markets", detail: "Leader opened PUMP long. PUMP is not in your allowed markets. Not copied." },

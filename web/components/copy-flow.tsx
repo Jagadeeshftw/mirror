@@ -109,7 +109,7 @@ export const CopyFlow = () => {
               <IconShieldCheck className="size-4" aria-hidden /> Or: blocked by your rule
             </p>
             <p className="mt-1.5 text-[15px] font-medium leading-snug text-foreground">
-              Leader opened 20x BTC long. Your max leverage is 5x. Not copied.
+              Leader opened 12x BTC long. Your max leverage is 5x. Not copied.
             </p>
             <p className="mt-1 font-mono text-[11px] text-muted-foreground">
               Blocked(reason: LeverageTooHigh, limit: 500, actual: 2000) · its own tx hash

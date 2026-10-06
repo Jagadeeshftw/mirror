@@ -231,7 +231,7 @@ const RuleEngine = () => {
 
 const ACTIVITY = [
   { m: "BTC long 3x", d: "Copied in 0.61 s", s: "FINALIZED" },
-  { m: "BTC long 20x", d: "Max leverage 5x", s: "BLOCKED" },
+  { m: "BTC long 12x", d: "Max leverage 5x", s: "BLOCKED" },
   { m: "ETH short 2x", d: "Copied in 0.58 s", s: "FINALIZED" },
   { m: "PUMP long 3x", d: "Market not allowed", s: "BLOCKED" },
   { m: "SOL long 4x", d: "Copied in 0.64 s", s: "FINALIZED" },
@@ -281,7 +281,7 @@ const BlockedFeed = () => (
         <IconShieldCheck className="size-4" /> Blocked by your rule · Max leverage
       </p>
       <p className="mt-1.5 text-[15px] font-medium leading-snug text-foreground">
-        Leader opened 20x BTC long. Your max leverage is 5x. Not copied.
+        Leader opened 12x BTC long. Your max leverage is 5x. Not copied.
       </p>
     </motion.div>
   </div>

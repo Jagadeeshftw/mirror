@@ -14,7 +14,7 @@ const QUESTIONS = [
   },
   {
     question: "What happens when a leader's trade breaks one of my rules?",
-    answer: `The contract rejects the copy before it reaches Perpl. The app shows which rule blocked it and the numbers, for example: "Leader opened 20x BTC long. Your max leverage is 5x. Not copied."`,
+    answer: `The contract rejects the copy before it reaches Perpl. The app shows which rule blocked it and the numbers, for example: "Leader opened 12x BTC long. Your max leverage is 5x. Not copied."`,
   },
   {
     question: "Which rules can I set?",

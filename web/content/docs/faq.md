@@ -13,7 +13,7 @@ Copies stop, but your money is not stuck. Every owner action is an EIP-712 signa
 
 ## What happens when a leader's trade breaks one of my rules?
 
-The contract does not trade. It emits a `Blocked` event naming the rule and the numbers, in its own transaction, and the app shows it, for example: "Leader opened 20x BTC long. Your max leverage is 5x. Not copied."
+The contract does not trade. It emits a `Blocked` event naming the rule and the numbers, in its own transaction, and the app shows it, for example: "Leader opened 12x BTC long. Your max leverage is 5x. Not copied."
 
 ## Can a copy be bigger than the leader's position?
 
