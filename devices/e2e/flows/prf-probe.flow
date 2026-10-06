@@ -1,0 +1,11 @@
+# Smoke flow for devices/prf-probe (Mirror PRF probe app). Exercises the harness end to end.
+# Without a Google account + live assetlinks the passkey step is EXPECTED to fail.
+# Quote selectors that contain spaces or regex backslashes (lines are parsed with shlex).
+device a
+launch
+waitFor "text~:SELFTEST ok=true" 60
+screenshot probe-launched
+tap "text:CREATE PASSKEY"
+passkeyExpectFail 60
+expectResult "text~:^CREATE (OK|FAIL)" ".*" 30
+screenshot probe-create-result

@@ -1,0 +1,49 @@
+{
+  "serial": "emulator-5554",
+  "gms": null,
+  "android": "",
+  "accounts": false,
+  "steps": [
+    {
+      "step": "create",
+      "result": "CREATE FAIL MeraError PASSKEY_OPERATION_FAILED: Passkey creation failed | cause.error=RequestFailed | cause.message=The incoming request cannot be validated",
+      "approval": {
+        "ok": true,
+        "events": [
+          "tap:Continue"
+        ],
+        "texts": [
+          "Create passkey on another device? | Probe 2026-10-06T07:10:06.062Z | probe \u2022 Passkey | Continue"
+        ]
+      }
+    },
+    {
+      "step": "enc",
+      "result": "NSENC FAIL MeraError PASSKEY_OPERATION_FAILED: Passkey assertion failed | cause.error=UserCancelled | cause.message=User cancelled the selector",
+      "approval": {
+        "ok": false,
+        "events": [
+          "back"
+        ],
+        "texts": [
+          "Sign in another way | View options"
+        ],
+        "error": "no-credential-sheet"
+      }
+    },
+    {
+      "step": "restore",
+      "result": "RESTORE FAIL MeraError PASSKEY_OPERATION_FAILED: Passkey assertion failed | cause.error=UserCancelled | cause.message=User cancelled the selector",
+      "approval": {
+        "ok": false,
+        "events": [
+          "back"
+        ],
+        "texts": [
+          "Sign in another way | View options"
+        ],
+        "error": "no-credential-sheet"
+      }
+    }
+  ]
+}

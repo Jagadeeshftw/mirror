@@ -1,0 +1,56 @@
+{
+  "flow": "e2e/flows/prf-probe.flow",
+  "apk": "prf-probe/dist/mirror-prf-probe-release.apk",
+  "package": "com.zeroxo.mirror",
+  "ok": true,
+  "steps": [
+    {
+      "line": 4,
+      "cmd": "device a",
+      "ok": true,
+      "secs": 0.5
+    },
+    {
+      "line": 5,
+      "cmd": "launch",
+      "ok": true,
+      "secs": 2.4
+    },
+    {
+      "line": 6,
+      "cmd": "waitFor \"text~:SELFTEST ok=true\" 60",
+      "ok": true,
+      "secs": 3.5
+    },
+    {
+      "line": 7,
+      "cmd": "screenshot probe-launched",
+      "ok": true,
+      "secs": 0.1
+    },
+    {
+      "line": 8,
+      "cmd": "tap \"text:CREATE PASSKEY\"",
+      "ok": true,
+      "secs": 2.9
+    },
+    {
+      "line": 9,
+      "cmd": "passkeyExpectFail 60",
+      "ok": true,
+      "secs": 11.9
+    },
+    {
+      "line": 10,
+      "cmd": "expectResult \"text~:^CREATE (OK|FAIL)\" \".*\" 30",
+      "ok": true,
+      "secs": 2.2
+    },
+    {
+      "line": 11,
+      "cmd": "screenshot probe-create-result",
+      "ok": true,
+      "secs": 0.2
+    }
+  ]
+}

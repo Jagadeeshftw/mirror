@@ -1,0 +1,46 @@
+{
+  "serial": "emulator-5554",
+  "gms": "26.36.35",
+  "android": "15",
+  "accounts": false,
+  "steps": [
+    {
+      "step": "create",
+      "result": "CREATE FAIL MeraError PASSKEY_OPERATION_FAILED: Passkey creation failed | cause.error=NoCreateOption | cause.message=No create options available.",
+      "approval": {
+        "ok": true,
+        "events": [
+          "tap:Continue"
+        ],
+        "texts": [
+          "Create passkey on another device? | Probe 2026-10-06T07:06:58.847Z | probe \u2022 Passkey | Continue"
+        ]
+      }
+    },
+    {
+      "step": "create2ns",
+      "result": "CREATE2NS FAIL MeraError PASSKEY_OPERATION_FAILED: Passkey creation failed | cause.error=RequestFailed | cause.message=The incoming request cannot be validated",
+      "approval": {
+        "ok": true,
+        "events": [
+          "tap:Continue"
+        ],
+        "texts": [
+          "Create passkey on another device? | Mirror probe 2026-10-06T07:07:17.332Z | probe \u2022 Passkey | Continue"
+        ]
+      }
+    },
+    {
+      "step": "enc",
+      "result": null,
+      "approval": {
+        "ok": false,
+        "events": [],
+        "texts": [
+          "Sign in another way | View options"
+        ],
+        "error": "timeout"
+      }
+    }
+  ]
+}

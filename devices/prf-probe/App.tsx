@@ -9,6 +9,8 @@ import {
   signAndVerify,
   walletFromPrf,
 } from "./src/wallet";
+import { createWithTwoNamespaces, deriveEncryptKey, NS_ENCRYPT } from "./src/namespaces";
+import { bytesToHex } from "@noble/hashes/utils.js";
 
 type W = ReturnType<typeof walletFromPrf> & { credentialId: string };
 
@@ -39,6 +41,29 @@ export default function App() {
     }
   };
 
+  const twoNs = async () => {
+    add("CREATE2NS...");
+    try {
+      const r = await createWithTwoNamespaces();
+      const w = { credentialId: r.created.credentialId, ...walletFromPrf(r.created.prfOutput) };
+      wallet?.session.end();
+      setWallet(w);
+      add(`CREATE2NS OK address=${w.address} x25519=${r.encrypt ? r.encrypt.publicKeyHex : "second-not-returned"}`);
+    } catch (e) {
+      add(`CREATE2NS FAIL ${describeError(e)}`);
+    }
+  };
+
+  const encKey = async () => {
+    add(`NSENC... salt=${bytesToHex(NS_ENCRYPT).slice(0, 16)}`);
+    try {
+      const r = await deriveEncryptKey(wallet?.credentialId);
+      add(`NSENC OK cred=${r.credentialId.slice(0, 12)}... x25519=${r.publicKeyHex}`);
+    } catch (e) {
+      add(`NSENC FAIL ${describeError(e)}`);
+    }
+  };
+
   const sign = async () => {
     if (!wallet) return add("no wallet");
     try {
@@ -51,12 +76,14 @@ export default function App() {
 
   return (
     <View style={s.root}>
-      <Text style={s.h}>meraprobe</Text>
+      <Text style={s.h}>Mirror PRF probe</Text>
       <Text testID="address">{wallet ? wallet.address : "no account"}</Text>
       <View style={s.row}>
         <Button title="Create passkey" onPress={run("CREATE", createAccount)} />
         <Button title="Restore" onPress={run("RESTORE", restoreAccount)} />
         <Button title="Sign 712" onPress={sign} />
+        <Button title="Create 2NS" onPress={twoNs} />
+        <Button title="Encrypt key" onPress={encKey} />
       </View>
       <ScrollView style={s.log}>
         {log.map((l, i) => (

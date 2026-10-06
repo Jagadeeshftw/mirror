@@ -1,0 +1,97 @@
+# Mirror full app flow (PLACEHOLDER until the app ships the testIDs in ../TESTIDS.md).
+# Run:  devices/run-e2e.sh <mirror.apk>            (this file is the default flow)
+# Needs: both emulators signed in to a Google account (same account for the restore step),
+#        assetlinks.json live at https://mirror.0xo.in/.well-known/assetlinks.json,
+#        the test leader + AUSD faucet funded on testnet (app-side config, not this harness).
+# Quote selectors with spaces/backslashes (shlex).
+
+# ---------- 1. install + create account with ONE passkey prompt (device a) ----------
+device a
+# run-e2e.sh already installed the APK on device a
+launch
+waitFor id:onboarding.screen 60
+screenshot 01-onboarding
+tap id:onboarding.createAccount
+passkey 90
+waitFor id:home.screen 90
+log one-prompt account creation done; the flow fails above if a 2nd prompt was needed and not approved
+
+# ---------- 2. AUSD balance ----------
+expectResult id:home.balance.ausd "[0-9]" 120
+expectResult id:home.account.address "^0x[0-9a-fA-F]{4}" 10
+screenshot 02-home-balance
+
+# ---------- 3. open a leader ----------
+tap id:home.tab.leaders
+waitFor id:leaders.list 30
+tap id:leaders.item.0
+waitFor id:leader.screen 30
+screenshot 03-leader
+
+# ---------- 4. follow with match-now ----------
+tap id:leader.follow
+waitFor id:follow.sheet 20
+tap id:follow.matchNow.toggle
+input id:follow.amount.input 10
+tap id:follow.confirm
+tapIfPresent id:passkey.confirm.continue
+passkey 90
+expectResult id:follow.status "(Following|Matched)" 120
+screenshot 04-following
+
+# ---------- 5. receive a copy (leader trades, follower copy lands) ----------
+tap id:home.tab.activity
+expectResult id:activity.item.0.type "Copy" 300
+tap id:activity.item.0
+expectResult id:trade.status "(Filled|Confirmed)" 120
+screenshot 05-copy-received
+back
+
+# ---------- 6. hit a blocked rule ----------
+log trigger a guard rule (e.g. max trade size / token allow-list) via the app's debug action
+tap id:home.tab.leaders
+tap id:leaders.item.0
+tap id:leader.rules
+input id:rules.maxTradeSize.input 1
+tap id:rules.save
+passkey 90
+expectResult id:activity.blocked.banner "(Blocked|rule)" 300
+screenshot 06-blocked-rule
+
+# ---------- 7. pause ----------
+tap id:leader.pause
+tapIfPresent id:passkey.confirm.continue
+passkey 90
+expectResult id:follow.status "Paused" 120
+screenshot 07-paused
+
+# ---------- 8. close all ----------
+tap id:home.tab.portfolio
+tap id:portfolio.closeAll
+tap id:portfolio.closeAll.confirm
+passkey 90
+expectResult id:portfolio.positions.count "^0$" 180
+screenshot 08-closed-all
+
+# ---------- 9. withdraw ----------
+tap id:home.withdraw
+input id:withdraw.address.input 0x000000000000000000000000000000000000dEaD
+input id:withdraw.amount.input 1
+tap id:withdraw.confirm
+passkey 90
+expectResult id:withdraw.status "(Sent|Confirmed)" 180
+screenshot 09-withdrawn
+tap id:home.account.address
+log the address shown on device a is compared to device b below by eye / report.json screenshots
+
+# ---------- 10. restore on device b (same Google account, synced passkey) ----------
+device b
+install
+launch
+waitFor id:onboarding.screen 60
+tap id:onboarding.restore
+passkey 120
+waitFor id:home.screen 90
+expectResult id:home.account.address "^0x[0-9a-fA-F]{4}" 30
+expectResult id:home.balance.ausd "[0-9]" 120
+screenshot 10-restored-on-b

@@ -1,0 +1,9 @@
+# local-only artefacts
+logs/
+*.apk
+prf-probe/node_modules/
+prf-probe/android/build/
+prf-probe/android/app/build/
+prf-probe/android/.gradle/
+__pycache__/
+evidence/**/logcat-emulator-*.txt
