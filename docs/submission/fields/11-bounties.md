@@ -9,12 +9,13 @@ How the three integrations work together:
 - AUSD is the balance. The follower's AUSD, which is Perpl's collateral, sits in their own MirrorAccount.
 - Perpl is the venue. Every copy is an immediate-or-cancel order on Perpl's onchain order book.
 
-Built and tested (73 tests, including fork tests against live Perpl and AUSD on Monad mainnet):
+Built and tested (90 tests, including fork tests against live Perpl and AUSD on Monad mainnet):
 - per-follower contract that owns its own Perpl account
 - onchain policy: leaders, sizing ratio, max leverage, allowed markets, max notional per market, max slippage, daily loss stop, drawdown stop, expiry
 - "blocked by your rule" recorded as an onchain event
 - keeper can trade but never withdraw
 - gasless AUSD deposits (permit, ERC-3009) and gasless signed owner actions (pause, close all, withdraw)
+- match now: the follower's own passkey-signed follow places a Perpl order at once, bringing the account to the leader's current position at the sizing ratio, under the same onchain checks (fork-tested on the live book)
 
 PENDING:
 - the Android app: passkey onboarding, AUSD balance on every screen, leaderboard, leader profiles, follow sheet, live copy feed, positions and PnL
@@ -27,7 +28,7 @@ PENDING:
 PENDING. Needs the app and the mainnet contracts. The planned cut shows exactly these three steps in order:
 1. passkey login
 2. a 10 AUSD gasless deposit, with the balance shown
-3. a copied Perpl trade with its tx link
+3. a follow with match now that places a Perpl trade at once, with its tx link
 <!--/answer-->
 
 ## Perpl: Best use of Perpl's API
