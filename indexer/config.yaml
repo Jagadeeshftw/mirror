@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: mirror-indexer
+description: Mirror copy trading on Perpl (Monad mainnet) - leaders, follower PnL attribution, copy/block feed, stats
+
+# Every event handler reads the transaction hash.
+field_selection:
+  transaction_fields:
+    - hash
+
+contracts:
+  # Perpl Exchange (proxy). All event fields are non-indexed.
+  - name: PerplExchange
+    events:
+      - event: AccountCreated(address account, uint256 id)
+      - event: CollateralDeposit(uint256 accountId, uint256 amountCNS, uint256 balanceCNS)
+      - event: CollateralWithdrawal(uint256 accountId, uint256 amountCNS, uint256 balanceCNS)
+      - event: PositionOpened(uint256 perpId, uint256 accountId, uint8 positionType, uint256 leverageHdths, uint256 depositCNS, int256 pnlCollateralizedCNS, uint256 pricePNS, uint256 lotLNS, uint256 insFeeCNS, uint256 protFeeCNS)
+      - event: PositionOpenedV2(uint256 perpId, uint256 accountId, uint8 positionType, uint256 leverageHdths, uint256 depositCNS, int256 pnlCollateralizedCNS, uint256 pricePNS, uint256 lotLNS, uint256 insFeeCNS, uint256 protFeeCNS, uint256 priceResiduePNSQ16)
+      - event: PositionIncreased(uint256 perpId, uint256 accountId, uint8 positionType, uint256 leverageHdths, uint256 startDepositCNS, uint256 endDepositCNS, int256 pnlCollateralizedCNS, int256 premiumPnlSettledCNS, uint256 maxNegPnlCollatBPS, uint256 pricePNS, uint256 startLotLNS, uint256 endLotLNS, uint256 insFeeCNS, uint256 protFeeCNS)
+      - event: PositionIncreasedV2(uint256 perpId, uint256 accountId, uint8 positionType, uint256 leverageHdths, uint256 startDepositCNS, uint256 endDepositCNS, int256 pnlCollateralizedCNS, int256 premiumPnlSettledCNS, uint256 maxNegPnlCollatBPS, uint256 pricePNS, uint256 startLotLNS, uint256 endLotLNS, uint256 insFeeCNS, uint256 protFeeCNS, uint256 priceResiduePNSQ16)
+      - event: PositionDecreased(uint256 perpId, uint256 accountId, uint8 positionType, uint256 startDepositCNS, uint256 endDepositCNS, uint256 startLotLNS, uint256 endLotLNS, int256 deltaPnlCNS, int256 fundingCNS)
+      - event: PositionClosed(uint256 perpId, uint256 accountId, uint8 positionType, uint256 pricePNS, int256 deltaPnlCNS, int256 fundingCNS)
+      - event: PositionInverted(uint256 perpId, uint256 accountId, uint8 positionType, uint256 leverageHdths, uint256 startDepositCNS, uint256 endDepositCNS, int256 pnlCollateralizedCNS, uint256 pricePNS, uint256 startLotLNS, uint256 endLotLNS, int256 deltaPnlCNS, int256 fundingCNS, uint256 insFeeCNS, uint256 protFeeCNS)
+      - event: PositionLiquidated(uint256 perpId, uint256 posAccountId, uint8 positionType, uint256 markPricePNS, uint256 liqPricePNS, uint256 liqLotLNS, uint256 posLotLNS, int256 deltaPnlCNS, int256 fundingCNS, int256 posAmountCNS, uint256 posDepositCNS, int256 accAmountCNS, uint256 accBalanceCNS, bool onOrderBook)
+      - event: PositionDeleveraged(uint256 perpId, uint256 accountId, bool forceClose, uint8 positionType, uint256 entryPricePNS, uint256 markPricePNS, uint256 deleveragePricePNS, int256 deltaPnlCNS, int256 fundingCNS, uint256 startDepositCNS, uint256 endDepositCNS, uint256 startLotLNS, uint256 endLotLNS, uint256 amountCNS, uint256 balanceCNS)
+      - event: PositionDeleveragedV2(uint256 perpId, uint256 accountId, bool forceClose, uint8 positionType, uint256 entryPricePNS, uint256 markPricePNS, uint256 deleveragePricePNS, int256 deltaPnlCNS, int256 fundingCNS, uint256 startDepositCNS, uint256 endDepositCNS, uint256 startLotLNS, uint256 endLotLNS, uint256 amountCNS, uint256 balanceCNS, uint256 priceResiduePNSQ16)
+      - event: PositionCollateralDecreased(uint256 perpId, uint256 accountId, uint8 positionType, uint256 markPricePNS, uint256 impactAdjPricePNS, uint256 startDepositCNS, uint256 endDepositCNS, uint256 startEntryPricePNS, uint256 endEntryPricePNS, uint256 effBmfHdths, uint256 decreaseCNS, uint256 balanceCNS)
+      - event: FundingEventCompleted(uint256 perpId, uint256 fundingEventBlock, int256 specifiedRatePct100k, int256 actualRatePct100k, uint256 fundingPricePNS, int48 fundingPaymentPNS, int48 fundingSumPNS, bool allowOverwrite)
+      - event: ContractAdded(uint256 perpId, string name, string symbol, uint8 status, uint256 basePricePNS, uint256 priceDecimals, uint256 lotDecimals, uint256 takerFeePer100K, uint256 makerFeePer100K, uint256 initMarginFracHdths, uint256 maintMarginFracHdths, uint256 maxOpenInterestLNS, uint256 unityDescentThreshHdths, uint256 overColDescentThreshHdths, uint256 dcpBorrowThreshHdths, uint256 priceTolPer100K, uint256 marginTol, uint256 marginTolDecimals, uint256 refPriceMaxAgeSec, uint256 absFundingClampPctPer100K, uint256 permCancelMinOrders, uint256 permCancelSegment, uint256 insAmtPer100K, uint256 liqInsAmtPer100K, uint256 liqUserAmtPer100K, bool btlRestrictBuyers, uint256 btlPriceThreshPer100K, uint256 btlInsAmtPer100K, uint256 btlUserAmtPer100K, uint256 btlBuyerAmtPer100K, uint256 numPerpetuals)
+      - event: ContractAddedV2(uint256 perpId, string name, string symbol, uint8 status, uint256 basePricePNS, uint256 priceDecimals, uint256 lotDecimals, uint256 initMarginFracHdths, uint256 maintMarginFracHdths, uint256 maxOpenInterestLNS, uint256 unityDescentThreshHdths, uint256 overColDescentThreshHdths, uint256 dcpBorrowThreshHdths, uint256 priceTolPer100K, uint256 marginTol, uint256 marginTolDecimals, uint256 refPriceMaxAgeSec, uint256 absFundingClampPctPer100K, uint256 permCancelMinOrders, uint256 permCancelSegment, uint256 insAmtPer100K, uint256 liqInsAmtPer100K, uint256 liqUserAmtPer100K, bool btlRestrictBuyers, uint256 btlPriceThreshPer100K, uint256 btlInsAmtPer100K, uint256 btlUserAmtPer100K, uint256 btlBuyerAmtPer100K, uint256 numPerpetuals, uint256 perpFeeSchedId)
+
+  # Mirror factory: deploys one EIP-1167 MirrorAccount clone per (owner, salt).
+  - name: MirrorAccountFactory
+    events:
+      - event: AccountCreated(address indexed owner, address indexed account, bytes32 salt)
+
+  # MirrorAccount clones, registered dynamically from MirrorAccountFactory.AccountCreated.
+  - name: MirrorAccount
+    events:
+      - event: Initialized(address indexed owner)
+        name: OwnerInitialized
+      - event: PerplAccountCreated(uint256 indexed perplAccountId)
+      - event: PolicyUpdated(uint16 maxLeverageHdths, uint16 maxSlippageBps, uint16 dailyLossBps, uint16 drawdownBps, uint40 expiry, (uint32 accountId, uint32 ratioBps)[] leaders, (uint32 perpId, uint64 maxNotionalCNS)[] markets)
+      - event: PausedSet(bool paused)
+      - event: Deposited(address indexed from, uint256 amount, uint256 netDeposits)
+      - event: Withdrawn(address indexed to, uint256 amount, uint256 netDeposits)
+      - event: Mirrored(address indexed keeper, uint32 indexed leaderAccountId, uint32 indexed perpId, uint8 orderType, uint64 lotLNS, uint64 pricePNS, uint16 leverageHdths, uint256 lotsBefore, uint256 lotsAfter, bytes32 leaderRef)
+      - event: Blocked(address indexed keeper, uint32 indexed leaderAccountId, uint32 indexed perpId, uint8 reason, uint8 orderType, uint64 lotLNS, uint256 limit, uint256 actual, bytes32 leaderRef)
+      - event: ClosedAll(uint16 slippageBps, uint256 positionsClosed)
+      - event: Followed(uint256 matchOrders, uint256 matchesExecuted)
+
+chains:
+  - id: 143 # Monad mainnet
+    start_block: ${ENVIO_START_BLOCK:-54773010}
+    # HyperSync (https://143.hypersync.xyz) is the primary source when ENVIO_API_TOKEN is set.
+    # ENVIO_RPC_MODE=sync switches historical sync to RPC (no token needed). Monad RPCs cap
+    # eth_getLogs at 100 blocks per call, so the block interval is pinned to 100.
+    rpc:
+      - url: ${ENVIO_RPC_URL:-https://rpc.monad.xyz}
+        for: ${ENVIO_RPC_MODE:-fallback}
+        initial_block_interval: 100
+        interval_ceiling: 100
+        acceleration_additive: 100
+        backoff_millis: 1000
+        query_timeout_millis: 20000
+    contracts:
+      - name: PerplExchange
+        address: "0x34B6552d57a35a1D042CcAe1951BD1C370112a6F"
+      - name: MirrorAccountFactory
+        address: "${ENVIO_MIRROR_FACTORY_ADDRESS:-0x0000000000000000000000000000000000000000}"
+        start_block: ${ENVIO_MIRROR_START_BLOCK:-54773010}
+      - name: MirrorAccount

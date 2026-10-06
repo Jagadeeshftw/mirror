@@ -1,0 +1,10 @@
+node_modules/
+.envio/*
+!.envio/.gitignore
+generated/
+build/
+logs/
+*.log
+.env
+.env.*
+!.env.example

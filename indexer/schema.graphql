@@ -1,0 +1,600 @@
+# Mirror indexer schema.
+#
+# Units: every *CNS field is collateral (AUSD, 6 decimals), *PNS is a Perpl price in the market's
+# priceDecimals, *LNS is a size in the market's lotDecimals, *Hdths is hundredths (leverage 1000 = 10x),
+# *Bps is basis points. Timestamps are unix seconds. `day` is floor(timestamp / 86400) (UTC).
+
+enum Side {
+  LONG
+  SHORT
+}
+
+enum PositionEventKind {
+  OPEN
+  INCREASE
+  DECREASE
+  CLOSE
+  INVERT
+  LIQUIDATION
+  DELEVERAGE
+}
+
+"How PositionEvent.pricePNS was obtained."
+enum PriceSource {
+  "Execution price emitted by the event (open, close, invert, liquidation, deleverage)."
+  EVENT
+  "Decrease exit price derived exactly from deltaPnl and the tracked entry price."
+  DERIVED_FROM_PNL
+  "Increase fill price derived from the change in Perpl's average entry price."
+  DERIVED_FROM_ENTRY
+  "Entry price unknown (position opened before the indexed range): last trade price of the market."
+  LAST_TRADE
+  "No price available."
+  NONE
+}
+
+enum StatsWindow {
+  D7
+  D30
+  D90
+}
+
+enum MirrorOrderType {
+  OPEN_LONG
+  OPEN_SHORT
+  CLOSE_LONG
+  CLOSE_SHORT
+}
+
+"MirrorAccount.BlockReason, same order as the Solidity enum."
+enum BlockReason {
+  None
+  Paused
+  Expired
+  LeaderNotAllowed
+  LeaderSideMismatch
+  MarketNotAllowed
+  LeverageTooHigh
+  SlippageTooHigh
+  FlipNotAllowed
+  StaleMark
+  ExceedsLeaderTarget
+  ExceedsMaxNotional
+  DailyLossStop
+  DrawdownStop
+  LeverageTooLow
+  Unknown
+}
+
+enum ActivityKind {
+  CREATED
+  PERPL_ACCOUNT_CREATED
+  DEPOSITED
+  WITHDRAWN
+  POLICY_UPDATED
+  PAUSED
+  UNPAUSED
+  MIRRORED
+  BLOCKED
+  CLOSED_ALL
+  FOLLOWED
+}
+
+# ------------------------------------------------------------------------------------------------
+# Perpl
+# ------------------------------------------------------------------------------------------------
+
+"A Perpl perpetual market."
+type Market {
+  "perpId"
+  id: ID!
+  perpId: Int!
+  symbol: String!
+  lotDecimals: Int!
+  priceDecimals: Int!
+  "False when the market is not in the static table and no ContractAdded event was seen; notional is then 0."
+  decimalsKnown: Boolean!
+  "Last execution price seen in a position event."
+  lastPricePNS: BigInt!
+  lastTradeAt: Int!
+  volumeCNS: BigInt!
+  trades: Int!
+  "Open interest tracked from position events (exact only when synced from the Perpl deploy block)."
+  longLotsLNS: BigInt!
+  shortLotsLNS: BigInt!
+  fundingEvents: Int!
+  lastFundingRatePct100k: BigInt!
+  lastFundingAt: Int!
+  positions: [Position!]! @derivedFrom(field: "market")
+}
+
+"A Perpl exchange account. Leaders and followers' MirrorAccounts are both Perpl accounts."
+type PerplAccount {
+  "Perpl account id (decimal)"
+  id: ID!
+  accountId: BigInt!
+  "Owner address on Perpl (a MirrorAccount clone for followers). Null until AccountCreated or the eth_call lookup."
+  address: String @index
+  isMirrorAccount: Boolean!
+  mirrorAccount: MirrorAccount
+  teamRun: Boolean!
+  balanceCNS: BigInt!
+  totalDepositedCNS: BigInt!
+  totalWithdrawnCNS: BigInt!
+  netDepositedCNS: BigInt!
+  createdAt: Int
+  createdBlock: Int
+  stats: LeaderStats
+  positions: [Position!]! @derivedFrom(field: "account")
+  events: [PositionEvent!]! @derivedFrom(field: "account")
+  daily: [DailyAccountStats!]! @derivedFrom(field: "account")
+  equityCurve: [EquityPoint!]! @derivedFrom(field: "account")
+  windows: [LeaderWindowStats!]! @derivedFrom(field: "account")
+}
+
+"Current position of an account in one market (one row per account+perp, kept after close)."
+type Position {
+  "<accountId>-<perpId>"
+  id: ID!
+  account: PerplAccount!
+  market: Market!
+  perpId: Int!
+  side: Side!
+  lotsLNS: BigInt!
+  "Perpl's average entry price (excludes the Q16 residue)."
+  entryPricePNS: BigInt!
+  "Fraction of one PNS (1/65536ths) on top of entryPricePNS"
+  entryResidueQ16: BigInt!
+  depositCNS: BigInt!
+  leverageHdths: Int!
+  isOpen: Boolean! @index
+  "False when the position predates the indexed range and its size was never observed."
+  lotsKnown: Boolean!
+  openedAt: Int!
+  openedBlock: Int!
+  updatedAt: Int!
+  realizedPnlCNS: BigInt!
+  fundingCNS: BigInt!
+  feesCNS: BigInt!
+  trades: Int!
+  lastExecPricePNS: BigInt!
+  lastTxHash: String!
+  isMirrorAccount: Boolean!
+  teamRun: Boolean!
+  events: [PositionEvent!]! @derivedFrom(field: "position")
+}
+
+"Full trade history: one row per Perpl position event."
+type PositionEvent {
+  "<txHash>-<logIndex>"
+  id: ID!
+  account: PerplAccount!
+  accountId: BigInt! @index
+  position: Position!
+  market: Market!
+  perpId: Int!
+  kind: PositionEventKind!
+  "Side after the event (the new side for INVERT, the closed side for CLOSE)."
+  side: Side!
+  lotsBeforeLNS: BigInt!
+  lotsAfterLNS: BigInt!
+  "Lots traded: opened + closed (INVERT counts both legs)."
+  lotsTradedLNS: BigInt!
+  lotsClosedLNS: BigInt!
+  lotsOpenedLNS: BigInt!
+  lotsKnown: Boolean!
+  pricePNS: BigInt!
+  priceSource: PriceSource!
+  entryPricePNS: BigInt!
+  notionalCNS: BigInt!
+  "Perpl deltaPnl: realized price PnL of the closed lots, excludes funding and fees."
+  realizedPnlCNS: BigInt!
+  "Funding settled on the event; positive = received."
+  fundingCNS: BigInt!
+  "insFee + protFee charged on opening legs."
+  feeCNS: BigInt!
+  netPnlCNS: BigInt!
+  leverageHdths: Int!
+  depositBeforeCNS: BigInt!
+  depositAfterCNS: BigInt!
+  isMirrorAccount: Boolean!
+  teamRun: Boolean!
+  blockNumber: Int! @index
+  timestamp: Int! @index
+  txHash: String! @index
+  logIndex: Int!
+}
+
+"All-time performance of a Perpl account (the leaderboard row)."
+type LeaderStats {
+  "Perpl account id"
+  id: ID!
+  account: PerplAccount!
+  accountId: BigInt!
+  address: String
+  isMirrorAccount: Boolean! @index
+  teamRun: Boolean! @index
+  trades: Int!
+  openingTrades: Int!
+  closingTrades: Int!
+  wins: Int!
+  losses: Int!
+  winRateBps: Int!
+  liquidations: Int!
+  realizedPnlCNS: BigInt!
+  fundingCNS: BigInt!
+  feesCNS: BigInt!
+  "realized + funding - fees: the realized equity curve."
+  netPnlCNS: BigInt! @index
+  volumeCNS: BigInt! @index
+  openingNotionalCNS: BigInt!
+  "sum(leverageHdths * opening notional), for the notional-weighted average."
+  leverageNotionalSum: BigInt!
+  avgLeverageHdths: Int!
+  peakNetPnlCNS: BigInt!
+  maxDrawdownCNS: BigInt!
+  "Max drawdown relative to (capital base + peak net PnL)."
+  maxDrawdownBps: Int!
+  "High-water mark of net collateral deposited into Perpl."
+  capitalBaseCNS: BigInt!
+  "netPnl / capitalBase, in bps (0 when the capital base is unknown)."
+  pnlBps: Int!
+  marketsTraded: [Int!]!
+  marketCount: Int!
+  openPositions: Int!
+  firstTradeAt: Int!
+  lastTradeAt: Int! @index
+  lastTradeBlock: Int!
+  lastTradeDay: Int!
+  "Non-team-run MirrorAccounts whose policy currently lists this leader."
+  followers: Int! @index
+  copiesExecuted: Int!
+  copiesBlocked: Int!
+  copiedNotionalCNS: BigInt!
+  "Realized PnL of followers attributed to this leader (FIFO)."
+  followerPnlCNS: BigInt!
+  windows: [LeaderWindowStats!]! @derivedFrom(field: "leaderStats")
+}
+
+"Rolling 7d/30d/90d figures, refreshed on every trade and by the hourly rollover at the head."
+type LeaderWindowStats {
+  "<accountId>-<D7|D30|D90>"
+  id: ID!
+  account: PerplAccount!
+  leaderStats: LeaderStats!
+  accountId: BigInt!
+  window: StatsWindow! @index
+  days: Int!
+  "Last UTC day included (windows cover days asOfDay-days+1 .. asOfDay)."
+  asOfDay: Int! @index
+  isMirrorAccount: Boolean! @index
+  teamRun: Boolean! @index
+  trades: Int! @index
+  closingTrades: Int!
+  wins: Int!
+  losses: Int!
+  winRateBps: Int!
+  realizedPnlCNS: BigInt!
+  fundingCNS: BigInt!
+  feesCNS: BigInt!
+  netPnlCNS: BigInt! @index
+  volumeCNS: BigInt! @index
+  openingNotionalCNS: BigInt!
+  leverageNotionalSum: BigInt!
+  avgLeverageHdths: Int!
+  "Cumulative net PnL at the start of the window (drawdown baseline)."
+  startCumPnlCNS: BigInt!
+  peakCumPnlCNS: BigInt!
+  maxDrawdownCNS: BigInt! @index
+  maxDrawdownBps: Int!
+  "netPnl / capitalBase in bps."
+  pnlBps: Int!
+  activeDays: Int!
+  lastTradeAt: Int!
+}
+
+"Per account per UTC day aggregates; the source for windows and the equity curve."
+type DailyAccountStats {
+  "<accountId>-<day>"
+  id: ID!
+  account: PerplAccount!
+  accountId: BigInt!
+  day: Int! @index
+  date: String!
+  trades: Int!
+  openingTrades: Int!
+  closingTrades: Int!
+  wins: Int!
+  losses: Int!
+  realizedPnlCNS: BigInt!
+  fundingCNS: BigInt!
+  feesCNS: BigInt!
+  netPnlCNS: BigInt!
+  volumeCNS: BigInt!
+  openingNotionalCNS: BigInt!
+  leverageNotionalSum: BigInt!
+  startCumPnlCNS: BigInt!
+  endCumPnlCNS: BigInt!
+  highCumPnlCNS: BigInt!
+  lowCumPnlCNS: BigInt!
+  "Largest drop from the intraday running high (starting at startCumPnl)."
+  maxIntradayDrawdownCNS: BigInt!
+  marketsTraded: [Int!]!
+  lastTradeAt: Int!
+}
+
+"Daily point of the realized equity curve (end of day values)."
+type EquityPoint {
+  "<accountId>-<day>"
+  id: ID!
+  account: PerplAccount!
+  accountId: BigInt!
+  day: Int! @index
+  date: String!
+  timestamp: Int!
+  cumulativeNetPnlCNS: BigInt!
+  peakNetPnlCNS: BigInt!
+  drawdownCNS: BigInt!
+  netDepositedCNS: BigInt!
+  "netDeposited + cumulative net PnL"
+  equityCNS: BigInt!
+  trades: Int!
+}
+
+# ------------------------------------------------------------------------------------------------
+# Mirror
+# ------------------------------------------------------------------------------------------------
+
+"A follower's copy-trading account (EIP-1167 clone)."
+type MirrorAccount {
+  "clone address"
+  id: ID!
+  address: String!
+  owner: String! @index
+  salt: String!
+  perplAccount: PerplAccount
+  perplAccountId: BigInt
+  teamRun: Boolean! @index
+  createdAt: Int!
+  createdBlock: Int!
+  createdTx: String!
+  paused: Boolean!
+  maxLeverageHdths: Int!
+  maxSlippageBps: Int!
+  dailyLossBps: Int!
+  drawdownBps: Int!
+  expiry: BigInt!
+  leaderAccountIds: [BigInt!]!
+  leaderRatiosBps: [Int!]!
+  marketIds: [Int!]!
+  marketMaxNotionalsCNS: [BigInt!]!
+  policyVersion: Int!
+  policyUpdatedAt: Int!
+  netDepositsCNS: BigInt!
+  totalDepositedCNS: BigInt!
+  totalWithdrawnCNS: BigInt!
+  funded: Boolean!
+  copiesExecuted: Int!
+  copiesBlocked: Int!
+  matchNowCopies: Int!
+  copiedNotionalCNS: BigInt!
+  closeAllCount: Int!
+  lastCopyAt: Int! @index
+  lastActivityAt: Int!
+  leaderRules: [MirrorLeaderRule!]! @derivedFrom(field: "mirrorAccount")
+  marketRules: [MirrorMarketRule!]! @derivedFrom(field: "mirrorAccount")
+  leaderPnl: [FollowerLeaderPnl!]! @derivedFrom(field: "mirrorAccount")
+  copies: [CopyEvent!]! @derivedFrom(field: "mirrorAccount")
+  blocked: [BlockedCopy!]! @derivedFrom(field: "mirrorAccount")
+  activity: [MirrorActivity!]! @derivedFrom(field: "mirrorAccount")
+}
+
+type MirrorLeaderRule {
+  "<mirrorAccount>-<leaderAccountId>"
+  id: ID!
+  mirrorAccount: MirrorAccount!
+  leaderAccountId: BigInt! @index
+  leader: PerplAccount!
+  ratioBps: Int!
+  active: Boolean! @index
+  updatedAt: Int!
+}
+
+type MirrorMarketRule {
+  "<mirrorAccount>-<perpId>"
+  id: ID!
+  mirrorAccount: MirrorAccount!
+  perpId: Int!
+  market: Market!
+  maxNotionalCNS: BigInt!
+  active: Boolean!
+  updatedAt: Int!
+}
+
+"An executed copy (Mirrored event)."
+type CopyEvent {
+  "<txHash>-<logIndex>"
+  id: ID!
+  mirrorAccount: MirrorAccount!
+  follower: PerplAccount
+  keeper: String!
+  leaderAccountId: BigInt! @index
+  leader: PerplAccount!
+  perpId: Int!
+  market: Market!
+  orderType: MirrorOrderType!
+  isOpen: Boolean!
+  lotLNS: BigInt!
+  "Limit price of the IOC order"
+  pricePNS: BigInt!
+  "Execution price from the follower's Perpl position event in the same tx (falls back to pricePNS)"
+  fillPricePNS: BigInt!
+  leverageHdths: Int!
+  lotsBeforeLNS: BigInt!
+  lotsAfterLNS: BigInt!
+  filledLotsLNS: BigInt!
+  notionalCNS: BigInt!
+  leaderRef: String! @index
+  "True for owner match-now orders (leaderRef == keccak256('MIRROR_MATCH_NOW'))"
+  isMatchNow: Boolean!
+  teamRun: Boolean!
+  blockNumber: Int!
+  timestamp: Int! @index
+  txHash: String!
+  logIndex: Int!
+}
+
+"A copy the follower's onchain policy refused (Blocked event)."
+type BlockedCopy {
+  "<txHash>-<logIndex>"
+  id: ID!
+  mirrorAccount: MirrorAccount!
+  keeper: String!
+  leaderAccountId: BigInt! @index
+  leader: PerplAccount!
+  perpId: Int!
+  market: Market!
+  reason: BlockReason! @index
+  reasonCode: Int!
+  orderType: MirrorOrderType!
+  lotLNS: BigInt!
+  limit: BigInt!
+  actual: BigInt!
+  leaderRef: String!
+  isMatchNow: Boolean!
+  teamRun: Boolean!
+  blockNumber: Int!
+  timestamp: Int! @index
+  txHash: String!
+  logIndex: Int!
+}
+
+"Realized PnL of one follower attributed to one leader (FIFO lots per follower+perp)."
+type FollowerLeaderPnl {
+  "<mirrorAccount>-<leaderAccountId> (leader 0 = owner/manual trades)"
+  id: ID!
+  mirrorAccount: MirrorAccount!
+  followerAccountId: BigInt!
+  leaderAccountId: BigInt! @index
+  leader: PerplAccount
+  realizedPnlCNS: BigInt!
+  fundingCNS: BigInt!
+  feesCNS: BigInt!
+  netPnlCNS: BigInt!
+  closedLotsFills: Int!
+  wins: Int!
+  losses: Int!
+  copiedOpens: Int!
+  copiedCloses: Int!
+  copiedNotionalCNS: BigInt!
+  teamRun: Boolean!
+  updatedAt: Int!
+}
+
+"FIFO lot queue of a follower's position in one market. Invariant: sum(lots) == position lots."
+type FollowerLotQueue @internal {
+  "<perplAccountId>-<perpId>"
+  id: ID!
+  mirrorAccountId: String!
+  "Leader account id per tranche; '0' = not (yet) attributed to a copy"
+  leaderIds: [String!]!
+  lots: [BigInt!]!
+  "Opening fees not yet attributed to a leader (assigned by the next Mirrored open)"
+  pendingFeeCNS: BigInt!
+}
+
+"Unified per-account feed (Mirrored/Blocked/Deposited/Withdrawn/PolicyUpdated/Paused/ClosedAll...)."
+type MirrorActivity {
+  "<txHash>-<logIndex>"
+  id: ID!
+  mirrorAccount: MirrorAccount!
+  kind: ActivityKind! @index
+  amountCNS: BigInt
+  copy: CopyEvent
+  blocked: BlockedCopy
+  detail: String
+  teamRun: Boolean!
+  blockNumber: Int! @index
+  timestamp: Int! @index
+  txHash: String!
+  logIndex: Int!
+}
+
+# ------------------------------------------------------------------------------------------------
+# Global stats
+# ------------------------------------------------------------------------------------------------
+
+"Public traction stats. Team-run accounts are excluded (see TeamRunStats)."
+type GlobalStats {
+  "global"
+  id: ID!
+  mirrorAccounts: Int!
+  fundedAccounts: Int!
+  pausedAccounts: Int!
+  netDepositsCNS: BigInt!
+  totalDepositedCNS: BigInt!
+  totalWithdrawnCNS: BigInt!
+  copiesExecuted: Int!
+  copiesBlocked: Int!
+  matchNowCopies: Int!
+  copiedNotionalCNS: BigInt!
+  followerRealizedPnlCNS: BigInt!
+  closeAllCount: Int!
+  policyUpdates: Int!
+  perplAccounts: Int!
+  perplTrades: Int!
+  perplVolumeCNS: BigInt!
+  lastUpdatedAt: Int!
+  lastBlock: Int!
+}
+
+"Same fields as GlobalStats, counting only team-run accounts (demo leader/follower)."
+type TeamRunStats {
+  "teamRun"
+  id: ID!
+  mirrorAccounts: Int!
+  fundedAccounts: Int!
+  pausedAccounts: Int!
+  netDepositsCNS: BigInt!
+  totalDepositedCNS: BigInt!
+  totalWithdrawnCNS: BigInt!
+  copiesExecuted: Int!
+  copiesBlocked: Int!
+  matchNowCopies: Int!
+  copiedNotionalCNS: BigInt!
+  followerRealizedPnlCNS: BigInt!
+  closeAllCount: Int!
+  policyUpdates: Int!
+  perplAccounts: Int!
+  perplTrades: Int!
+  perplVolumeCNS: BigInt!
+  lastUpdatedAt: Int!
+  lastBlock: Int!
+}
+
+"Blocked copies per rule, per scope (global excludes team-run)."
+type BlockReasonCount {
+  "<global|teamRun>-<reason>"
+  id: ID!
+  scope: String! @index
+  reason: BlockReason!
+  count: Int!
+}
+
+"Daily Mirror and Perpl activity per scope (global excludes team-run)."
+type DailyStats {
+  "<global|teamRun>-<day>"
+  id: ID!
+  scope: String! @index
+  day: Int! @index
+  date: String!
+  newMirrorAccounts: Int!
+  copiesExecuted: Int!
+  copiesBlocked: Int!
+  matchNowCopies: Int!
+  copiedNotionalCNS: BigInt!
+  depositsCNS: BigInt!
+  withdrawalsCNS: BigInt!
+  perplTrades: Int!
+  perplVolumeCNS: BigInt!
+}

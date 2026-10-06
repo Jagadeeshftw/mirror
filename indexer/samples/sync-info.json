@@ -1,0 +1,14 @@
+{
+  "description": "Live mainnet proof: RPC-only sync (ENVIO_RPC_MODE=sync, no HyperSync token) with envio start + Postgres + Hasura, then queries/engine.graphql run via scripts/export-samples.mjs",
+  "chainId": 143,
+  "rpc": "https://rpc.monad.xyz",
+  "startBlock": 110970847,
+  "reachedHeadAtBlock": 110976988,
+  "samplesExportedAtBlock": 110977119,
+  "eventsProcessed": 1701,
+  "positionEvents": 1700,
+  "perplAccountsSeen": 51,
+  "derivedPriceCheck": { "checked": 72, "exact": 58, "within1PNS": 71, "maxErrPNS": 2 },
+  "envioVersion": "3.12.1",
+  "date": "2026-10-06"
+}

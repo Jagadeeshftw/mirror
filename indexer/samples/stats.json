@@ -1,0 +1,41 @@
+{
+  "GlobalStats_by_pk": {
+    "mirrorAccounts": 0,
+    "fundedAccounts": 0,
+    "pausedAccounts": 0,
+    "netDepositsCNS": "0",
+    "totalDepositedCNS": "0",
+    "totalWithdrawnCNS": "0",
+    "copiesExecuted": 0,
+    "copiesBlocked": 0,
+    "matchNowCopies": 0,
+    "copiedNotionalCNS": "0",
+    "followerRealizedPnlCNS": "0",
+    "closeAllCount": 0,
+    "policyUpdates": 0,
+    "perplAccounts": 51,
+    "perplTrades": 1700,
+    "perplVolumeCNS": "264576551863",
+    "lastUpdatedAt": 1791271233,
+    "lastBlock": 110977108
+  },
+  "TeamRunStats_by_pk": null,
+  "BlockReasonCount": [],
+  "DailyStats": [
+    {
+      "day": 20732,
+      "date": "2026-10-06",
+      "newMirrorAccounts": 0,
+      "copiesExecuted": 0,
+      "copiesBlocked": 0,
+      "matchNowCopies": 0,
+      "copiedNotionalCNS": "0",
+      "depositsCNS": "0",
+      "withdrawalsCNS": "0",
+      "perplTrades": 1700,
+      "perplVolumeCNS": "264576551863"
+    }
+  ],
+  "activeFollowers": [],
+  "copies": []
+}

@@ -1,0 +1,359 @@
+# GraphQL operations the Mirror engine runs against the indexer (Hasura, role "public").
+# Numeric (BigInt) values come back as strings. Addresses are EIP-55 checksummed.
+
+# GET /v1/leaders?window=7d|30d|90d — leaderboard rows with every score input.
+# Sort client-side by score; order_by here just bounds the candidate set.
+query Leaderboard($window: statswindow!, $minTrades: Int! = 5, $limit: Int! = 200) {
+  LeaderWindowStats(
+    where: {
+      window: { _eq: $window }
+      teamRun: { _eq: false }
+      isMirrorAccount: { _eq: false }
+      trades: { _gte: $minTrades }
+    }
+    order_by: [{ netPnlCNS: desc }, { volumeCNS: desc }]
+    limit: $limit
+  ) {
+    accountId
+    window
+    asOfDay
+    netPnlCNS
+    realizedPnlCNS
+    fundingCNS
+    feesCNS
+    pnlBps
+    volumeCNS
+    trades
+    closingTrades
+    wins
+    losses
+    winRateBps
+    avgLeverageHdths
+    maxDrawdownCNS
+    maxDrawdownBps
+    activeDays
+    lastTradeAt
+    leaderStats {
+      address
+      teamRun
+      followers
+      marketsTraded
+      openPositions
+      capitalBaseCNS
+      netPnlCNS
+      maxDrawdownBps
+      winRateBps
+      trades
+      firstTradeAt
+      copiesExecuted
+      followerPnlCNS
+    }
+  }
+}
+
+# GET /v1/leaders/:accountId — profile, equity curve, open positions, recent trades.
+query LeaderProfile($id: String!, $sinceDay: Int!, $trades: Int! = 50) {
+  PerplAccount_by_pk(id: $id) {
+    id
+    accountId
+    address
+    teamRun
+    isMirrorAccount
+    balanceCNS
+    netDepositedCNS
+    createdAt
+    stats {
+      trades
+      openingTrades
+      closingTrades
+      wins
+      losses
+      winRateBps
+      liquidations
+      realizedPnlCNS
+      fundingCNS
+      feesCNS
+      netPnlCNS
+      pnlBps
+      volumeCNS
+      avgLeverageHdths
+      peakNetPnlCNS
+      maxDrawdownCNS
+      maxDrawdownBps
+      capitalBaseCNS
+      marketsTraded
+      openPositions
+      firstTradeAt
+      lastTradeAt
+      followers
+      copiesExecuted
+      copiesBlocked
+      copiedNotionalCNS
+      followerPnlCNS
+    }
+    windows(order_by: { days: asc }) {
+      window
+      asOfDay
+      netPnlCNS
+      pnlBps
+      volumeCNS
+      trades
+      winRateBps
+      avgLeverageHdths
+      maxDrawdownCNS
+      maxDrawdownBps
+      activeDays
+    }
+    equityCurve(where: { day: { _gte: $sinceDay } }, order_by: { day: asc }) {
+      day
+      date
+      cumulativeNetPnlCNS
+      peakNetPnlCNS
+      drawdownCNS
+      equityCNS
+      trades
+    }
+    positions(where: { isOpen: { _eq: true } }, order_by: { updatedAt: desc }) {
+      perpId
+      side
+      lotsLNS
+      entryPricePNS
+      depositCNS
+      leverageHdths
+      openedAt
+      realizedPnlCNS
+      market {
+        symbol
+        lotDecimals
+        priceDecimals
+        lastPricePNS
+      }
+    }
+    events(order_by: [{ blockNumber: desc }, { logIndex: desc }], limit: $trades) {
+      kind
+      perpId
+      side
+      lotsBeforeLNS
+      lotsAfterLNS
+      lotsTradedLNS
+      pricePNS
+      priceSource
+      notionalCNS
+      realizedPnlCNS
+      fundingCNS
+      feeCNS
+      leverageHdths
+      blockNumber
+      timestamp
+      txHash
+    }
+  }
+}
+
+# GET /v1/owners/:owner/accounts — the owner's MirrorAccounts with policy, positions and PnL per leader.
+query OwnerAccounts($owner: String!) {
+  MirrorAccount(where: { owner: { _ilike: $owner } }, order_by: { createdAt: asc }) {
+    id
+    owner
+    teamRun
+    createdAt
+    paused
+    expiry
+    maxLeverageHdths
+    maxSlippageBps
+    dailyLossBps
+    drawdownBps
+    leaderAccountIds
+    leaderRatiosBps
+    marketIds
+    marketMaxNotionalsCNS
+    policyVersion
+    netDepositsCNS
+    totalDepositedCNS
+    totalWithdrawnCNS
+    funded
+    copiesExecuted
+    copiesBlocked
+    matchNowCopies
+    lastCopyAt
+    perplAccount {
+      accountId
+      balanceCNS
+      stats {
+        netPnlCNS
+        realizedPnlCNS
+        fundingCNS
+        feesCNS
+        openPositions
+        maxDrawdownCNS
+      }
+      positions(where: { isOpen: { _eq: true } }) {
+        perpId
+        side
+        lotsLNS
+        entryPricePNS
+        depositCNS
+        leverageHdths
+      }
+    }
+    leaderPnl(order_by: { netPnlCNS: desc }) {
+      leaderAccountId
+      leader {
+        address
+      }
+      realizedPnlCNS
+      fundingCNS
+      feesCNS
+      netPnlCNS
+      wins
+      losses
+      copiedOpens
+      copiedCloses
+      copiedNotionalCNS
+    }
+  }
+}
+
+# GET /v1/accounts/:account/feed?cursor= — newest first; cursor = blockNumber of the last row.
+query AccountFeed($account: String!, $beforeBlock: Int! = 2147483647, $limit: Int! = 50) {
+  MirrorActivity(
+    where: { mirrorAccount_id: { _eq: $account }, blockNumber: { _lt: $beforeBlock } }
+    order_by: [{ blockNumber: desc }, { logIndex: desc }]
+    limit: $limit
+  ) {
+    kind
+    amountCNS
+    detail
+    txHash
+    blockNumber
+    timestamp
+    copy {
+      leaderAccountId
+      perpId
+      orderType
+      filledLotsLNS
+      fillPricePNS
+      notionalCNS
+      leaderRef
+      isMatchNow
+    }
+    blocked {
+      leaderAccountId
+      perpId
+      reason
+      orderType
+      lotLNS
+      limit
+      actual
+    }
+  }
+}
+
+# GET /v1/stats — public traction numbers (team-run excluded) plus the team-run totals.
+query Stats($sinceDay: Int!, $activeSince: Int!, $copiesOffset: Int! = 0) {
+  GlobalStats_by_pk(id: "global") {
+    mirrorAccounts
+    fundedAccounts
+    pausedAccounts
+    netDepositsCNS
+    totalDepositedCNS
+    totalWithdrawnCNS
+    copiesExecuted
+    copiesBlocked
+    matchNowCopies
+    copiedNotionalCNS
+    followerRealizedPnlCNS
+    closeAllCount
+    policyUpdates
+    perplAccounts
+    perplTrades
+    perplVolumeCNS
+    lastUpdatedAt
+    lastBlock
+  }
+  TeamRunStats_by_pk(id: "teamRun") {
+    mirrorAccounts
+    copiesExecuted
+    copiesBlocked
+    netDepositsCNS
+  }
+  BlockReasonCount(where: { scope: { _eq: "global" } }, order_by: { count: desc }) {
+    reason
+    count
+  }
+  DailyStats(where: { scope: { _eq: "global" }, day: { _gte: $sinceDay } }, order_by: { day: asc }) {
+    day
+    date
+    newMirrorAccounts
+    copiesExecuted
+    copiesBlocked
+    matchNowCopies
+    copiedNotionalCNS
+    depositsCNS
+    withdrawalsCNS
+    perplTrades
+    perplVolumeCNS
+  }
+  activeFollowers: MirrorAccount(where: { teamRun: { _eq: false }, lastCopyAt: { _gte: $activeSince } }) {
+    id
+  }
+  copies: CopyEvent(
+    where: { teamRun: { _eq: false } }
+    order_by: [{ blockNumber: desc }, { logIndex: desc }]
+    limit: 50
+    offset: $copiesOffset
+  ) {
+    mirrorAccount_id
+    leaderAccountId
+    perpId
+    orderType
+    filledLotsLNS
+    fillPricePNS
+    notionalCNS
+    isMatchNow
+    txHash
+    timestamp
+  }
+}
+
+# Followers of a leader (for the profile card).
+query LeaderFollowers($leaderAccountId: numeric!) {
+  MirrorLeaderRule(
+    where: { leaderAccountId: { _eq: $leaderAccountId }, active: { _eq: true }, mirrorAccount: { teamRun: { _eq: false } } }
+  ) {
+    ratioBps
+    mirrorAccount {
+      id
+      owner
+      paused
+    }
+  }
+}
+
+# Markets (symbols, decimals, last price, indexed volume and open interest).
+query Markets {
+  Market(order_by: { perpId: asc }) {
+    perpId
+    symbol
+    lotDecimals
+    priceDecimals
+    lastPricePNS
+    lastTradeAt
+    volumeCNS
+    trades
+    longLotsLNS
+    shortLotsLNS
+    lastFundingRatePct100k
+  }
+}
+
+# Indexer health (block lag).
+query IndexerStatus {
+  _meta {
+    chainId
+    progressBlock
+    sourceBlock
+    eventsProcessed
+    isReady
+  }
+}

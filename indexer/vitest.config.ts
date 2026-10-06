@@ -1,0 +1,16 @@
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    include: ["test/**/*.test.ts"],
+    env: {
+      ENVIO_RESOLVE_PERPL_ADDRESSES: "false",
+      ENVIO_TEAM_RUN_ADDRESSES: "0x00000000000000000000000000000000000000d1,0x00000000000000000000000000000000000000d2",
+      ENVIO_TEAM_RUN_ACCOUNT_IDS: "999",
+      ENVIO_MIRROR_FACTORY_ADDRESS: "0x00000000000000000000000000000000000000fa",
+      ENVIO_TUI: "false",
+      ENVIO_START_BLOCK: "60000000",
+      ENVIO_MIRROR_START_BLOCK: "60000000",
+    },
+  },
+});
