@@ -1,14 +1,7 @@
-// "One Passkey, Many Keys": a namespaced X25519 key derived from the same passkey PRF output
-// that never signs transactions. It decrypts end-to-end encrypted push payloads and
+// "One Passkey, Many Keys": an X25519 key from a separate PRF namespace of the user's passkey
+// (salt sha256("mirror.prf.ns.notify.v1")), evaluated in the same prompt as the account namespace
+// (prfNamespaces.ts). It never signs transactions. It decrypts end-to-end encrypted push payloads and
 // encrypts private follow notes before they are stored on the backend.
-//
-// Mera 0.2 returns exactly one PRF output per WebAuthn ceremony (the `first` PRF
-// evaluation for one 32-byte salt). A second PRF salt would need a second ceremony, i.e.
-// a second biometric prompt at account creation. To keep create to one prompt, namespaced
-// keys are derived from the single PRF output with HKDF-SHA256 using distinct `info`
-// strings, the same domain-separation scheme Mera itself uses for its secret vaults
-// (`mera.v1.encrypt.secret`). The trading key comes from the PRF output via BIP-39/BIP-44,
-// a different derivation path, so the two keys are independent.
 import { x25519 } from "@noble/curves/ed25519.js";
 import { chacha20poly1305 } from "@noble/ciphers/chacha.js";
 import { hkdf } from "@noble/hashes/hkdf.js";
@@ -27,6 +20,7 @@ export interface NotifyKeyPair {
   publicKey: Uint8Array;
 }
 
+/** X25519 key from the notification PRF namespace output (HKDF for domain separation). */
 export function deriveNotifyKey(prfOutput: Uint8Array): NotifyKeyPair {
   if (prfOutput.length !== 32) throw new Error("PRF output must be 32 bytes");
   const privateKey = hkdf(sha256, prfOutput, new Uint8Array(0), utf8ToBytes(NOTIFY_KEY_INFO), 32);

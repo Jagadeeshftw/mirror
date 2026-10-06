@@ -1,8 +1,9 @@
 // Account layer: Mera passkeys only.
 // - Create: one passkey prompt (createPasskeyWithPrfOutput, rpId mirror.0xo.in).
 // - Restore: discoverable assertion without a credential id (getPasskeyPrfOutput).
-// - Keys: PRF output -> BIP-39 entropy -> seed -> m/44'/60'/0'/0/0 (trading/owner key),
-//         PRF output -> HKDF("mirror.v1.notify.x25519") (notification key, never signs).
+// - Keys: account PRF namespace -> BIP-39 entropy -> seed -> m/44'/60'/0'/0/0 (owner key);
+//         separate notification PRF namespace (mirror.prf.ns.notify.v1) -> X25519 key that never signs.
+//         Both namespaces are evaluated in the same passkey prompt (see prfNamespaces.ts).
 // - Signing: a secp256k1 signing session is opened for one action and ended right after.
 //   Nothing that can sign is ever persisted; only the address, the credential id and the
 //   decrypt-only notification key are stored.
@@ -17,6 +18,7 @@ import * as SecureStore from "expo-secure-store";
 import type { LocalAccount } from "viem";
 import { addressFromPrf, mnemonicFromPrf, sessionFromPrf } from "./derive";
 import { deriveNotifyKey, decodeKeyPair, encodeKeyPair, type NotifyKeyPair } from "./notifyKey";
+import { NS_ACCOUNT, NS_NOTIFY, withSecondSalt } from "./prfNamespaces";
 import type { Address } from "./types";
 import { getApiBase } from "./api";
 
@@ -50,7 +52,7 @@ export interface StoredAccount {
 }
 
 // ---------- dev passkey simulator ----------
-async function devPrf(create: boolean): Promise<{ credentialId: string; prfOutput: Uint8Array }> {
+async function devPrf(create: boolean, salt: Uint8Array = NS_ACCOUNT): Promise<{ credentialId: string; prfOutput: Uint8Array }> {
   if (!DEV_TOOLS) throw new Error("unavailable");
   let secret = await SecureStore.getItemAsync(DEV_SECRET_KEY);
   if (!secret) {
@@ -62,7 +64,7 @@ async function devPrf(create: boolean): Promise<{ credentialId: string; prfOutpu
     await SecureStore.setItemAsync(DEV_SECRET_KEY, secret, UNGATED);
   }
   const s = base64.decode(secret);
-  const prfOutput = sha256(new Uint8Array([...s, ...sha256(utf8ToBytes("mera.prf.salt.v1"))]));
+  const prfOutput = sha256(new Uint8Array([...s, ...salt]));
   return { credentialId: "dev-" + base64.encode(sha256(s)).replace(/[+/=]/g, "").slice(0, 22), prfOutput };
 }
 
@@ -79,10 +81,22 @@ export async function loadAccount(): Promise<StoredAccount | null> {
   }
 }
 
-async function saveAccount(a: StoredAccount, prfOutput: Uint8Array) {
+async function saveAccount(a: StoredAccount, notifyPrf: Uint8Array) {
   await SecureStore.setItemAsync(ACCOUNT_KEY, JSON.stringify(a), UNGATED);
-  // Decrypt-only key, needed in the background to open push payloads without a prompt.
-  await SecureStore.setItemAsync(NOTIFY_KEY, encodeKeyPair(deriveNotifyKey(prfOutput)), UNGATED);
+  // Decrypt-only key from the notification namespace, needed in the background to open push
+  // payloads without a prompt.
+  await SecureStore.setItemAsync(NOTIFY_KEY, encodeKeyPair(deriveNotifyKey(notifyPrf)), UNGATED);
+}
+
+/** Notification namespace on its own (one more prompt), for providers that ignore `eval.second`. */
+async function notifyPrfAlone(credentialId: string): Promise<Uint8Array> {
+  const got = await getPasskeyPrfOutput({
+    rpId: RP_ID,
+    prfSalt: NS_NOTIFY,
+    credential: { credentialId },
+    webAuthnClient: reactNativeWebAuthnClient,
+  });
+  return got.prfOutput;
 }
 
 export async function loadNotifyKey(): Promise<NotifyKeyPair | null> {
@@ -99,23 +113,29 @@ export async function signOutDevice(): Promise<void> {
 export async function createAccount(deviceName?: string): Promise<StoredAccount> {
   let credentialId: string;
   let prfOutput: Uint8Array;
+  let notifyPrf: Uint8Array | undefined;
   if (DEV_TOOLS && devPasskeyActive()) {
     ({ credentialId, prfOutput } = await devPrf(true));
+    notifyPrf = (await devPrf(false, NS_NOTIFY)).prfOutput;
   } else {
-    const created = await createPasskeyWithPrfOutput({
-      rp: { id: RP_ID, name: BRAND },
-      user: { name: `${BRAND} account`, displayName: `${BRAND} account` },
-      webAuthnClient: reactNativeWebAuthnClient,
-    });
+    const { result: created, second } = await withSecondSalt(NS_NOTIFY, () =>
+      createPasskeyWithPrfOutput({
+        rp: { id: RP_ID, name: BRAND },
+        user: { name: `${BRAND} account`, displayName: `${BRAND} account` },
+        webAuthnClient: reactNativeWebAuthnClient,
+      }),
+    );
     credentialId = created.credentialId;
     prfOutput = created.prfOutput;
+    notifyPrf = second ?? (await notifyPrfAlone(credentialId));
   }
   try {
     const account: StoredAccount = { address: addressFromPrf(prfOutput), credentialId, createdAt: Date.now(), device: deviceName };
-    await saveAccount(account, prfOutput);
+    await saveAccount(account, notifyPrf);
     return account;
   } finally {
     prfOutput.fill(0);
+    notifyPrf.fill(0);
   }
 }
 
@@ -123,12 +143,17 @@ export async function createAccount(deviceName?: string): Promise<StoredAccount>
 export async function restoreAccount(deviceName?: string): Promise<StoredAccount> {
   let credentialId: string;
   let prfOutput: Uint8Array;
+  let notifyPrf: Uint8Array | undefined;
   if (DEV_TOOLS && devPasskeyActive()) {
     ({ credentialId, prfOutput } = await devPrf(false));
+    notifyPrf = (await devPrf(false, NS_NOTIFY)).prfOutput;
   } else {
-    const got = await getPasskeyPrfOutput({ rpId: RP_ID, webAuthnClient: reactNativeWebAuthnClient });
+    const { result: got, second } = await withSecondSalt(NS_NOTIFY, () =>
+      getPasskeyPrfOutput({ rpId: RP_ID, webAuthnClient: reactNativeWebAuthnClient }),
+    );
     credentialId = got.credentialId;
     prfOutput = got.prfOutput;
+    notifyPrf = second ?? (await notifyPrfAlone(credentialId));
   }
   try {
     const account: StoredAccount = {
@@ -138,10 +163,11 @@ export async function restoreAccount(deviceName?: string): Promise<StoredAccount
       device: deviceName,
       restored: true,
     };
-    await saveAccount(account, prfOutput);
+    await saveAccount(account, notifyPrf);
     return account;
   } finally {
     prfOutput.fill(0);
+    notifyPrf.fill(0);
   }
 }
 

@@ -6,7 +6,8 @@ import { TextInput, View } from "react-native";
 import { DEFAULT_API_BASE, getApiBase, setApiBaseOverride } from "../lib/api";
 import { addressUrl, blockNumber } from "../lib/chain";
 import { dateShort, shortAddr } from "../lib/format";
-import { fingerprint, NOTIFY_KEY_INFO } from "../lib/notifyKey";
+import { fingerprint } from "../lib/notifyKey";
+import { NS_NOTIFY_LABEL } from "../lib/prfNamespaces";
 import { registerForPush } from "../lib/push";
 import { devPasskeyActive, describeError, exportRecoveryPhrase, loadNotifyKey, RP_ID } from "../lib/wallet";
 import { useConfig, useTotals } from "../state/data";
@@ -104,7 +105,7 @@ export default function Settings() {
                   {fp ?? "Not on this device"}
                 </T>
                 <T size={11} color="mu">
-                  HKDF-SHA256 of the passkey PRF, info "{NOTIFY_KEY_INFO}". Decrypts push and seals private follow notes.
+                  Separate PRF namespace "{NS_NOTIFY_LABEL}" of your passkey, read in the same prompt. Never signs. Decrypts push and seals private follow notes.
                 </T>
               </View>
             }
