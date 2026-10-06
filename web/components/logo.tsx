@@ -16,19 +16,13 @@ export const Logo = ({ className, href = "/" }: { className?: string; href?: str
   );
 };
 
-/** Mark: a filled half and its outlined reflection across a centre axis. */
+/** Mark: the sail, a solid triangle and its reflection across a vertical axis (source: brand/svg/mark.svg). */
 export const LogoIcon = (props: React.SVGAttributes<SVGSVGElement>) => {
   return (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden {...props}>
-      <rect width="24" height="24" rx="7" className="fill-brand" />
-      <path d="M11 6.5a5.5 5.5 0 0 0 0 11V6.5Z" fill="white" />
-      <path
-        d="M13 6.5a5.5 5.5 0 0 1 0 11V6.5Z"
-        stroke="white"
-        strokeOpacity="0.85"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
+    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden {...props}>
+      <rect width="32" height="32" rx="9" fill="#4B3BFF" />
+      <path d="M15 7.5 6.5 24.5H15z" fill="#FFFFFF" />
+      <path d="M17 7.5l8.5 17H17z" fill="#FFFFFF" fillOpacity="0.45" />
     </svg>
   );
 };

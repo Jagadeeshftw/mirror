@@ -1,7 +1,8 @@
 # Mirror brand kit
 
-All files are rendered from one mark by `python3 brand/src/render.py` (plus `... render.py preview` for the
-X preview). The mark is the approved **sail**: a solid triangle and its reflection across a vertical axis,
+**The sail is Mirror's only logo.** `brand/` is the single source for every shipped mark: run
+`python3 brand/src/render.py` to render all files and sync them into the app (`app/assets/`) and the site
+(`web/app/` icons, `web/public/icons/`). `render.py sync` only copies; `render.py preview` only redraws the X preview. The mark is the approved **sail**: a solid triangle and its reflection across a vertical axis,
 on the accent. It is the one used in the approved app design (`design/app-proposal`) and in the shipped
 app icon (`app/assets/`).
 
@@ -17,12 +18,13 @@ app icon (`app/assets/`).
 | `png/logo-light-1024.png`, `png/logo-dark-1024.png` | Mark for light and dark backgrounds | 1024×1024 PNG |
 | `png/logo-horizontal-light.png`, `png/logo-horizontal-dark.png` | Mark + wordmark | 840×200 PNG |
 | `png/mark-rounded-1024.png` | Rounded-square mark with transparent corners | 1024×1024 PNG |
-| `svg/*.svg` | Sources: `mark.svg`, `mark-square.svg`, `glyph-light.svg`, `glyph-dark.svg`, `logo-light.svg`, `logo-dark.svg` (wordmark kept as Inter text), `x-profile-400.svg`, `maskable-512.svg`, Android adaptive foreground and monochrome | vector |
+| `svg/*.svg` | Sources: `mark.svg`, `mark-square.svg`, `glyph-light.svg`, `glyph-dark.svg`, `logo-light.svg`, `logo-dark.svg` (wordmark outlined to paths from Inter SemiBold, so it renders the same on any machine), `x-profile-400.svg`, `maskable-512.svg`, Android adaptive foreground and monochrome | vector |
 | `icons/favicon.ico` (16/32/48), `icons/favicon-{16,32,48}.png`, `icons/favicon.svg` | Favicon | |
 | `icons/icon-192.png`, `icons/icon-512.png`, `icons/maskable-512.png`, `icons/apple-touch-icon-180.png` | PWA and Apple touch icons | |
 | `icons/android-adaptive-foreground.png`, `icons/android-adaptive-monochrome.png` | Android adaptive icon layers (background `#4B3BFF`) | 1024×1024 |
-| `app/*` | The app's shipped icon assets, exported as-is (`icon-1024`, adaptive foreground/monochrome, notification icon, splash mark) | |
+| `app/*` | App icon, adaptive foreground and monochrome (background `#4B3BFF`), notification icon, splash mark; synced to `app/assets/` | |
+| `web/opengraph-image.png` | Social share image; synced to `web/app/opengraph-image.png` | 1200×630 |
 
-The website currently uses a different mark from the landing proposal (a half-disc and its outlined
-reflection, `web/components/logo.tsx`, `web/app/icon.svg`). Aligning the website's logo, favicon and
-OG image to the sail mark is pending confirmation.
+The wordmark outline comes from `src/wordmark.py` (Inter SemiBold, `src/fonts/`, SIL Open Font License,
+`src/fonts/OFL.txt`). In code, the mark is drawn from the same geometry with fixed colours in both themes:
+`web/components/logo.tsx` (`LogoIcon`) and `app/src/ui/kit.tsx` (`BrandMark`).

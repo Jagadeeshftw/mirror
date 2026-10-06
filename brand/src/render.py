@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import pathlib
 import subprocess
+import sys
 import tempfile
 
 from PIL import Image
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 REPO = ROOT.parent
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
@@ -71,13 +73,16 @@ def scaled_glyph_svg(size: int, scale: float, bg: str | None, fill: str = "#FFFF
 
 
 def logo_svg(text_color: str) -> str:
-    """Horizontal logo: rounded mark + Inter SemiBold wordmark (text kept as text; needs Inter)."""
+    """Horizontal logo: rounded mark + "Mirror" in Inter SemiBold, outlined to paths (renders the same on
+    any machine; no font needed)."""
+    from wordmark import outline
+
+    word = outline("Mirror", 44, 29, 26, -0.56)
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 40">'
         '<g transform="translate(0 4)">'
         f'<rect width="32" height="32" rx="9" fill="{ACCENT}"/>{glyph("#FFFFFF")}</g>'
-        f'<text x="44" y="29" font-family="Inter, Arial, sans-serif" font-weight="600" font-size="26" '
-        f'letter-spacing="-0.5" fill="{text_color}">Mirror</text></svg>'
+        f'<path d="{word}" fill="{text_color}"/></svg>'
     )
 
 
@@ -207,10 +212,6 @@ def main() -> None:
     print("rendered brand kit into", ROOT)
 
 
-if __name__ == "__main__":
-    main()
-
-
 def preview() -> None:
     """X profile mock: desktop column (600 px) and phone width (390 px), plus avatar at 48/32 px."""
     import base64
@@ -256,5 +257,80 @@ def preview() -> None:
     chrome_png(page(body, 1120, 600, "#E8E8E3"), 1120, 600, ROOT / "x" / "preview-x-profile.png")
 
 
-if __name__ == "__main__" and len(__import__("sys").argv) > 1 and __import__("sys").argv[1] == "preview":
-    preview()
+def og_html(w: int = 1200, h: int = 630) -> str:
+    """Social share image (same layout as the site's previous OG image, now with the sail mark)."""
+    css = f"""
+    .og{{width:{w}px;height:{h}px;box-sizing:border-box;background:{PAPER};padding:72px 80px;display:flex;flex-direction:column;
+      justify-content:space-between;color:{INK}}}
+    .top{{display:flex;align-items:center;gap:18px}}
+    .name{{font-size:40px;font-weight:700;letter-spacing:-1px}}
+    .tag{{margin-left:12px;font-size:22px;color:{ACCENT};background:#ECEAFF;padding:6px 16px;border-radius:999px}}
+    .h{{font-size:76px;font-weight:700;letter-spacing:-3px;line-height:1.04}}
+    .sub{{margin-top:28px;font-size:30px;color:#5B606B;max-width:940px;line-height:1.35}}
+    .foot{{display:flex;gap:28px;font-size:24px;color:#5B606B}}
+    """
+    mark = mark_svg().replace("<svg ", '<svg width="56" height="56" ', 1)
+    body = (
+        f'<div class="og"><div class="top">{mark}<span class="name">Mirror</span><span class="tag">Beta · Android</span></div>'
+        '<div style="display:flex;flex-direction:column"><span class="h">Copy the best onchain traders.</span>'
+        f'<span class="h" style="color:{ACCENT}">Keep your limits.</span>'
+        '<span class="sub">Your own contract on Monad checks your rules on every copied Perpl order. It can trade for you. '
+        "It can never withdraw.</span></div>"
+        "<div class=\"foot\"><span>Built on Monad</span><span>·</span><span>Trades on Perpl</span><span>·</span>"
+        "<span>Balance in AUSD</span><span>·</span><span>Passkeys by Mera</span></div></div>"
+    )
+    return page(body, w, h, PAPER, css)
+
+
+def app_and_web_assets() -> None:
+    """Everything the app and the site ship, rendered here so brand/ is the single source."""
+    app = ROOT / "app"
+    svg_png(scaled_glyph_svg(1024, 0.6, ACCENT), 1024, 1024, app / "icon.png")
+    svg_png(scaled_glyph_svg(1024, 0.36, None), 1024, 1024, app / "adaptive-foreground.png")
+    svg_png(scaled_glyph_svg(1024, 0.36, None, "#FFFFFF"), 1024, 1024, app / "adaptive-monochrome.png")
+    svg_png(scaled_glyph_svg(96, 0.78, None, "#FFFFFF"), 96, 96, app / "notification-icon.png")
+    svg_png(mark_svg(), 288, 288, app / "splash-mark.png")
+    old = app / "icon-1024.png"
+    if old.exists():
+        old.unlink()
+    chrome_png(og_html(), 1200, 630, ROOT / "web" / "opengraph-image.png")
+
+
+SYNC = {
+    # brand file -> shipped location (relative to repo root)
+    "app/icon.png": "app/assets/icon.png",
+    "app/adaptive-foreground.png": "app/assets/adaptive-foreground.png",
+    "app/adaptive-monochrome.png": "app/assets/adaptive-monochrome.png",
+    "app/notification-icon.png": "app/assets/notification-icon.png",
+    "app/splash-mark.png": "app/assets/splash-mark.png",
+    "icons/favicon.ico": "web/app/favicon.ico",
+    "icons/favicon.svg": "web/app/icon.svg",
+    "icons/apple-touch-icon-180.png": "web/app/apple-icon.png",
+    "web/opengraph-image.png": "web/app/opengraph-image.png",
+    "icons/icon-192.png": "web/public/icons/icon-192.png",
+    "icons/icon-512.png": "web/public/icons/icon-512.png",
+    "icons/maskable-512.png": "web/public/icons/maskable-512.png",
+}
+
+
+def sync() -> None:
+    import shutil
+
+    for src, dst in SYNC.items():
+        d = REPO / dst
+        d.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / src, d)
+    print("synced", len(SYNC), "files into app/ and web/")
+
+
+if __name__ == "__main__":
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "all"
+    if cmd == "preview":
+        preview()
+    elif cmd == "sync":
+        sync()
+    else:
+        main()
+        app_and_web_assets()
+        preview()
+        sync()

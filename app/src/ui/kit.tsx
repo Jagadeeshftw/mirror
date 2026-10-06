@@ -402,12 +402,12 @@ export function TxLink({ hash, onPress, testID }: { hash: string; onPress?: () =
 
 // ---------------------------------------------------------------- identity marks
 export function BrandMark({ size = 28 }: { size?: number }) {
-  const c = useColors();
   return (
     <Svg width={size} height={size} viewBox="0 0 32 32">
-      <Rect width={32} height={32} rx={9} fill={c.ac} />
-      <Path d="M15 7.5 6.5 24.5H15z" fill={c.onAc} />
-      <Path d="M17 7.5l8.5 17H17z" fill={c.onAc} fillOpacity={0.45} />
+      {/* Brand mark (brand/svg/mark.svg): fixed colours in both themes. */}
+      <Rect width={32} height={32} rx={9} fill="#4B3BFF" />
+      <Path d="M15 7.5 6.5 24.5H15z" fill="#FFFFFF" />
+      <Path d="M17 7.5l8.5 17H17z" fill="#FFFFFF" fillOpacity={0.45} />
     </Svg>
   );
 }
