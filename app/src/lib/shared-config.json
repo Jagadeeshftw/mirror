@@ -1,0 +1,51 @@
+{
+  "product": "Mirror",
+  "domain": "mirror.0xo.in",
+  "rpId": "mirror.0xo.in",
+  "androidPackage": "com.zeroxo.mirror",
+  "networks": {
+    "mainnet": {
+      "chainId": 143,
+      "rpc": "https://rpc.monad.xyz",
+      "wss": "wss://rpc.monad.xyz",
+      "explorerTx": "https://monadvision.com/tx/",
+      "explorerAddress": "https://monadvision.com/address/",
+      "perplExchange": "0x34B6552d57a35a1D042CcAe1951BD1C370112a6F",
+      "perplDeployBlock": 54773010,
+      "perplApi": "https://app.perpl.xyz/api",
+      "perplWs": "wss://app.perpl.xyz",
+      "collateral": "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+      "collateralDecimals": 6,
+      "minAccountOpenCNS": "10000000",
+      "mirror": {
+        "factory": null,
+        "implementation": null,
+        "keeperRegistry": null,
+        "deployBlock": null
+      },
+      "teamRun": {
+        "demoLeaderAddress": null,
+        "demoLeaderAccountId": null,
+        "demoFollowerAccount": null
+      },
+      "markets": [
+        { "perpId": 1, "symbol": "BTC", "lotDecimals": 5, "priceDecimals": 1 },
+        { "perpId": 10, "symbol": "MON", "lotDecimals": 0, "priceDecimals": 6 },
+        { "perpId": 20, "symbol": "ETH", "lotDecimals": 3, "priceDecimals": 2 },
+        { "perpId": 31, "symbol": "SOL", "lotDecimals": 3, "priceDecimals": 3 },
+        { "perpId": 40, "symbol": "HYPE", "lotDecimals": 2, "priceDecimals": 4 },
+        { "perpId": 50, "symbol": "ZEC", "lotDecimals": 4, "priceDecimals": 2 },
+        { "perpId": 60, "symbol": "LIT", "lotDecimals": 1, "priceDecimals": 5 },
+        { "perpId": 70, "symbol": "VVV", "lotDecimals": 2, "priceDecimals": 4 },
+        { "perpId": 90, "symbol": "PUMP", "lotDecimals": 0, "priceDecimals": 6 },
+        { "perpId": 100, "symbol": "NEAR", "lotDecimals": 2, "priceDecimals": 4 },
+        { "perpId": 110, "symbol": "UNI", "lotDecimals": 2, "priceDecimals": 4 }
+      ]
+    },
+    "localFork": {
+      "chainId": 143,
+      "rpc": "http://127.0.0.1:8545",
+      "note": "anvil --fork-url https://rpc.monad.xyz --chain-id 143; same addresses as mainnet; test funds only"
+    }
+  }
+}

@@ -1,0 +1,203 @@
+// Account layer: Mera passkeys only.
+// - Create: one passkey prompt (createPasskeyWithPrfOutput, rpId mirror.0xo.in).
+// - Restore: discoverable assertion without a credential id (getPasskeyPrfOutput).
+// - Keys: PRF output -> BIP-39 entropy -> seed -> m/44'/60'/0'/0/0 (trading/owner key),
+//         PRF output -> HKDF("mirror.v1.notify.x25519") (notification key, never signs).
+// - Signing: a secp256k1 signing session is opened for one action and ended right after.
+//   Nothing that can sign is ever persisted; only the address, the credential id and the
+//   decrypt-only notification key are stored.
+import { createPasskeyWithPrfOutput, getPasskeyPrfOutput, isMeraError } from "@category-labs/mera";
+import { reactNativeWebAuthnClient } from "@category-labs/mera/react-native-webauthn-client";
+import { toViemAccount } from "@category-labs/mera/viem";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { utf8ToBytes } from "@noble/hashes/utils.js";
+import { base64 } from "@scure/base";
+import Constants from "expo-constants";
+import * as SecureStore from "expo-secure-store";
+import type { LocalAccount } from "viem";
+import { addressFromPrf, mnemonicFromPrf, sessionFromPrf } from "./derive";
+import { deriveNotifyKey, decodeKeyPair, encodeKeyPair, type NotifyKeyPair } from "./notifyKey";
+import type { Address } from "./types";
+import { getApiBase } from "./api";
+
+export const RP_ID: string = Constants.expoConfig?.extra?.rpId ?? "mirror.0xo.in";
+export const BRAND: string = Constants.expoConfig?.extra?.brand ?? "Mirror";
+/**
+ * Dev-only passkey simulator for emulators without a Google account. Active only when the
+ * build sets EXPO_PUBLIC_DEV_PASSKEY=1 or the app is pointed at a local cleartext mock
+ * (http://localhost, 127.0.0.1, 10.0.2.2). Against any real (https) backend the app always
+ * uses Mera passkeys.
+ */
+export function devPasskeyActive(): boolean {
+  return process.env.EXPO_PUBLIC_DEV_PASSKEY === "1" || /^http:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:|\/|$)/.test(getApiBase());
+}
+
+const ACCOUNT_KEY = "mirror.account.v1";
+const NOTIFY_KEY = "mirror.notify.v1";
+const DEV_SECRET_KEY = "mirror.devpasskey.v1";
+const UNGATED: SecureStore.SecureStoreOptions = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
+
+export interface StoredAccount {
+  address: Address;
+  credentialId: string;
+  createdAt: number;
+  device?: string;
+  restored?: boolean;
+}
+
+// ---------- dev passkey simulator ----------
+async function devPrf(create: boolean): Promise<{ credentialId: string; prfOutput: Uint8Array }> {
+  let secret = await SecureStore.getItemAsync(DEV_SECRET_KEY);
+  if (!secret) {
+    if (!create) throw Object.assign(new Error("No passkey for mirror.0xo.in on this device"), { code: "NO_CREDENTIAL" });
+    const b = new Uint8Array(32);
+    globalThis.crypto.getRandomValues(b);
+    const seedEnv = process.env.EXPO_PUBLIC_DEV_PASSKEY_SEED;
+    secret = seedEnv ? base64.encode(sha256(utf8ToBytes(seedEnv))) : base64.encode(b);
+    await SecureStore.setItemAsync(DEV_SECRET_KEY, secret, UNGATED);
+  }
+  const s = base64.decode(secret);
+  const prfOutput = sha256(new Uint8Array([...s, ...sha256(utf8ToBytes("mera.prf.salt.v1"))]));
+  return { credentialId: "dev-" + base64.encode(sha256(s)).replace(/[+/=]/g, "").slice(0, 22), prfOutput };
+}
+
+// ---------- storage ----------
+export async function loadAccount(): Promise<StoredAccount | null> {
+  const raw = await SecureStore.getItemAsync(ACCOUNT_KEY);
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw) as StoredAccount;
+    if (!/^0x[0-9a-fA-F]{40}$/.test(v.address) || typeof v.credentialId !== "string") return null;
+    return v;
+  } catch {
+    return null;
+  }
+}
+
+async function saveAccount(a: StoredAccount, prfOutput: Uint8Array) {
+  await SecureStore.setItemAsync(ACCOUNT_KEY, JSON.stringify(a), UNGATED);
+  // Decrypt-only key, needed in the background to open push payloads without a prompt.
+  await SecureStore.setItemAsync(NOTIFY_KEY, encodeKeyPair(deriveNotifyKey(prfOutput)), UNGATED);
+}
+
+export async function loadNotifyKey(): Promise<NotifyKeyPair | null> {
+  const raw = await SecureStore.getItemAsync(NOTIFY_KEY);
+  return raw ? decodeKeyPair(raw) : null;
+}
+
+export async function signOutDevice(): Promise<void> {
+  await SecureStore.deleteItemAsync(ACCOUNT_KEY);
+  await SecureStore.deleteItemAsync(NOTIFY_KEY);
+}
+
+// ---------- ceremonies ----------
+export async function createAccount(deviceName?: string): Promise<StoredAccount> {
+  let credentialId: string;
+  let prfOutput: Uint8Array;
+  if (devPasskeyActive()) {
+    ({ credentialId, prfOutput } = await devPrf(true));
+  } else {
+    const created = await createPasskeyWithPrfOutput({
+      rp: { id: RP_ID, name: BRAND },
+      user: { name: `${BRAND} account`, displayName: `${BRAND} account` },
+      webAuthnClient: reactNativeWebAuthnClient,
+    });
+    credentialId = created.credentialId;
+    prfOutput = created.prfOutput;
+  }
+  try {
+    const account: StoredAccount = { address: addressFromPrf(prfOutput), credentialId, createdAt: Date.now(), device: deviceName };
+    await saveAccount(account, prfOutput);
+    return account;
+  } finally {
+    prfOutput.fill(0);
+  }
+}
+
+/** Restore on any device from the synced passkey alone: no credential id is passed. */
+export async function restoreAccount(deviceName?: string): Promise<StoredAccount> {
+  let credentialId: string;
+  let prfOutput: Uint8Array;
+  if (devPasskeyActive()) {
+    ({ credentialId, prfOutput } = await devPrf(false));
+  } else {
+    const got = await getPasskeyPrfOutput({ rpId: RP_ID, webAuthnClient: reactNativeWebAuthnClient });
+    credentialId = got.credentialId;
+    prfOutput = got.prfOutput;
+  }
+  try {
+    const account: StoredAccount = {
+      address: addressFromPrf(prfOutput),
+      credentialId,
+      createdAt: Date.now(),
+      device: deviceName,
+      restored: true,
+    };
+    await saveAccount(account, prfOutput);
+    return account;
+  } finally {
+    prfOutput.fill(0);
+  }
+}
+
+async function assertPrf(stored: StoredAccount): Promise<Uint8Array> {
+  if (devPasskeyActive()) return (await devPrf(false)).prfOutput;
+  const got = await getPasskeyPrfOutput({
+    rpId: RP_ID,
+    credential: { credentialId: stored.credentialId },
+    webAuthnClient: reactNativeWebAuthnClient,
+  });
+  return got.prfOutput;
+}
+
+/**
+ * Runs `fn` with a viem account backed by a scoped Mera signing session. One passkey prompt;
+ * the session is ended (private key zeroed) as soon as `fn` settles.
+ */
+export async function withSigner<T>(fn: (account: LocalAccount, address: Address) => Promise<T>): Promise<T> {
+  const stored = await loadAccount();
+  if (!stored) throw new Error("No account on this device");
+  const prf = await assertPrf(stored);
+  const { session, address } = sessionFromPrf(prf);
+  prf.fill(0);
+  try {
+    if (address.toLowerCase() !== stored.address.toLowerCase()) {
+      throw new Error("This passkey belongs to a different account");
+    }
+    return await fn(toViemAccount(session) as LocalAccount, address);
+  } finally {
+    session.end();
+  }
+}
+
+/** Optional recovery phrase export, behind a passkey prompt. The caller must not persist it. */
+export async function exportRecoveryPhrase(): Promise<string[]> {
+  const stored = await loadAccount();
+  if (!stored) throw new Error("No account on this device");
+  const prf = await assertPrf(stored);
+  try {
+    if (addressFromPrf(prf).toLowerCase() !== stored.address.toLowerCase()) throw new Error("Passkey mismatch");
+    return mnemonicFromPrf(prf).split(" ");
+  } finally {
+    prf.fill(0);
+  }
+}
+
+export function describeError(e: unknown): { title: string; detail: string; cancelled: boolean } {
+  if (isMeraError(e)) {
+    const cause = (e.cause ?? {}) as { error?: string; message?: string };
+    const msg = `${cause.error ?? ""} ${cause.message ?? ""}`.toLowerCase();
+    const cancelled = /cancel|abort|user/.test(msg);
+    if (e.code === "PRF_UNAVAILABLE") {
+      return { title: "This passkey provider can't derive keys", detail: "Use Google Password Manager on Android 14 or newer.", cancelled: false };
+    }
+    if (cancelled) return { title: "Passkey cancelled", detail: "Nothing was signed or created.", cancelled: true };
+    if (/no credential|nocredential|no passkey|not found/.test(msg)) {
+      return { title: "No passkey found", detail: `No ${BRAND} passkey is saved to this device's Google account.`, cancelled: false };
+    }
+    return { title: "Passkey didn't complete", detail: cause.message || e.message, cancelled: false };
+  }
+  const err = e as { message?: string; code?: string };
+  if (err?.code === "NO_CREDENTIAL") return { title: "No passkey found", detail: err.message ?? "", cancelled: false };
+  return { title: "Something went wrong", detail: err?.message ?? String(e), cancelled: false };
+}
