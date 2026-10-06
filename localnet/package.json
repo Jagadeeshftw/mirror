@@ -1,0 +1,13 @@
+{
+  "name": "@mirror/localnet",
+  "private": true,
+  "type": "module",
+  "description": "Local Monad-like chain with Perpl's exchange (from Perpl's MIT dex-sdk test kit) and Mirror deployed, for stage-A tests",
+  "scripts": {
+    "fetch": "node fetch-perpl.mjs",
+    "start": "node start.mjs"
+  },
+  "dependencies": {
+    "viem": "^2.57.3"
+  }
+}
