@@ -1,0 +1,14 @@
+**/node_modules
+**/.e2e
+**/data
+**/dist
+**/.env
+**/.env.*
+.git
+contracts
+web
+app
+indexer
+devices
+design
+docs
