@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MATCH_NOW_REF, blockReason } from "../src/lib/constants.js";
+import { MATCH_NOW_REF, blockReason, stopKind } from "../src/lib/constants.js";
 import { isTeamRun } from "../src/lib/env.js";
 import {
   avgLeverageHdths,
@@ -75,7 +75,17 @@ describe("constants and env", () => {
     expect(blockReason(6)).toBe("LeverageTooHigh");
     expect(blockReason(13)).toBe("DrawdownStop");
     expect(blockReason(14)).toBe("LeverageTooLow");
-    expect(blockReason(15)).toBe("Unknown");
+    expect(blockReason(15)).toBe("EntryTooFar");
+    expect(blockReason(16)).toBe("MarketHeldByOtherLeader");
+    expect(blockReason(17)).toBe("LeaderBudgetExceeded");
+    expect(blockReason(18)).toBe("LeaderLossStop");
+    expect(blockReason(19)).toBe("MarketHalted");
+    expect(blockReason(20)).toBe("CloseBelowTarget");
+    expect(blockReason(21)).toBe("Unknown");
+  });
+
+  it("decodes StopKind in Solidity order", () => {
+    expect([0, 1, 2, 3, 4, 5].map(stopKind)).toEqual(["DailyLoss", "Drawdown", "LeaderLoss", "StopLoss", "TakeProfit", "Unknown"]);
   });
 
   it("team-run matching is case-insensitive on addresses and exact on account ids", () => {

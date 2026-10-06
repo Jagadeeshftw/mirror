@@ -63,7 +63,48 @@ enum BlockReason {
   DailyLossStop
   DrawdownStop
   LeverageTooLow
+  EntryTooFar
+  MarketHeldByOtherLeader
+  LeaderBudgetExceeded
+  LeaderLossStop
+  MarketHalted
+  CloseBelowTarget
   Unknown
+}
+
+"MirrorAccount.StopKind, same order as the Solidity enum."
+enum StopKind {
+  DailyLoss
+  Drawdown
+  LeaderLoss
+  StopLoss
+  TakeProfit
+  Unknown
+}
+
+"Where CopyEvent.followerFillPNS came from."
+enum FollowerFillSource {
+  "CopyProof.fillPNS emitted by the MirrorAccount (opening copies)."
+  PROOF
+  "The follower's own Perpl position event in the same transaction (closing copies, or opens without a proof fill)."
+  PERPL_EVENT
+  "Nothing filled, or no priced Perpl event."
+  NONE
+}
+
+"Which leader fill price CopyEvent.deviationBps is measured against."
+enum LeaderFillBasis {
+  "The leader's own Perpl position event(s) in the leaderRef transaction."
+  ACTUAL
+  "The keeper-reported CopyProof.leaderFillPNS (the leaderRef transaction was not indexed or carried no priced leader event)."
+  REPORTED
+  "No leader fill price (match-now copies, or nothing reported and nothing indexed)."
+  NONE
+}
+
+enum StatsPeriod {
+  ALL_TIME
+  DAY
 }
 
 enum ActivityKind {
@@ -78,6 +119,10 @@ enum ActivityKind {
   BLOCKED
   CLOSED_ALL
   FOLLOWED
+  STOP_TRIGGERED
+  LEVEL_SET
+  LEADER_STOPPED
+  MARKET_CLOSED
 }
 
 # ------------------------------------------------------------------------------------------------
@@ -130,6 +175,8 @@ type PerplAccount {
   daily: [DailyAccountStats!]! @derivedFrom(field: "account")
   equityCurve: [EquityPoint!]! @derivedFrom(field: "account")
   windows: [LeaderWindowStats!]! @derivedFrom(field: "account")
+  "Copy-quality aggregates of the copies of this account as a leader."
+  copyQuality: [CopyQualityStats!]! @derivedFrom(field: "leader")
 }
 
 "Current position of an account in one market (one row per account+perp, kept after close)."
@@ -161,6 +208,8 @@ type Position {
   lastTxHash: String!
   isMirrorAccount: Boolean!
   teamRun: Boolean!
+  "MirrorAccounts only: leader whose copy opened the open position (MirrorAccount.marketLeader). Null when flat or not opened by a copy."
+  heldForLeaderAccountId: BigInt
   events: [PositionEvent!]! @derivedFrom(field: "position")
 }
 
@@ -253,6 +302,8 @@ type LeaderStats {
   copiedNotionalCNS: BigInt!
   "Realized PnL of followers attributed to this leader (FIFO)."
   followerPnlCNS: BigInt!
+  "Times a non-team-run follower's per-leader loss stop fired for this leader (LeaderStopped)."
+  followerLeaderStops: Int!
   windows: [LeaderWindowStats!]! @derivedFrom(field: "leaderStats")
 }
 
@@ -364,8 +415,18 @@ type MirrorAccount {
   dailyLossBps: Int!
   drawdownBps: Int!
   expiry: BigInt!
+  "Opening copies further than this from the leader's onchain entry are blocked (0 = off)."
+  maxEntryDeviationBps: Int!
+  "Slippage bound for closes sent by a triggered stop."
+  stopSlippageBps: Int!
+  "Anyone may flatten the account (or a leader's positions) once a loss stop is hit."
+  flattenOnStop: Boolean!
   leaderAccountIds: [BigInt!]!
   leaderRatiosBps: [Int!]!
+  "Per leader, same order as leaderAccountIds: most margin the leader's positions may hold."
+  leaderBudgetsCNS: [BigInt!]!
+  "Per leader, same order as leaderAccountIds: loss stop in bps of the budget (0 = off)."
+  leaderLossStopsBps: [Int!]!
   marketIds: [Int!]!
   marketMaxNotionalsCNS: [BigInt!]!
   policyVersion: Int!
@@ -379,10 +440,15 @@ type MirrorAccount {
   matchNowCopies: Int!
   copiedNotionalCNS: BigInt!
   closeAllCount: Int!
+  marketCloseCount: Int!
+  stopsTriggered: Int!
+  leaderStops: Int!
   lastCopyAt: Int! @index
   lastActivityAt: Int!
   leaderRules: [MirrorLeaderRule!]! @derivedFrom(field: "mirrorAccount")
   marketRules: [MirrorMarketRule!]! @derivedFrom(field: "mirrorAccount")
+  levels: [MirrorLevel!]! @derivedFrom(field: "mirrorAccount")
+  stops: [StopTrigger!]! @derivedFrom(field: "mirrorAccount")
   leaderPnl: [FollowerLeaderPnl!]! @derivedFrom(field: "mirrorAccount")
   copies: [CopyEvent!]! @derivedFrom(field: "mirrorAccount")
   blocked: [BlockedCopy!]! @derivedFrom(field: "mirrorAccount")
@@ -396,6 +462,17 @@ type MirrorLeaderRule {
   leaderAccountId: BigInt! @index
   leader: PerplAccount!
   ratioBps: Int!
+  "Most collateral this leader's positions may hold as margin."
+  budgetCNS: BigInt!
+  "Stop copying the leader once its PnL since it was added falls below -lossStopBps x budget (0 = off)."
+  lossStopBps: Int!
+  "The leader's loss stop fired; cleared by the next PolicyUpdated listing the leader (the contract re-arms it)."
+  stopped: Boolean!
+  stoppedAt: Int
+  "Leader PnL (realized + unrealized, net of fees) when the stop fired; negative."
+  stopPnlCNS: BigInt
+  stopLimitCNS: BigInt
+  stopCount: Int!
   active: Boolean! @index
   updatedAt: Int!
 }
@@ -407,8 +484,64 @@ type MirrorMarketRule {
   perpId: Int!
   market: Market!
   maxNotionalCNS: BigInt!
+  "Set when an owner stop-loss / take-profit level fired; opening copies are blocked until the next policy."
+  halted: Boolean!
+  haltedAt: Int
   active: Boolean!
   updatedAt: Int!
+}
+
+"Owner stop-loss / take-profit level on one market (LevelSet)."
+type MirrorLevel {
+  "<mirrorAccount>-<perpId>"
+  id: ID!
+  mirrorAccount: MirrorAccount!
+  perpId: Int!
+  market: Market!
+  "Side of the position the level protects."
+  side: Side!
+  "0 = none"
+  stopLossPNS: BigInt!
+  "0 = none"
+  takeProfitPNS: BigInt!
+  slippageBps: Int!
+  "False once cleared (both prices 0) or once it fired and closed the whole position."
+  active: Boolean!
+  setAt: Int!
+  triggeredAt: Int
+  triggeredKind: StopKind
+  updatedAt: Int!
+}
+
+"A stop anyone may trigger (StopTriggered): account loss stop, leader loss stop or an owner level."
+type StopTrigger {
+  "<txHash>-<logIndex>"
+  id: ID!
+  mirrorAccount: MirrorAccount!
+  caller: String!
+  kind: StopKind! @index
+  kindCode: Int!
+  "perpId for StopLoss/TakeProfit, leader account id for LeaderLoss, 0 for DailyLoss/Drawdown"
+  scope: Int!
+  perpId: Int
+  market: Market
+  leaderAccountId: BigInt
+  leader: PerplAccount
+  "Equity floor (account stops), loss limit (leader stop) or the level price (levels)."
+  limit: BigInt!
+  "Equity (account stops), loss (leader stop) or Perpl's mark (levels)."
+  actual: BigInt!
+  "Fresh Chainlink price for levels (0 if stale or unused)."
+  oraclePNS: BigInt!
+  "Positions closed (account and leader stops); null for levels."
+  positionsClosed: Int
+  "Lots closed (levels); null for account and leader stops."
+  lotsClosedLNS: BigInt
+  teamRun: Boolean!
+  blockNumber: Int!
+  timestamp: Int! @index
+  txHash: String!
+  logIndex: Int!
 }
 
 "An executed copy (Mirrored event)."
@@ -438,6 +571,42 @@ type CopyEvent {
   "True for owner match-now orders (leaderRef == keccak256('MIRROR_MATCH_NOW'))"
   isMatchNow: Boolean!
   teamRun: Boolean!
+
+  # ---- copy-quality proof (docs/indexer.md, "Copy quality")
+  "CopyProof.leaderFillPNS: the leader fill price reported by the keeper (0 = not reported). Informational; no rule trusts it."
+  leaderFillReportedPNS: BigInt!
+  "The leader's actual fill: lots-weighted price of the leader's priced Perpl position events in this market in the leaderRef tx. Null if that tx was not indexed or had none."
+  leaderFillActualPNS: BigInt
+  "First leader Perpl position event in this market in the leaderRef tx."
+  leaderEvent: PositionEvent
+  leaderBlock: Int
+  leaderTimestamp: Int
+  "Reported and actual leader fill both known and more than 1 PNS apart (derived prices can be off by 1 PNS)."
+  leaderFillMismatch: Boolean! @index
+  "(reported - actual) / actual in bps, when both are known."
+  leaderFillDiffBps: Int
+  "CopyProof.leaderEntryPNS: the leader's onchain average entry on the copied side at copy time (0 for closes)."
+  leaderEntryPNS: BigInt!
+  "CopyProof.markPNS: Perpl mark at copy time."
+  markPNS: BigInt!
+  "CopyProof.fillPNS: the follower's average fill of the added lots (opens; 0 for closes or no fill)."
+  proofFillPNS: BigInt!
+  "CopyProof.entryDeviationBps: proofFillPNS vs leaderEntryPNS, positive = follower worse (opens only)."
+  entryDeviationBps: Int!
+  "Follower fill price used for quality stats: the proof for opens, the follower's own Perpl event in this tx for closes."
+  followerFillPNS: BigInt
+  followerFillSource: FollowerFillSource!
+  followerEvent: PositionEvent
+  "ACTUAL when leaderFillActualPNS is known, else REPORTED when the keeper reported one, else NONE. NONE for match-now."
+  leaderFillBasis: LeaderFillBasis!
+  "followerFill vs the leader fill (basis above) in bps, positive = follower worse (paid more on a buy, received less on a sell)."
+  deviationBps: Int
+  "copy block - leader event block (Monad blocks are ~0.4 s, block timestamps are whole seconds)."
+  latencyBlocks: Int
+  latencySeconds: Int
+  "Follower or leader is team-run: kept out of the public copy-quality aggregates (counted in the teamRun scope)."
+  excludedFromStats: Boolean! @index
+
   blockNumber: Int!
   timestamp: Int! @index
   txHash: String!
@@ -461,8 +630,14 @@ type BlockedCopy {
   limit: BigInt!
   actual: BigInt!
   leaderRef: String!
+  "Leader fill price reported by the keeper (0 = unknown)."
+  leaderFillPNS: BigInt!
+  "Perpl mark at the time of the attempt."
+  markPNS: BigInt!
   isMatchNow: Boolean!
   teamRun: Boolean!
+  "Follower or leader is team-run (see CopyEvent.excludedFromStats)."
+  excludedFromStats: Boolean!
   blockNumber: Int!
   timestamp: Int! @index
   txHash: String!
@@ -512,6 +687,7 @@ type MirrorActivity {
   amountCNS: BigInt
   copy: CopyEvent
   blocked: BlockedCopy
+  stop: StopTrigger
   detail: String
   teamRun: Boolean!
   blockNumber: Int! @index
@@ -541,6 +717,8 @@ type GlobalStats {
   followerRealizedPnlCNS: BigInt!
   closeAllCount: Int!
   policyUpdates: Int!
+  stopsTriggered: Int!
+  leaderStops: Int!
   perplAccounts: Int!
   perplTrades: Int!
   perplVolumeCNS: BigInt!
@@ -565,6 +743,8 @@ type TeamRunStats {
   followerRealizedPnlCNS: BigInt!
   closeAllCount: Int!
   policyUpdates: Int!
+  stopsTriggered: Int!
+  leaderStops: Int!
   perplAccounts: Int!
   perplTrades: Int!
   perplVolumeCNS: BigInt!
@@ -597,4 +777,78 @@ type DailyStats {
   withdrawalsCNS: BigInt!
   perplTrades: Int!
   perplVolumeCNS: BigInt!
+}
+
+# ------------------------------------------------------------------------------------------------
+# Copy quality
+# ------------------------------------------------------------------------------------------------
+
+"""
+Copy-quality aggregates for the public stats page, per scope (global excludes copies whose follower or
+leader is team-run), for all leaders or one leader, all time or one UTC day. Deviation and latency
+samples come only from keeper copies (not match-now). Percentiles are nearest-rank over exact counts.
+"""
+type CopyQualityStats {
+  "<scope>-<leaderAccountId|all>-<day|all>"
+  id: ID!
+  scope: String! @index
+  "Null = all leaders."
+  leaderAccountId: BigInt @index
+  leader: PerplAccount
+  period: StatsPeriod! @index
+  "Null for ALL_TIME."
+  day: Int @index
+  date: String
+  copies: Int!
+  matchNowCopies: Int!
+  opens: Int!
+  closes: Int!
+  copiedNotionalCNS: BigInt!
+  blocked: Int!
+  "Copies with a deviation sample (filled keeper copies with a leader fill price)."
+  deviationSamples: Int!
+  "Deviation samples measured against the leader's actual onchain fill (the rest use the keeper-reported fill)."
+  deviationSamplesActual: Int!
+  deviationSumBps: BigInt!
+  avgDeviationBps: Int
+  medianDeviationBps: Int
+  p90DeviationBps: Int
+  "Samples where the follower got a worse price than the leader (deviation > 0)."
+  worseThanLeader: Int!
+  latencySamples: Int!
+  medianLatencyBlocks: Int
+  p90LatencyBlocks: Int
+  medianLatencySeconds: Int
+  p90LatencySeconds: Int
+  "Copies whose leader fill could be looked up onchain (leaderRef tx indexed)."
+  leaderFillVerified: Int!
+  "Copies where the keeper-reported leader fill differs from the actual one."
+  leaderFillMismatches: Int!
+  updatedAt: Int!
+}
+
+"Exact value histograms behind CopyQualityStats percentiles (parallel arrays sorted by value)."
+type CopyQualityHistogram @internal {
+  "same id as the CopyQualityStats row"
+  id: ID!
+  deviationValues: [Int!]!
+  deviationCounts: [Int!]!
+  latencyBlockValues: [Int!]!
+  latencyBlockCounts: [Int!]!
+  latencySecondValues: [Int!]!
+  latencySecondCounts: [Int!]!
+}
+
+"Blocked copies per reason, per scope, for all leaders or one leader, all time or one UTC day."
+type BlockReasonStats {
+  "<scope>-<leaderAccountId|all>-<day|all>-<reason>"
+  id: ID!
+  scope: String! @index
+  leaderAccountId: BigInt @index
+  leader: PerplAccount
+  period: StatsPeriod! @index
+  day: Int @index
+  date: String
+  reason: BlockReason!
+  count: Int!
 }

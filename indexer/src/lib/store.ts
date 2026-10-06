@@ -17,6 +17,7 @@ import {
   ratioBps,
   winRateBps,
 } from "./math.js";
+import { addSample, percentile, sampleCount, type Histogram } from "./quality.js";
 import { applyDelta, computeWindow, type DayRow, type TradeDelta, type WindowAgg } from "./windows.js";
 
 export type Ctx = EvmOnEventContext;
@@ -26,6 +27,7 @@ export type LeaderStats = Entity<"LeaderStats">;
 export type MirrorAccount = Entity<"MirrorAccount">;
 export type ScopeStats = Entity<"GlobalStats">;
 export type DailyStats = Entity<"DailyStats">;
+export type CopyQualityStats = Entity<"CopyQualityStats">;
 
 export type Meta = {
   block: number;
@@ -240,6 +242,7 @@ export function newLeaderStats(account: PerplAccount): LeaderStats {
     copiesBlocked: 0,
     copiedNotionalCNS: 0n,
     followerPnlCNS: 0n,
+    followerLeaderStops: 0,
   };
 }
 
@@ -286,6 +289,8 @@ function emptyScope(id: string): ScopeStats {
     followerRealizedPnlCNS: 0n,
     closeAllCount: 0,
     policyUpdates: 0,
+    stopsTriggered: 0,
+    leaderStops: 0,
     perplAccounts: 0,
     perplTrades: 0,
     perplVolumeCNS: 0n,
@@ -563,4 +568,156 @@ export async function refreshStaleWindows(ctx: Ctx, today: number): Promise<numb
     }
   }
   return accountIds.length;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Copy-quality aggregates (CopyQualityStats + BlockReasonStats)
+//
+// Every copy or block updates four rows in its scope: all leaders / its leader x all time / its UTC
+// day. The scope is "teamRun" when the follower or the leader is team-run, "global" otherwise.
+// -------------------------------------------------------------------------------------------------
+
+type QualityKey = { id: string; leaderAccountId: bigint | undefined; day: number | undefined };
+
+function qualityKeys(scope: string, leaderAccountId: bigint, day: number): QualityKey[] {
+  const keys: QualityKey[] = [];
+  for (const leader of [undefined, leaderAccountId]) {
+    for (const d of [undefined, day]) {
+      keys.push({ id: `${scope}-${leader ?? "all"}-${d ?? "all"}`, leaderAccountId: leader, day: d });
+    }
+  }
+  return keys;
+}
+
+function emptyQuality(scope: string, k: QualityKey): CopyQualityStats {
+  return {
+    id: k.id,
+    scope,
+    leaderAccountId: k.leaderAccountId,
+    leader_id: k.leaderAccountId?.toString(),
+    period: k.day === undefined ? "ALL_TIME" : "DAY",
+    day: k.day,
+    date: k.day === undefined ? undefined : dateOf(k.day),
+    copies: 0,
+    matchNowCopies: 0,
+    opens: 0,
+    closes: 0,
+    copiedNotionalCNS: 0n,
+    blocked: 0,
+    deviationSamples: 0,
+    deviationSamplesActual: 0,
+    deviationSumBps: 0n,
+    avgDeviationBps: undefined,
+    medianDeviationBps: undefined,
+    p90DeviationBps: undefined,
+    worseThanLeader: 0,
+    latencySamples: 0,
+    medianLatencyBlocks: undefined,
+    p90LatencyBlocks: undefined,
+    medianLatencySeconds: undefined,
+    p90LatencySeconds: undefined,
+    leaderFillVerified: 0,
+    leaderFillMismatches: 0,
+    updatedAt: 0,
+  };
+}
+
+export type CopySample = {
+  isMatchNow: boolean;
+  isOpen: boolean;
+  notionalCNS: bigint;
+  /** null = no deviation sample */
+  deviationBps: number | null;
+  deviationActual: boolean;
+  latencyBlocks: number | null;
+  latencySeconds: number | null;
+  leaderFillVerified: boolean;
+  leaderFillMismatch: boolean;
+};
+
+function hist(values: readonly number[], counts: readonly number[]): Histogram {
+  return { values: [...values], counts: [...counts] };
+}
+
+/** Fold one executed copy into the four quality rows of its scope. */
+export async function recordCopyQuality(
+  ctx: Ctx,
+  excluded: boolean,
+  leaderAccountId: bigint,
+  m: Meta,
+  c: CopySample,
+): Promise<void> {
+  const scope = scopeName(excluded);
+  for (const k of qualityKeys(scope, leaderAccountId, dayOf(m.timestamp))) {
+    const [row, h] = await Promise.all([ctx.CopyQualityStats.get(k.id), ctx.CopyQualityHistogram.get(k.id)]);
+    const cur = row ?? emptyQuality(scope, k);
+    let dev = hist(h?.deviationValues ?? [], h?.deviationCounts ?? []);
+    let latB = hist(h?.latencyBlockValues ?? [], h?.latencyBlockCounts ?? []);
+    let latS = hist(h?.latencySecondValues ?? [], h?.latencySecondCounts ?? []);
+    if (c.deviationBps !== null) dev = addSample(dev, c.deviationBps);
+    if (c.latencyBlocks !== null) latB = addSample(latB, c.latencyBlocks);
+    if (c.latencySeconds !== null) latS = addSample(latS, c.latencySeconds);
+    const devSum = cur.deviationSumBps + BigInt(c.deviationBps ?? 0);
+    const devN = sampleCount(dev);
+    ctx.CopyQualityHistogram.set({
+      id: k.id,
+      deviationValues: dev.values,
+      deviationCounts: dev.counts,
+      latencyBlockValues: latB.values,
+      latencyBlockCounts: latB.counts,
+      latencySecondValues: latS.values,
+      latencySecondCounts: latS.counts,
+    });
+    ctx.CopyQualityStats.set({
+      ...cur,
+      copies: cur.copies + 1,
+      matchNowCopies: cur.matchNowCopies + (c.isMatchNow ? 1 : 0),
+      opens: cur.opens + (c.isOpen ? 1 : 0),
+      closes: cur.closes + (c.isOpen ? 0 : 1),
+      copiedNotionalCNS: cur.copiedNotionalCNS + c.notionalCNS,
+      deviationSamples: devN,
+      deviationSamplesActual: cur.deviationSamplesActual + (c.deviationBps !== null && c.deviationActual ? 1 : 0),
+      deviationSumBps: devSum,
+      avgDeviationBps: devN > 0 ? Math.round(Number(devSum) / devN) : undefined,
+      medianDeviationBps: percentile(dev, 50) ?? undefined,
+      p90DeviationBps: percentile(dev, 90) ?? undefined,
+      worseThanLeader: cur.worseThanLeader + (c.deviationBps !== null && c.deviationBps > 0 ? 1 : 0),
+      latencySamples: sampleCount(latB),
+      medianLatencyBlocks: percentile(latB, 50) ?? undefined,
+      p90LatencyBlocks: percentile(latB, 90) ?? undefined,
+      medianLatencySeconds: percentile(latS, 50) ?? undefined,
+      p90LatencySeconds: percentile(latS, 90) ?? undefined,
+      leaderFillVerified: cur.leaderFillVerified + (c.leaderFillVerified ? 1 : 0),
+      leaderFillMismatches: cur.leaderFillMismatches + (c.leaderFillMismatch ? 1 : 0),
+      updatedAt: m.timestamp,
+    });
+  }
+}
+
+/** Fold one blocked copy into the quality rows and the per-reason rows of its scope. */
+export async function recordBlockQuality(
+  ctx: Ctx,
+  excluded: boolean,
+  leaderAccountId: bigint,
+  reason: Entity<"BlockReasonStats">["reason"],
+  m: Meta,
+): Promise<void> {
+  const scope = scopeName(excluded);
+  for (const k of qualityKeys(scope, leaderAccountId, dayOf(m.timestamp))) {
+    const cur = (await ctx.CopyQualityStats.get(k.id)) ?? emptyQuality(scope, k);
+    ctx.CopyQualityStats.set({ ...cur, blocked: cur.blocked + 1, updatedAt: m.timestamp });
+    const reasonId = `${k.id}-${reason}`;
+    const r = await ctx.BlockReasonStats.get(reasonId);
+    ctx.BlockReasonStats.set({
+      id: reasonId,
+      scope,
+      leaderAccountId: k.leaderAccountId,
+      leader_id: k.leaderAccountId?.toString(),
+      period: cur.period,
+      day: k.day,
+      date: cur.date,
+      reason,
+      count: (r?.count ?? 0) + 1,
+    });
+  }
 }

@@ -15,6 +15,8 @@ export const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
 
 type Item = Record<string, unknown>;
 
+export type Proof = { leaderFillPNS: bigint; leaderEntryPNS: bigint; markPNS: bigint; fillPNS: bigint; entryDeviationBps: bigint };
+
 export class Timeline {
   private blockNo = 60_000_100;
   private ts = T0;
@@ -22,9 +24,9 @@ export class Timeline {
   private log = 0;
   readonly items: Item[] = [];
 
-  /** Start a new transaction at unix time `ts`. */
-  tx(ts: number): this {
-    this.blockNo += 1;
+  /** Start a new transaction at unix time `ts`, `blocks` blocks after the previous one. */
+  tx(ts: number, blocks = 1): this {
+    this.blockNo += blocks;
     this.ts = ts;
     this.hash = `0x${this.blockNo.toString(16).padStart(64, "0")}`;
     this.log = 0;
@@ -33,6 +35,10 @@ export class Timeline {
 
   get txHash(): string {
     return this.hash;
+  }
+
+  get block(): number {
+    return this.blockNo;
   }
 
   add(contract: string, event: string, params: Record<string, unknown>, srcAddress?: string): this {
@@ -112,26 +118,32 @@ export class Timeline {
     return this.add("MirrorAccount", event, params, src);
   }
 
-  mirrored(src: string, o: { leader: bigint; perpId: bigint; orderType: bigint; lot: bigint; price: bigint; before: bigint; after: bigint; lev?: bigint; ref?: string; keeper?: string }): this {
+  mirrored(src: string, o: { leader: bigint; perpId: bigint; orderType: bigint; lot: bigint; price: bigint; before: bigint; after: bigint; lev?: bigint; ref?: string; keeper?: string; proof?: Partial<Proof> }): this {
     return this.mirror(src, "Mirrored", {
       keeper: o.keeper ?? addr(0xbeef), leaderAccountId: o.leader, perpId: o.perpId, orderType: o.orderType,
       lotLNS: o.lot, pricePNS: o.price, leverageHdths: o.lev ?? 500n, lotsBefore: o.before, lotsAfter: o.after,
       leaderRef: o.ref ?? `0x${"ab".repeat(32)}`,
+      proof: { leaderFillPNS: 0n, leaderEntryPNS: 0n, markPNS: 0n, fillPNS: 0n, entryDeviationBps: 0n, ...o.proof },
     });
   }
 
-  blocked(src: string, o: { leader: bigint; perpId: bigint; reason: bigint; limit: bigint; actual: bigint; orderType?: bigint; lot?: bigint }): this {
+  blocked(src: string, o: { leader: bigint; perpId: bigint; reason: bigint; limit: bigint; actual: bigint; orderType?: bigint; lot?: bigint; leaderFill?: bigint; mark?: bigint }): this {
     return this.mirror(src, "Blocked", {
       keeper: addr(0xbeef), leaderAccountId: o.leader, perpId: o.perpId, reason: o.reason, orderType: o.orderType ?? 0n,
       lotLNS: o.lot ?? 100n, limit: o.limit, actual: o.actual, leaderRef: `0x${"cd".repeat(32)}`,
+      leaderFillPNS: o.leaderFill ?? 0n, markPNS: o.mark ?? 0n,
     });
   }
 
-  policy(src: string, leaders: [bigint, bigint][], markets: [bigint, bigint][], o: { maxLev?: bigint } = {}): this {
+  /** leaders: [accountId, ratioBps, budgetCNS?, lossStopBps?] */
+  policy(src: string, leaders: [bigint, bigint, bigint?, bigint?][], markets: [bigint, bigint][], o: { maxLev?: bigint; maxEntryDev?: bigint; flatten?: boolean } = {}): this {
     return this.mirror(src, "PolicyUpdated", {
       maxLeverageHdths: o.maxLev ?? 1000n, maxSlippageBps: 50n, dailyLossBps: 500n, drawdownBps: 1000n,
-      expiry: BigInt(T0 + 30 * DAY),
-      leaders: leaders.map(([accountId, ratioBps]) => ({ accountId, ratioBps })),
+      expiry: BigInt(T0 + 30 * DAY), maxEntryDeviationBps: o.maxEntryDev ?? 0n, stopSlippageBps: 300n,
+      flattenOnStop: o.flatten ?? false,
+      leaders: leaders.map(([accountId, ratioBps, budgetCNS, lossStopBps]) => ({
+        accountId, ratioBps, budgetCNS: budgetCNS ?? 100_000_000n, lossStopBps: lossStopBps ?? 0n,
+      })),
       markets: markets.map(([perpId, maxNotionalCNS]) => ({ perpId, maxNotionalCNS })),
     });
   }

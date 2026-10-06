@@ -1,0 +1,113 @@
+# "What if I had followed" simulation inputs. Everything the simulation needs is already indexed:
+# the leader's ordered Perpl position events per market with execution price, sizes, leverage,
+# realized PnL, funding and fees, plus market decimals and the last trade price for marking open
+# positions. Numeric (BigInt) values come back as strings.
+#
+# Replay: walk the events in (blockNumber, logIndex) order per market. Follower lots for an event =
+# ceil(lotsTraded * ratioBps / 10000) on the event's side (INCREASE/OPEN add, DECREASE/CLOSE remove,
+# INVERT closes then opens, LIQUIDATION/DELEVERAGE are forced reductions). Use pricePNS as the
+# leader's fill; for the follower, add the measured copy deviation (CopyQualityStats.medianDeviationBps
+# for that leader, see copy-quality.graphql) on the adverse side. Skip rows with lotsKnown = false
+# (size unknown, position opened before the indexed range) and treat priceSource LAST_TRADE as an
+# estimate. Notional = lots * price * 10^6 / 10^(lotDecimals + priceDecimals) in AUSD units.
+
+# All position events of one leader since a time, every market, oldest first. Group by perpId
+# client-side. Page with $offset (or by the last blockNumber/logIndex) for long histories.
+query LeaderTradeHistory($accountId: numeric!, $since: Int! = 0, $limit: Int! = 1000, $offset: Int! = 0) {
+  PositionEvent(
+    where: { accountId: { _eq: $accountId }, timestamp: { _gte: $since } }
+    order_by: [{ blockNumber: asc }, { logIndex: asc }]
+    limit: $limit
+    offset: $offset
+  ) {
+    perpId
+    kind
+    side
+    lotsBeforeLNS
+    lotsAfterLNS
+    lotsOpenedLNS
+    lotsClosedLNS
+    lotsTradedLNS
+    lotsKnown
+    pricePNS
+    priceSource
+    entryPricePNS
+    leverageHdths
+    notionalCNS
+    realizedPnlCNS
+    fundingCNS
+    feeCNS
+    depositBeforeCNS
+    depositAfterCNS
+    blockNumber
+    timestamp
+    txHash
+    logIndex
+    market {
+      symbol
+      lotDecimals
+      priceDecimals
+      lastPricePNS
+    }
+  }
+}
+
+# The same history for one market.
+query LeaderMarketHistory($accountId: numeric!, $perpId: Int!, $since: Int! = 0, $limit: Int! = 1000) {
+  PositionEvent(
+    where: { accountId: { _eq: $accountId }, perpId: { _eq: $perpId }, timestamp: { _gte: $since } }
+    order_by: [{ blockNumber: asc }, { logIndex: asc }]
+    limit: $limit
+  ) {
+    kind
+    side
+    lotsBeforeLNS
+    lotsAfterLNS
+    lotsTradedLNS
+    lotsKnown
+    pricePNS
+    priceSource
+    leverageHdths
+    realizedPnlCNS
+    fundingCNS
+    feeCNS
+    blockNumber
+    timestamp
+  }
+}
+
+# Starting state and marks: the leader's positions (open ones need a mark to value at the end),
+# markets traded and the realized equity curve to compare the replay against.
+query LeaderSimulationContext($id: String!, $sinceDay: Int! = 0) {
+  PerplAccount_by_pk(id: $id) {
+    accountId
+    teamRun
+    stats {
+      marketsTraded
+      firstTradeAt
+      netPnlCNS
+      capitalBaseCNS
+    }
+    positions(where: { isOpen: { _eq: true } }) {
+      perpId
+      side
+      lotsLNS
+      entryPricePNS
+      leverageHdths
+      openedAt
+      lotsKnown
+    }
+    equityCurve(where: { day: { _gte: $sinceDay } }, order_by: { day: asc }) {
+      day
+      cumulativeNetPnlCNS
+    }
+  }
+  Market(order_by: { perpId: asc }) {
+    perpId
+    symbol
+    lotDecimals
+    priceDecimals
+    lastPricePNS
+    lastFundingRatePct100k
+  }
+}

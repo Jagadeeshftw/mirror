@@ -1,0 +1,129 @@
+# Copy-quality figures for the public stats page and leader profiles. Scope "global" excludes copies
+# whose follower or leader is team-run; scope "teamRun" holds exactly those. Row ids are
+# <scope>-<leaderAccountId|all>-<day|all>. Numeric (BigInt) values come back as strings.
+
+# Headline numbers: all-time and daily rows for all leaders, blocked counts by reason.
+query CopyQuality($sinceDay: Int!) {
+  allTime: CopyQualityStats_by_pk(id: "global-all-all") {
+    ...QualityFields
+  }
+  daily: CopyQualityStats(
+    where: { scope: { _eq: "global" }, leaderAccountId: { _is_null: true }, period: { _eq: "DAY" }, day: { _gte: $sinceDay } }
+    order_by: { day: asc }
+  ) {
+    day
+    date
+    ...QualityFields
+  }
+  blockedByReason: BlockReasonStats(
+    where: { scope: { _eq: "global" }, leaderAccountId: { _is_null: true }, period: { _eq: "ALL_TIME" } }
+    order_by: { count: desc }
+  ) {
+    reason
+    count
+  }
+  teamRun: CopyQualityStats_by_pk(id: "teamRun-all-all") {
+    ...QualityFields
+  }
+}
+
+# Per-leader quality (leader profile, or a "best copied leaders" table).
+query LeaderCopyQuality($leaderAccountId: numeric!, $sinceDay: Int!) {
+  allTime: CopyQualityStats(
+    where: { scope: { _eq: "global" }, leaderAccountId: { _eq: $leaderAccountId }, period: { _eq: "ALL_TIME" } }
+  ) {
+    ...QualityFields
+  }
+  daily: CopyQualityStats(
+    where: { scope: { _eq: "global" }, leaderAccountId: { _eq: $leaderAccountId }, period: { _eq: "DAY" }, day: { _gte: $sinceDay } }
+    order_by: { day: asc }
+  ) {
+    day
+    date
+    ...QualityFields
+  }
+  blockedByReason: BlockReasonStats(
+    where: { scope: { _eq: "global" }, leaderAccountId: { _eq: $leaderAccountId }, period: { _eq: "ALL_TIME" } }
+    order_by: { count: desc }
+  ) {
+    reason
+    count
+  }
+}
+
+# Leaders ranked by copy volume, with their quality figures.
+query LeadersByCopyQuality($limit: Int! = 50) {
+  CopyQualityStats(
+    where: { scope: { _eq: "global" }, leaderAccountId: { _is_null: false }, period: { _eq: "ALL_TIME" } }
+    order_by: { copies: desc }
+    limit: $limit
+  ) {
+    leaderAccountId
+    leader {
+      address
+    }
+    ...QualityFields
+  }
+}
+
+# Per-copy proof rows (newest first), e.g. for a "verify a copy" table on the stats page.
+query CopyProofs($limit: Int! = 50, $offset: Int! = 0) {
+  CopyEvent(
+    where: { excludedFromStats: { _eq: false }, isMatchNow: { _eq: false } }
+    order_by: [{ blockNumber: desc }, { logIndex: desc }]
+    limit: $limit
+    offset: $offset
+  ) {
+    mirrorAccount_id
+    leaderAccountId
+    perpId
+    orderType
+    filledLotsLNS
+    leaderRef
+    leaderFillReportedPNS
+    leaderFillActualPNS
+    leaderFillMismatch
+    leaderFillDiffBps
+    leaderEntryPNS
+    markPNS
+    followerFillPNS
+    followerFillSource
+    leaderFillBasis
+    deviationBps
+    entryDeviationBps
+    latencyBlocks
+    latencySeconds
+    leaderBlock
+    leaderTimestamp
+    blockNumber
+    timestamp
+    txHash
+    market {
+      symbol
+      priceDecimals
+    }
+  }
+}
+
+fragment QualityFields on CopyQualityStats {
+  copies
+  matchNowCopies
+  opens
+  closes
+  copiedNotionalCNS
+  blocked
+  deviationSamples
+  deviationSamplesActual
+  avgDeviationBps
+  medianDeviationBps
+  p90DeviationBps
+  worseThanLeader
+  latencySamples
+  medianLatencyBlocks
+  p90LatencyBlocks
+  medianLatencySeconds
+  p90LatencySeconds
+  leaderFillVerified
+  leaderFillMismatches
+  updatedAt
+}

@@ -160,6 +160,8 @@ export async function applyPositionChange(ctx: Ctx, m: Meta, c: PositionChange):
     lastTxHash: m.txHash,
     isMirrorAccount: account.isMirrorAccount,
     teamRun: account.teamRun,
+    // Set by the Mirrored handler (later log, same tx); kept while the same position stays open.
+    heldForLeaderAccountId: isOpen && !newCycle ? pos?.heldForLeaderAccountId : undefined,
   };
   ctx.Position.set(position);
 

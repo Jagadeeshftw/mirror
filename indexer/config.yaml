@@ -40,13 +40,18 @@ contracts:
       - event: Initialized(address indexed owner)
         name: OwnerInitialized
       - event: PerplAccountCreated(uint256 indexed perplAccountId)
-      - event: PolicyUpdated(uint16 maxLeverageHdths, uint16 maxSlippageBps, uint16 dailyLossBps, uint16 drawdownBps, uint40 expiry, (uint32 accountId, uint32 ratioBps)[] leaders, (uint32 perpId, uint64 maxNotionalCNS)[] markets)
+      - event: PolicyUpdated(uint16 maxLeverageHdths, uint16 maxSlippageBps, uint16 dailyLossBps, uint16 drawdownBps, uint40 expiry, uint16 maxEntryDeviationBps, uint16 stopSlippageBps, bool flattenOnStop, (uint32 accountId, uint32 ratioBps, uint64 budgetCNS, uint16 lossStopBps)[] leaders, (uint32 perpId, uint64 maxNotionalCNS)[] markets)
       - event: PausedSet(bool paused)
       - event: Deposited(address indexed from, uint256 amount, uint256 netDeposits)
       - event: Withdrawn(address indexed to, uint256 amount, uint256 netDeposits)
-      - event: Mirrored(address indexed keeper, uint32 indexed leaderAccountId, uint32 indexed perpId, uint8 orderType, uint64 lotLNS, uint64 pricePNS, uint16 leverageHdths, uint256 lotsBefore, uint256 lotsAfter, bytes32 leaderRef)
-      - event: Blocked(address indexed keeper, uint32 indexed leaderAccountId, uint32 indexed perpId, uint8 reason, uint8 orderType, uint64 lotLNS, uint256 limit, uint256 actual, bytes32 leaderRef)
+      - event: Mirrored(address indexed keeper, uint32 indexed leaderAccountId, uint32 indexed perpId, uint8 orderType, uint64 lotLNS, uint64 pricePNS, uint16 leverageHdths, uint256 lotsBefore, uint256 lotsAfter, bytes32 leaderRef, (uint64 leaderFillPNS, uint64 leaderEntryPNS, uint64 markPNS, uint64 fillPNS, int32 entryDeviationBps) proof)
+      - event: Blocked(address indexed keeper, uint32 indexed leaderAccountId, uint32 indexed perpId, uint8 reason, uint8 orderType, uint64 lotLNS, uint256 limit, uint256 actual, bytes32 leaderRef, uint64 leaderFillPNS, uint64 markPNS)
       - event: ClosedAll(uint16 slippageBps, uint256 positionsClosed)
+      - event: MarketClosed(uint32 indexed perpId, uint16 slippageBps, uint256 lotsBefore, uint256 lotsAfter)
+      - event: LevelSet(uint32 indexed perpId, uint8 side, uint64 stopLossPNS, uint64 takeProfitPNS, uint16 slippageBps)
+      # kind is the StopKind enum (uint8 in the ABI)
+      - event: StopTriggered(address indexed caller, uint8 indexed kind, uint32 indexed scope, uint256 limit, uint256 actual, uint256 oraclePNS, uint256 positionsClosed)
+      - event: LeaderStopped(uint32 indexed leaderAccountId, int256 pnlCNS, uint256 limitCNS)
       - event: Followed(uint256 matchOrders, uint256 matchesExecuted)
 
 chains:

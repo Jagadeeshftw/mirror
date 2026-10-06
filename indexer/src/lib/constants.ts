@@ -47,10 +47,28 @@ export const BLOCK_REASONS: readonly Enum<"BlockReason">[] = [
   "DailyLossStop",
   "DrawdownStop",
   "LeverageTooLow",
+  "EntryTooFar",
+  "MarketHeldByOtherLeader",
+  "LeaderBudgetExceeded",
+  "LeaderLossStop",
+  "MarketHalted",
+  "CloseBelowTarget",
 ];
 
 export function blockReason(code: number): Enum<"BlockReason"> {
   return BLOCK_REASONS[code] ?? "Unknown";
+}
+
+/** MirrorAccount.StopKind in Solidity declaration order. */
+export const STOP_KINDS: readonly Enum<"StopKind">[] = ["DailyLoss", "Drawdown", "LeaderLoss", "StopLoss", "TakeProfit"];
+
+export function stopKind(code: number): Enum<"StopKind"> {
+  return STOP_KINDS[code] ?? "Unknown";
+}
+
+/** Stop kinds whose scope is a perpId (owner levels). */
+export function isLevelStop(kind: Enum<"StopKind">): boolean {
+  return kind === "StopLoss" || kind === "TakeProfit";
 }
 
 export const ORDER_TYPES: readonly Enum<"MirrorOrderType">[] = [
@@ -73,6 +91,14 @@ export const WINDOWS: readonly { window: Enum<"StatsWindow">; days: number }[] =
   { window: "D30", days: 30 },
   { window: "D90", days: 90 },
 ];
+
+/**
+ * Team-run accounts known at build time, mirroring `networks.mainnet.teamRun` in shared/config.json
+ * (demo leader EOA and Perpl id, demo follower MirrorAccount). Fill these in when the demo accounts are
+ * created; ENVIO_TEAM_RUN_ADDRESSES / ENVIO_TEAM_RUN_ACCOUNT_IDS add to them at runtime.
+ */
+export const TEAM_RUN_ADDRESSES: readonly string[] = [];
+export const TEAM_RUN_ACCOUNT_IDS: readonly bigint[] = [];
 
 export const SCOPE_GLOBAL = "global";
 export const SCOPE_TEAM_RUN = "teamRun";

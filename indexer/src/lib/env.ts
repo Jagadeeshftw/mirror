@@ -3,6 +3,8 @@
  * so the unprefixed names are accepted as a fallback for self-hosting only.
  */
 
+import { TEAM_RUN_ACCOUNT_IDS, TEAM_RUN_ADDRESSES } from "./constants.js";
+
 function read(name: string): string {
   return process.env[`ENVIO_${name}`] ?? process.env[name] ?? "";
 }
@@ -24,11 +26,14 @@ function load(): void {
   const key = `${rawAddrs}|${rawIds}`;
   if (key === cacheKey) return;
   cacheKey = key;
-  addresses = new Set(parseList(rawAddrs));
-  accountIds = new Set(parseList(rawIds).map((s) => BigInt(s).toString()));
+  addresses = new Set([...TEAM_RUN_ADDRESSES.map((a) => a.toLowerCase()), ...parseList(rawAddrs)]);
+  accountIds = new Set([...TEAM_RUN_ACCOUNT_IDS.map((id) => id.toString()), ...parseList(rawIds).map((s) => BigInt(s).toString())]);
 }
 
-/** True when any of the given addresses or the Perpl account id is configured as team-run. */
+/**
+ * True when any of the given addresses or the Perpl account id is configured as team-run (the static
+ * list in constants.ts plus the ENVIO_TEAM_RUN_* variables).
+ */
 export function isTeamRun(opts: {
   addresses?: readonly (string | null | undefined)[];
   accountId?: bigint | null;
