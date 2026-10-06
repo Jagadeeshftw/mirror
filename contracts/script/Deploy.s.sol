@@ -14,7 +14,8 @@ import {MirrorAccountFactory} from "../src/MirrorAccountFactory.sol";
 ///   forge script script/Deploy.s.sol --rpc-url $MONAD_RPC_URL --private-key $OPS_PRIVATE_KEY \
 ///     --broadcast --verify --verifier sourcify   (see docs/deploy.md)
 ///
-/// Env: PERPL_EXCHANGE, COLLATERAL_TOKEN, DEPOSIT_CAP (6-decimal units), KEEPERS (comma-separated).
+/// Env: PERPL_EXCHANGE, COLLATERAL_TOKEN, DEPOSIT_CAP (6-decimal units), KEEPERS (comma-separated),
+///      WRITE_DEPLOYMENT=true to record deployments/<chainId>.json (set it only for the real broadcast).
 contract Deploy is Script {
     function run() external returns (KeeperRegistry registry, MirrorAccountFactory factory) {
         address exchange = vm.envOr("PERPL_EXCHANGE", address(0x34B6552d57a35a1D042CcAe1951BD1C370112a6F));
@@ -45,6 +46,9 @@ contract Deploy is Script {
             '","depositCap":', vm.toString(cap),
             ',"block":', vm.toString(block.number), "}"
         );
-        vm.writeFile(string.concat("deployments/", vm.toString(block.chainid), ".json"), json);
+        // Only real broadcasts record a deployment (fork dry runs use the same chain id).
+        if (vm.envOr("WRITE_DEPLOYMENT", false)) {
+            vm.writeFile(string.concat("deployments/", vm.toString(block.chainid), ".json"), json);
+        }
     }
 }

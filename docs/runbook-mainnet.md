@@ -7,7 +7,7 @@ The ops wallet is `0x299E77E58DD37607e4890C761924D829F8ACe82C`. Its key is in `m
 | # | Step | Who | Command / action |
 |---|---|---|---|
 | 1 | Fund the ops wallet per `docs/funding.md` | Jagadeesh | Exchange withdrawal / CCTP / swap |
-| 2 | Deploy and verify KeeperRegistry, MirrorAccountFactory (+ MirrorAccount implementation), register the ops EOA as keeper | Claude | `cd contracts && KEEPERS=<ops> forge script script/Deploy.s.sol --rpc-url $MONAD_RPC_URL --private-key $OPS_PRIVATE_KEY --broadcast --gas-estimate-multiplier 115 --verify --verifier sourcify` (writes `deployments/143.json`) |
+| 2 | Deploy and verify KeeperRegistry, MirrorAccountFactory (+ MirrorAccount implementation), register the ops EOA as keeper | Claude | `cd contracts && WRITE_DEPLOYMENT=true KEEPERS=<ops> forge script script/Deploy.s.sol --rpc-url $MONAD_RPC_URL --private-key $OPS_PRIVATE_KEY --broadcast --gas-estimate-multiplier 115 --verify --verifier sourcify` (writes `deployments/143.json`) |
 | 3 | Open the team-run demo leader's Perpl account with 10.00 AUSD | Jagadeesh | `cd contracts && forge script script/DemoLeaderSetup.s.sol --rpc-url https://rpc.monad.xyz --private-key $OPS_PRIVATE_KEY --broadcast --gas-estimate-multiplier 120` |
 | 4 | Deploy the engine to Railway (EU region) with the ops key as keeper, relayer and demo leader; deploy the indexer | Claude | `engine/README.md`, `indexer/README.md` |
 | 5 | Team-run demo follower: in the app, create the account (passkey), send 10.00 AUSD to the shown address, deposit, and follow the demo leader with match now | Jagadeesh (in the app) | App |

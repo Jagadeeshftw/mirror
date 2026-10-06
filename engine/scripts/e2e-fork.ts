@@ -159,7 +159,7 @@ function deploy(): { factory: Address; keeperRegistry: Address; block: number } 
     ['script', 'script/Deploy.s.sol', '--rpc-url', RPC, '--private-key', K.deployer, '--broadcast'],
     {
       cwd: join(repo, 'contracts'),
-      env: { ...process.env, KEEPERS: `${A.keeperA.address},${A.keeperB.address}`, FOUNDRY_BROADCAST: join(work, 'broadcast') },
+      env: { ...process.env, WRITE_DEPLOYMENT: 'true', KEEPERS: `${A.keeperA.address},${A.keeperB.address}`, FOUNDRY_BROADCAST: join(work, 'broadcast') },
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       maxBuffer: 64 * 1024 * 1024,
@@ -173,7 +173,9 @@ function deploy(): { factory: Address; keeperRegistry: Address; block: number } 
 }
 
 function restoreDeployments() {
+  // Put back the real deployment record, or remove the fork one if there was none.
   if (deploymentsBackup !== undefined) writeFileSync(deploymentsFile, deploymentsBackup);
+  else if (existsSync(deploymentsFile)) rmSync(deploymentsFile);
 }
 
 async function fundAusd(to: Address, amount: bigint) {
