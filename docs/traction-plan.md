@@ -59,6 +59,6 @@ The stats page is pending. It will be served from the same indexer as the app, s
 Capital we put in ourselves is capped at 30 USD in total (demo leader plus demo follower). External users fund their own accounts.
 
 ## Path to a business
-- **Revenue:** a fee on copied volume, taken as a Perpl builder fee on each copied order. Perpl supports builder fees of up to 0.1% of notional; registration needs Perpl's approval and has not been requested. Illustration only: at 5 bps, $10M of copied volume a month is $5,000 a month.
+- **Revenue (confirmed vs pending):** Confirmed: Mirror never takes a fee out of follower collateral; the contract can only send collateral to its owner. Pending: we applied for a Perpl builder code on 7 Oct. Perpl's docs say builder fees apply only to orders routed through Perpl's API, while Mirror's copies are placed onchain through each follower's contract. Perpl is checking with its developers whether an onchain order can carry a builder code. Until they answer, Mirror has no confirmed fee on copied orders. If onchain builder codes are possible, the fee would be a small share of copied notional (Perpl allows up to 0.1%).
 - **Growth:** raise the per-account cap after an audit. Followers bring more capital, and leaders bring their audiences.
 - **Expansion:** the same pattern (an owned venue account plus onchain policy checks plus a keeper that cannot withdraw) works on any fully onchain order book, starting with other Monad venues.

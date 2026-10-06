@@ -47,8 +47,6 @@ PENDING (video). The copy engine is built and passes an end-to-end run on a loca
 PENDING (link). Planned: the public stats page listing every copy the engine has executed, with MonadVision links and the keeper address.
 
 Built: the engine uses Perpl's public REST context (market config, minimum sizes) and WebSocket market data (marks, best bid and ask, recent trades) to price, size and pre-check every copy and every match-now quote, and exposes them at /v1/markets. It executes onchain through each follower's MirrorAccount.
-
-Open question for Perpl: does this hybrid count as API use? Not yet asked.
 <!--/answer-->
 
 ## Monad Foundation: Best Mera-Powered UX on Monad

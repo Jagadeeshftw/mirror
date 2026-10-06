@@ -41,7 +41,7 @@ From onchain Perpl data indexed by Envio: PnL, maximum drawdown, win rate and co
 
 ## Does Mirror charge fees?
 
-Not during the beta. The plan is a fee on copied volume, charged as a Perpl builder fee on each copied order; it needs Perpl's approval and has not been requested yet. Perpl's own trading fees apply to every order.
+No. Perpl's own trading fees apply to every order. Mirror has applied for a Perpl builder code, but Perpl's docs say builder fees apply to orders routed through Perpl's API, and Mirror's copies are placed onchain; Perpl is checking whether an onchain order can carry one. Whatever the answer, a fee will never be taken out of your MirrorAccount: the contract can only send collateral to you.
 
 ## Is it audited?
 

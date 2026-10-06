@@ -24,7 +24,10 @@ contract DemoLeaderSetup is Script {
 
         vm.startBroadcast();
         address leader = msg.sender;
-        require(EXCHANGE.getAccountByAddr(leader).accountId == 0, "leader already has a Perpl account");
+        // getAccountByAddr reverts for an address with no Perpl account, which is the expected case here.
+        try EXCHANGE.getAccountByAddr(leader) returns (IPerplExchange.AccountInfo memory info) {
+            require(info.accountId == 0, "leader already has a Perpl account");
+        } catch {}
         require(AUSD.balanceOf(leader) >= amount, "not enough AUSD in the leader wallet");
         AUSD.approve(address(EXCHANGE), amount);
         uint256 id = EXCHANGE.createAccount(amount);

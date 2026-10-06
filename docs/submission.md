@@ -5,7 +5,7 @@ Fields are in the portal's order. Character counts use the portal's counting (UT
 Anything not built yet is marked PENDING. The portal has no final submit: what is saved at the deadline
 (14 Oct 2026, 03:59 UTC) is the entry, so keep the saved form in sync with this file.
 
-Last built: 2026-10-06 17:24 UTC
+Last built: 2026-10-06 20:54 UTC
 
 ## Primary track
 
@@ -90,7 +90,7 @@ Deposits are capped at 25 AUSD per account while the contracts are unaudited.
 ```
 
 ### Please describe the go-to-market and user acquisition strategy for your product. *
-Characters: 3,221 / 8,000. Matches docs/traction-plan.md.
+Characters: 3,556 / 8,000. Matches docs/traction-plan.md.
 
 ```text
 FIRST USERS
@@ -142,7 +142,7 @@ Targets before judging:
 Our own capital is capped at 30 USD in total. External users fund their own accounts.
 
 PATH TO A BUSINESS
-- Revenue: a fee on copied volume, charged as a Perpl builder fee on each copied order. Perpl supports builder fees of up to 0.1% of notional. Registration needs Perpl's approval and has not been requested yet. For illustration only: at 5 bps, $10M of copied volume a month is $5,000 a month.
+- Revenue, confirmed vs pending. Confirmed: Mirror never takes a fee out of follower collateral; the contract can only send collateral to its owner. Pending: we applied for a Perpl builder code on 7 Oct. Perpl's docs say builder fees apply only to orders routed through Perpl's API, while Mirror's copies are placed onchain through each follower's contract. Perpl is checking with its developers whether an onchain order can carry a builder code. Until they answer, Mirror has no confirmed fee on copied orders. If onchain builder codes are possible, the fee would be a small share of copied notional (Perpl allows up to 0.1%).
 - Growth: raise the per-account cap after an audit. Followers bring capital, and leaders bring their audiences.
 - Expansion: the same pattern works on any fully onchain order book, starting with other Monad venues. The pattern is an owned venue account, policy checked onchain on every order, and a keeper that cannot withdraw.
 ```
@@ -226,8 +226,10 @@ come from docs/submission/bounty-limits.json (null until read from the portal) a
 
 ### Agora: Best Mobile Trading App on Monad (Agora Onchain Trading Bounty)
 
+Helper text (portal): Focus on how it creatively integrates the following 3 key features: authenticates users via Mera, holds and displays a stablecoin balance in AUSD, and executes trades through Perpl. Video field: PWAs are accepted.
+
 #### Q1. Describe the core features of your trading app.
-Characters: 1,499.
+Characters: 1,499 / 8,000. Field type: Text area (required).
 
 ```text
 Mirror is a copy-trading app for Perpl. A follower picks a leader, sets limits once, and every leader trade is copied into the follower's own contract account, with the limits checked onchain on every order.
@@ -252,7 +254,7 @@ PENDING:
 ```
 
 #### Q2. Submit a demo video (up to 2 mins) showing a user logging in via passkey, funding or viewing an AUSD balance, and placing at least one trade on Perpl in your app
-Characters: 256.
+Characters: 256 / 2,000. Field type: URL (required).
 
 ```text
 PENDING. Needs the app and the mainnet contracts. The planned cut shows exactly these three steps in order:
@@ -264,7 +266,7 @@ PENDING. Needs the app and the mainnet contracts. The planned cut shows exactly 
 ### Perpl: Best use of Perpl's API
 
 #### Q1. Submit a demo video (up to 2 mins) showing your trading bot or automation system on Perpl with demonstrated real on-chain activity.
-Characters: 295.
+Characters: 295 / 2,000. Field type: URL (required).
 
 ```text
 PENDING (video). The copy engine is built and passes an end-to-end run on a local fork of Monad mainnet; it is not deployed yet. The video will show:
@@ -275,20 +277,18 @@ PENDING (video). The copy engine is built and passes an end-to-end run on a loca
 ```
 
 #### Q2. Link to your trading bot or automation system on Perpl with demonstrated real on-chain activity.
-Characters: 522.
+Characters: 446 / 2,000. Field type: URL (required).
 
 ```text
 PENDING (link). Planned: the public stats page listing every copy the engine has executed, with MonadVision links and the keeper address.
 
 Built: the engine uses Perpl's public REST context (market config, minimum sizes) and WebSocket market data (marks, best bid and ask, recent trades) to price, size and pre-check every copy and every match-now quote, and exposes them at /v1/markets. It executes onchain through each follower's MirrorAccount.
-
-Open question for Perpl: does this hybrid count as API use? Not yet asked.
 ```
 
 ### Monad Foundation: Best Mera-Powered UX on Monad
 
 #### Q1. Describe how your project meaningfully integrates Mera as the entire account layer
-Characters: 1,130.
+Characters: 1,130 / 8,000. Field type: Text area (required).
 
 ```text
 The Mera-derived EOA is the only owner of each MirrorAccount. Nothing else can withdraw, change the policy, pause or close all:
@@ -309,7 +309,7 @@ PENDING:
 ```
 
 #### Q2. Submit an optional demo video (up to 2 mins) showing how Mera is integrated into your app, focusing on UX elements
-Characters: 110.
+Characters: 110 / 2,000. Field type: URL (optional).
 
 ```text
 PENDING. Planned:
@@ -321,8 +321,10 @@ PENDING. Planned:
 
 ### Monad Foundation: Mera - One Passkey, Many Keys
 
+Helper text (portal): The most creative use of that primitive for anything that is NOT signing blockchain transactions from a wallet account.
+
 #### Q1. Describe how your project meaningfully utilizes Mera in non-account work.
-Characters: 611.
+Characters: 611 / 8,000. Field type: Text area (required).
 
 ```text
 Verified on device, not yet in the live app. A second PRF namespace, separate from the account salt, derives an X25519 key that never signs transactions. Google Password Manager returns both PRF outputs in the same single passkey prompt, and the namespace key is identical when restored on a second device. In Mirror it encrypts the follower's push-notification payloads and private follow notes end to end, so the backend relays only ciphertext.
@@ -331,7 +333,7 @@ PENDING: the app currently derives this key with HKDF from the account PRF outpu
 ```
 
 #### Q2. Submit an optional demo video (up to 2 mins) showing how Mera is used where at least one PRF namespace does non-account work
-Characters: 8.
+Characters: 8 / 2,000. Field type: URL (optional).
 
 ```text
 PENDING.
@@ -340,7 +342,7 @@ PENDING.
 ### Nansen AI: Best use of Nansen
 
 #### Q1. Describe how your project meaningfully integrates Nansen API endpoint, MCP tool, and/or the Nansen CLI
-Characters: 464.
+Characters: 464 / 8,000. Field type: Text area (required).
 
 ```text
 PENDING (live data). The engine's Nansen module is built: an x402 client that pays per call in USDC on Monad, and leader enrichment (Monad PnL summary and Hyperliquid positions for the same address) that adjusts the leaderboard's ranking score rather than only being displayed. It is tested against a mock 402 server; no paid calls have been made yet.
@@ -349,7 +351,7 @@ Nansen's coverage of Monad wallets has not been verified yet. The first paid cal
 ```
 
 #### Q2. Submit an optional demo video (up to 2 mins) showing how Nansen API endpoint, MCP tool, and/or the Nansen CLI are meaningfully integrated in your app.
-Characters: 8.
+Characters: 8 / 2,000. Field type: URL (optional).
 
 ```text
 PENDING.
@@ -358,7 +360,7 @@ PENDING.
 ### Envio: Best Use of Envio
 
 #### Q1. Describe how your project meaningfully uses Envio's HyperIndex, HyperSync or HyperRPC to power real on-chain data in your app — not just installed, but actually driving a feature.
-Characters: 631.
+Characters: 631 / 8,000. Field type: Text area (required).
 
 ```text
 Built, not deployed yet. A HyperIndex indexer over Perpl Exchange position events and Mirror events, from Perpl's mainnet deploy block 54,773,010, with Mirror accounts registered dynamically from the factory. It derives leader stats with 7d, 30d and 90d windows, equity curves, decoded blocked copies and follower PnL attributed to each leader by FIFO. 24 handler tests pass, and a live sync of recent mainnet blocks decoded 1,700 real Perpl position events. In the app it powers:
@@ -369,7 +371,7 @@ Built, not deployed yet. A HyperIndex indexer over Perpl Exchange position event
 ```
 
 #### Q2. Submit an optional demo video (up to 2 mins) showing the data flowing end to end through Envio's HyperIndex, HyperSync or HyperRPC.
-Characters: 8.
+Characters: 8 / 2,000. Field type: URL (optional).
 
 ```text
 PENDING.
@@ -385,8 +387,8 @@ PENDING. No 30-second clip yet.
 ```
 
 ### X profile link for your project (optional)
-Characters: 34. URL field.
+Characters: 27. URL field.
 
 ```text
-PENDING. No project X account yet.
+https://x.com/MirrorOnMonad
 ```

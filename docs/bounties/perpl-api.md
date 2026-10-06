@@ -11,7 +11,7 @@ Requirement text **(secondhand)**: "Build a production-ready trading bot or auto
 | 3 | Production-ready | Parallel submission, confirmation tracking, retries, monitoring dashboard, runbook | todo |
 | 4 | Real trades on Perpl | Mainnet tx hashes from the engine | todo |
 | 5 | A public link showing the bot's real onchain activity (official wording) | Public stats page listing engine copies with MonadVision links + keeper address | todo |
-| Open question | Does onchain execution through MirrorAccount (data via the API) count as "use of the API"? | Ask Perpl in Discord | todo (needs user) |
+| Eligibility | Does onchain execution through MirrorAccount (data via the API) count as "use of the API"? | **Confirmed by Perpl staff (Arich) in Perpl's Discord, 7 Oct 2026:** reading Perpl's REST and WebSocket API and placing orders through the Exchange contract counts. | confirmed |
 
 ## Asked for at submission (official, from the bounty page, read 6 Oct 2026)
 
