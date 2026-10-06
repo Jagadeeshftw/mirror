@@ -5,7 +5,7 @@ Fields are in the portal's order. Character counts use the portal's counting (UT
 Anything not built yet is marked PENDING. The portal has no final submit: what is saved at the deadline
 (14 Oct 2026, 03:59 UTC) is the entry, so keep the saved form in sync with this file.
 
-Last built: 2026-10-06 07:29 UTC
+Last built: 2026-10-06 08:22 UTC
 
 ## Primary track
 
@@ -221,8 +221,8 @@ Everything the app shows is real Monad mainnet state. There is no testnet or sim
 
 ## Bounties
 
-Each bounty's questions appear in the portal only after the bounty is added, so their limits are not
-known yet. Question wording is from each bounty page's "ASKED FOR AT SUBMISSION" section.
+Question wording is from each bounty page's "ASKED FOR AT SUBMISSION" section. Field types and limits
+come from docs/submission/bounty-limits.json (null until read from the portal) and are enforced here.
 
 ### Agora: Best Mobile Trading App on Monad (Agora Onchain Trading Bounty)
 

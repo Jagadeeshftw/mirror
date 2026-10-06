@@ -1,0 +1,62 @@
+{
+  "Agora: Best Mobile Trading App on Monad (Agora Onchain Trading Bounty)": {
+    "Q1. Describe the core features of your trading app.": {
+      "type": null,
+      "limit": null
+    },
+    "Q2. Submit a demo video (up to 2 mins) showing a user logging in via passkey, funding or viewing an AUSD balance, and placing at least one trade on Perpl in your app": {
+      "type": null,
+      "limit": null
+    }
+  },
+  "Perpl: Best use of Perpl's API": {
+    "Q1. Submit a demo video (up to 2 mins) showing your trading bot or automation system on Perpl with demonstrated real on-chain activity.": {
+      "type": null,
+      "limit": null
+    },
+    "Q2. Link to your trading bot or automation system on Perpl with demonstrated real on-chain activity.": {
+      "type": null,
+      "limit": null
+    }
+  },
+  "Monad Foundation: Best Mera-Powered UX on Monad": {
+    "Q1. Describe how your project meaningfully integrates Mera as the entire account layer": {
+      "type": null,
+      "limit": null
+    },
+    "Q2. Submit an optional demo video (up to 2 mins) showing how Mera is integrated into your app, focusing on UX elements": {
+      "type": null,
+      "limit": null
+    }
+  },
+  "Monad Foundation: Mera - One Passkey, Many Keys": {
+    "Q1. Describe how your project meaningfully utilizes Mera in non-account work.": {
+      "type": null,
+      "limit": null
+    },
+    "Q2. Submit an optional demo video (up to 2 mins) showing how Mera is used where at least one PRF namespace does non-account work": {
+      "type": null,
+      "limit": null
+    }
+  },
+  "Nansen AI: Best use of Nansen": {
+    "Q1. Describe how your project meaningfully integrates Nansen API endpoint, MCP tool, and/or the Nansen CLI": {
+      "type": null,
+      "limit": null
+    },
+    "Q2. Submit an optional demo video (up to 2 mins) showing how Nansen API endpoint, MCP tool, and/or the Nansen CLI are meaningfully integrated in your app.": {
+      "type": null,
+      "limit": null
+    }
+  },
+  "Envio: Best Use of Envio": {
+    "Q1. Describe how your project meaningfully uses Envio's HyperIndex, HyperSync or HyperRPC to power real on-chain data in your app \u2014 not just installed, but actually driving a feature.": {
+      "type": null,
+      "limit": null
+    },
+    "Q2. Submit an optional demo video (up to 2 mins) showing the data flowing end to end through Envio's HyperIndex, HyperSync or HyperRPC.": {
+      "type": null,
+      "limit": null
+    }
+  }
+}

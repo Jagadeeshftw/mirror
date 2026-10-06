@@ -7,6 +7,7 @@ length) and exits non-zero if any field is over its limit.
 Usage: python3 docs/submission/build.py
 """
 import datetime
+import json
 import pathlib
 import re
 import sys
@@ -81,16 +82,31 @@ def main() -> int:
 
     # Bounties
     lines += ["## Bounties", "",
-              "Each bounty's questions appear in the portal only after the bounty is added, so their limits are not",
-              "known yet. Question wording is from each bounty page's \"ASKED FOR AT SUBMISSION\" section.", ""]
+              "Question wording is from each bounty page's \"ASKED FOR AT SUBMISSION\" section. Field types and limits",
+              "come from docs/submission/bounty-limits.json (null until read from the portal) and are enforced here.", ""]
     btxt = read("11-bounties.md")
+    limits = json.loads((ROOT / "bounty-limits.json").read_text(encoding="utf-8"))
     for block in re.split(r"(?m)^(?=## )", btxt):
         if not block.strip():
             continue
-        def repl(m):
-            ans = m.group(1).strip("\n")
-            return f"Characters: {count(ans):,}.\n\n```text\n{ans}\n```"
-        block = re.sub(r"<!--answer-->\n(.*?)\n<!--/answer-->", repl, block, flags=re.S)
+        bname = block.splitlines()[0][3:].strip()
+        qlimits = limits.get(bname, {})
+
+        def repl(m, qlimits=qlimits, bname=bname):
+            question = m.group(1).strip()
+            ans = m.group(2).strip("\n")
+            n = count(ans)
+            spec = qlimits.get(question) or {}
+            lim, kind = spec.get("limit"), spec.get("type")
+            meta = f"Characters: {n:,}" + (f" / {lim:,}" if lim else "") + "."
+            if kind:
+                meta += f" Field type: {kind}."
+            if lim and n > lim:
+                meta += "  **OVER LIMIT**"
+                errors.append(f"{bname} / {question[:60]}: {n} > {lim}")
+            return f"### {question}\n{meta}\n\n```text\n{ans}\n```"
+
+        block = re.sub(r"(?ms)^### (.*?)\n<!--answer-->\n(.*?)\n<!--/answer-->", repl, block)
         block = re.sub(r"(?m)^## ", "### ", block)
         block = re.sub(r"(?m)^### Q", "#### Q", block)
         lines += [block.rstrip(), ""]
