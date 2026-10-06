@@ -108,6 +108,21 @@ When it works you should see:
 
 Both blockers are fixed outside the code: (1) serve `assetlinks.json`, (2) sign in to Google.
 
+**Result on 2026-10-06, signed in, `https://mirror.0xo.in/.well-known/assetlinks.json` live:** everything works.
+Google's Digital Asset Links API confirms `mirror.0xo.in` → `com.zeroxo.mirror` with the release fingerprint.
+Evidence is in `evidence/prf-signedin-a/`, `evidence/prf-signedin-b/` and `evidence/prf-signedin-b2/`; only result screens
+are committed, because the Google sheet screenshots show the account email.
+- mirror-a (Android 15, Play services 26.36.35), one simulated fingerprint touch per action:
+  - `CREATE OK address=0x1bbD7e3333B99E7618C921B267ee246D1425040D`
+  - `CREATE2NS OK address=0x3aBF625Be454F8F78e5aDA1B4AB627Ede6C26C78 x25519=f9b75f20…2362235d`: Google Password
+    Manager returns **both** PRF outputs (account salt and a second namespace salt) in **one** prompt.
+  - `NSENC OK x25519=f9b75f20…2362235d`: evaluating the second namespace on its own gives the same key.
+- mirror-b, same Google account: the passkey synced. The first use on a new device asks once, on a Google page, for
+  the original device's screen lock ("Enter your screen lock for the selected device"); the account owner enters it.
+  After that:
+  - `RESTORE OK address=0x3aBF625Be454F8F78e5aDA1B4AB627Ede6C26C78`, the same account as on mirror-a.
+  - `NSENC OK x25519=f9b75f20…2362235d`, the same encryption key as on mirror-a.
+
 ## 5. E2E runs
 
 ```

@@ -11,9 +11,9 @@ clearly scoped session"; "stateless test": identity rebuilds from the passkey on
 | 1 | Mera is the entire account layer | Owner of every MirrorAccount is the Mera-derived EOA | todo |
 | 2 | No seed phrase, no extension | Passkey only; optional recovery export | todo |
 | 3 | No custody backend | Keepers can trade but never withdraw (invariant tests: `contracts/test/MirrorAccount.invariant.t.sol`); relayer only submits owner-signed actions | in progress |
-| 4 | One-prompt onboarding | Single passkey prompt creates account | todo |
+| 4 | One-prompt onboarding | `devices/evidence/prf-signedin-a/`: one prompt creates passkey and account | done in probe; in-app todo |
 | 5 | Scoped signing session, prompt-free signing | `createSecp256k1SigningSession` scoped to the action set; session ended after use | todo |
-| 6 | Stateless test: fresh-device restore | Restore flow on a second device; video timestamp | todo (needs Google-signed-in device) |
+| 6 | Stateless test: fresh-device restore | `devices/evidence/prf-signedin-b2/`: same address restored on a second emulator from the synced passkey | done in probe; video todo |
 
 ## Asked for at submission (official, from the bounty page, read 6 Oct 2026)
 

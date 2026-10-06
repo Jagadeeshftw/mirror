@@ -1,0 +1,50 @@
+{
+  "serial": "emulator-5554",
+  "gms_versions": [
+    "26.36.35",
+    "24.23.35"
+  ],
+  "android": "15",
+  "google_account_present": true,
+  "steps": [
+    {
+      "step": "create",
+      "result": "CREATE OK address=0x1bbD7e3333B99E7618C921B267ee246D1425040D cred=jTjkeJ29FYAx...",
+      "approval": {
+        "ok": true,
+        "events": [
+          "biometric->finger"
+        ],
+        "texts": [
+          "meraprobe | Create passkey to sign in to meraprobe? | Probe 2026-10-06T16:24:11.727Z | This passkey will be saved to Google Password Manager for <google-account>. You can use it on other devices, and your screen lock will be used to encrypt your data. | More Options | Use PIN"
+        ]
+      }
+    },
+    {
+      "step": "create2ns",
+      "result": "CREATE2NS OK address=0x3aBF625Be454F8F78e5aDA1B4AB627Ede6C26C78 x25519=f9b75f20b95715bbeecf45d12f3456f00042a7da34caa628be9392112362235d",
+      "approval": {
+        "ok": true,
+        "events": [
+          "biometric->finger"
+        ],
+        "texts": [
+          "meraprobe | Create passkey to sign in to meraprobe? | Mirror probe 2026-10-06T16:24:36.460Z | This passkey will be saved to Google Password Manager for <google-account>. You can use it on other devices, and your screen lock will be used to encrypt your data. | More Options | Use PIN"
+        ]
+      }
+    },
+    {
+      "step": "enc",
+      "result": "NSENC OK cred=qK9QlS55_FRQ... x25519=f9b75f20b95715bbeecf45d12f3456f00042a7da34caa628be9392112362235d",
+      "approval": {
+        "ok": true,
+        "events": [
+          "biometric->finger"
+        ],
+        "texts": [
+          "Google Password Manager | Use your screen lock | meraprobe needs to verify it's you. | Touch the fingerprint sensor | Use PIN"
+        ]
+      }
+    }
+  ]
+}

@@ -5,7 +5,7 @@ Fields are in the portal's order. Character counts use the portal's counting (UT
 Anything not built yet is marked PENDING. The portal has no final submit: what is saved at the deadline
 (14 Oct 2026, 03:59 UTC) is the entry, so keep the saved form in sync with this file.
 
-Last built: 2026-10-06 15:50 UTC
+Last built: 2026-10-06 17:24 UTC
 
 ## Primary track
 
@@ -288,7 +288,7 @@ Open question for Perpl: does this hybrid count as API use? Not yet asked.
 ### Monad Foundation: Best Mera-Powered UX on Monad
 
 #### Q1. Describe how your project meaningfully integrates Mera as the entire account layer
-Characters: 832.
+Characters: 1,130.
 
 ```text
 The Mera-derived EOA is the only owner of each MirrorAccount. Nothing else can withdraw, change the policy, pause or close all:
@@ -298,15 +298,14 @@ The Mera-derived EOA is the only owner of each MirrorAccount. Nothing else can w
 
 The keeper can trade within the policy but cannot withdraw. This is enforced in the contract and covered by invariant tests. Every owner action is an EIP-712 signature that anyone can relay, and deposits use AUSD permit or ERC-3009, so the user never needs MON.
 
-Verified so far:
-- Mera 0.2.0 builds into an Expo Android app.
-- PRF-to-key derivation and EIP-712 signing work on device.
+Verified on Android emulators signed in to Google, with rpId mirror.0xo.in (assetlinks.json live and confirmed by Google's Digital Asset Links API):
+- one fingerprint prompt creates the passkey and derives the account through Mera's PRF output
+- on a second device with the same Google account, the synced passkey restores the same account address
+- PRF-to-key derivation and EIP-712 signing work on device
 
 PENDING:
-- passkey create and restore on a real device. This needs the rpId domain's assetlinks.json to be hosted and a Google-signed-in phone.
-- one-prompt onboarding
-- scoped signing sessions
-- the fresh-device restore demo
+- the same flows inside the Mirror app against the deployed contracts (verified so far in a release-signed probe app with the same package and rpId)
+- scoped signing sessions in the live app and the fresh-device restore demo video
 ```
 
 #### Q2. Submit an optional demo video (up to 2 mins) showing how Mera is integrated into your app, focusing on UX elements
@@ -323,10 +322,12 @@ PENDING. Planned:
 ### Monad Foundation: Mera - One Passkey, Many Keys
 
 #### Q1. Describe how your project meaningfully utilizes Mera in non-account work.
-Characters: 326.
+Characters: 611.
 
 ```text
-PENDING. Not built. The plan is a second PRF namespace, separate from the account key, that never signs transactions. Its derived key would encrypt the follower's push-notification payloads and private follow notes end to end, so our backend relays only ciphertext. The exact use will be fixed once the app design is approved.
+Verified on device, not yet in the live app. A second PRF namespace, separate from the account salt, derives an X25519 key that never signs transactions. Google Password Manager returns both PRF outputs in the same single passkey prompt, and the namespace key is identical when restored on a second device. In Mirror it encrypts the follower's push-notification payloads and private follow notes end to end, so the backend relays only ciphertext.
+
+PENDING: the app currently derives this key with HKDF from the account PRF output; switching it to the separate PRF namespace verified here is the next app change.
 ```
 
 #### Q2. Submit an optional demo video (up to 2 mins) showing how Mera is used where at least one PRF namespace does non-account work

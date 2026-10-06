@@ -7,7 +7,7 @@ that "is NOT signing blockchain transactions from a wallet account".
 
 | # | Requirement | Evidence | Status |
 |---|---|---|---|
-| 0 | At least one PRF namespace does non-account work (official wording) | Separate PRF namespace, never signs transactions | todo |
+| 0 | At least one PRF namespace does non-account work (official wording) | `devices/evidence/prf-signedin-a/` and `-b2/`: second PRF namespace returned in the same prompt, X25519 key identical after restore | done in probe; in-app switch from HKDF todo |
 | 1 | Non-wallet use of PRF-derived key material | Candidates: PRF-derived Ed25519 key as the user's read-only Perpl API credential; PRF-derived key encrypting push-notification payloads and private follow notes end to end | todo (pick in design review) |
 | 2 | Not signing blockchain transactions | Derived keys never sign Monad txs | todo |
 | 3 | Creative and demoable | Video timestamp | todo |

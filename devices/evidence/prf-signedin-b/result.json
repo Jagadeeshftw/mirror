@@ -1,0 +1,36 @@
+{
+  "serial": "emulator-5556",
+  "gms_versions": [
+    "26.36.35",
+    "24.23.35"
+  ],
+  "android": "15",
+  "google_account_present": true,
+  "steps": [
+    {
+      "step": "restore",
+      "result": "RESTORE FAIL MeraError PASSKEY_OPERATION_FAILED: Passkey assertion failed | cause.error=UserCancelled | cause.message=Unsuccessful result from folsom activity.",
+      "approval": {
+        "ok": false,
+        "events": [
+          "biometric->finger",
+          "biometric->finger",
+          "biometric->finger",
+          "biometric->finger",
+          "biometric->finger",
+          "biometric->finger",
+          "biometric->finger",
+          "biometric->finger",
+          "biometric->finger",
+          "biometric->finger",
+          "biometric->finger"
+        ],
+        "texts": [
+          "meraprobe | Use your saved passkey for meraprobe | Use your screen lock to sign in to meraprobe with Mirror probe 2026-10-06T16:24:36.460Z | More Options | Use PIN",
+          "Sign in - Google Accounts | Enter your screen lock for the selected device | To access your encrypted data, verify it\u2019s you | <google-account> | Select a device | Show PIN | Show PIN | Clear | Next"
+        ],
+        "error": "timeout"
+      }
+    }
+  ]
+}

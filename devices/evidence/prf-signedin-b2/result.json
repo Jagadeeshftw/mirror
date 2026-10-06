@@ -1,0 +1,24 @@
+{
+  "serial": "emulator-5556",
+  "gms_versions": [
+    "26.36.35",
+    "24.23.35"
+  ],
+  "android": "15",
+  "google_account_present": true,
+  "steps": [
+    {
+      "step": "enc",
+      "result": "NSENC OK cred=qK9QlS55_FRQ... x25519=f9b75f20b95715bbeecf45d12f3456f00042a7da34caa628be9392112362235d",
+      "approval": {
+        "ok": true,
+        "events": [
+          "biometric->finger"
+        ],
+        "texts": [
+          "meraprobe | Use your saved passkey for meraprobe | Use your screen lock to sign in to meraprobe with Mirror probe 2026-10-06T16:24:36.460Z | More Options | Touch the fingerprint sensor | Use PIN"
+        ]
+      }
+    }
+  ]
+}
