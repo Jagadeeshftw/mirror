@@ -14,6 +14,7 @@ import { Button, Card, ChipS, ErrorBanner, IconButton, Identicon, Lbl, LoadingBl
 import { useColors } from "../../ui/theme";
 import { AdversarialFlag } from "../../ui/adversarial";
 import { useLayout } from "../../ui/layout";
+import { ShareSheet } from "../../ui/shareSheet";
 import { Redirect } from "expo-router";
 
 function Stat({ k, v, sub, color }: { k: string; v: string; sub?: string; color?: string }) {
@@ -48,6 +49,7 @@ function LeaderProfile() {
   const [window, setWindow] = useState<LeaderWindow>("30d");
   const [alerts, setAlerts] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const cfg = useConfig().data;
   const { bySymbol, byPerp } = useMarkets(cfg);
   const q = useLeader(Number(id), window);
@@ -117,8 +119,10 @@ function LeaderProfile() {
           }}
         />
         <View style={{ flex: 1 }} />
+        <IconButton name="share" onPress={() => setSharing(true)} testID="leader.share" />
         <BalanceChip />
       </View>
+      <ShareSheet visible={sharing} onClose={() => setSharing(false)} targets={[{ key: String(l.accountId), label: shortAddr(l.address), target: { kind: "leader", leaderId: l.accountId, teamRun: l.teamRun } }]} />
       <Scroll testID="leader.scroll" contentStyle={{ paddingHorizontal: 20, paddingTop: 4, gap: 14, paddingBottom: 24 }}>
         <Row gap={12}>
           <Identicon seed={l.address} size={56} />

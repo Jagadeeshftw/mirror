@@ -3,7 +3,7 @@
 // Chrome virtual authenticator (PRF), against the engine and Perpl's exchange on the localnet.
 //
 //   cd localnet && npm start                     (another shell; or: ./run-stage-a.sh --web)
-//   node e2e-web.mjs [--no-build]                (engine on 8807, web on 8818; E2E_ENGINE_PORT / E2E_WEB_PORT)
+//   node e2e-web.mjs [--no-build]                (engine on 8807, web on 8818, site on 8819; E2E_ENGINE_PORT / E2E_WEB_PORT / E2E_SITE_PORT)
 //
 // Builds the web export (EXPO_BASE_URL=/app, EXPO_PUBLIC_API_BASE=engine, MERA_RP_ID=localhost) into a temp
 // dir unless --no-build with E2E_WEB_DIST=<dir>. Evidence: devices/evidence/stage-a/<run>/web/ (a screenshot
@@ -20,9 +20,12 @@ import { createReport } from "./e2e-web/report.mjs";
 import { phoneFlows } from "./e2e-web/flows-watch.mjs";
 import { followFlows } from "./e2e-web/flows-follow.mjs";
 import { exitFlows } from "./e2e-web/flows-exit.mjs";
+import { startSite } from "./e2e-web/share-card.mjs";
 
 const ENGINE_PORT = Number(process.env.E2E_ENGINE_PORT ?? 8807);
 const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 8818);
+// The website (web/, next dev) that renders the share cards; the app's share sheet points at it.
+const SITE_PORT = Number(process.env.E2E_SITE_PORT ?? 8819);
 const API = `http://127.0.0.1:${ENGINE_PORT}`;
 const WEB = `http://localhost:${WEB_PORT}/app`;
 const RUN = process.env.E2E_RUN ?? new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -59,7 +62,7 @@ async function buildWeb() {
   cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
   const dist = join(dir, "dist");
   console.log(`building the web export into ${dist} (1-3 min)`);
-  const buildEnv = { ...process.env, EXPO_BASE_URL: "/app", EXPO_PUBLIC_API_BASE: API, MERA_RP_ID: "localhost", CI: "1" };
+  const buildEnv = { ...process.env, EXPO_BASE_URL: "/app", EXPO_PUBLIC_API_BASE: API, EXPO_PUBLIC_SHARE_BASE: `http://localhost:${SITE_PORT}`, MERA_RP_ID: "localhost", CI: "1" };
   delete buildEnv.EXPO_PUBLIC_DEV_PASSKEY;
   delete buildEnv.EXPO_PUBLIC_MIRROR_DEV_TOOLS;
   await run("npx", ["expo", "export", "-p", "web", "--clear", "--output-dir", dist], { cwd: join(ROOT, "app"), env: buildEnv }, join(OUT, "build.log"));
@@ -101,6 +104,8 @@ try {
   cleanups.push(() => new Promise((r) => server.close(r)));
   await engineCtl.start();
   const api = apiClient(API);
+  const site = await startSite({ port: SITE_PORT, api: API, logFile: join(OUT, "site.log") }).catch((e) => { console.log(`website did not start: ${e.message}`); return null; });
+  if (site) cleanups.push(() => site.stop());
   await R.check("engine up on the localnet (NETWORK=localnet, PUBLIC_RPC_URL, CORS *)", null, async () => {
     const h = await api("GET", "/v1/health");
     const cfg = await api("GET", "/v1/config");
@@ -112,7 +117,7 @@ try {
   cleanups.push(() => browser.close());
   const dev = await openDevice(browser, PHONE);
   R.pageErrors = () => dev.consoleLog.filter((l) => l.startsWith("pageerror"));
-  const ctx = { R, api, WEB, API, env, engineCtl, browser, dev, page: dev.page, state: R.state };
+  const ctx = { R, api, WEB, API, env, engineCtl, browser, dev, page: dev.page, state: R.state, site };
   const only = process.env.E2E_FLOWS ? process.env.E2E_FLOWS.split(",") : null;
   for (const flows of [phoneFlows, followFlows, exitFlows]) {
     if (only && !only.includes(flows.name)) continue;

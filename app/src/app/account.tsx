@@ -11,6 +11,7 @@ import { CloseAllDialog } from "../ui/closeAll";
 import { Icon, type IconName } from "../ui/icons";
 import { Button, Card, IconButton, Identicon, LoadingBlock, Note, Press, Row, Screen, Scroll, Switch, T } from "../ui/kit";
 import { useColors } from "../ui/theme";
+import { followerChoices, ShareSheet } from "../ui/shareSheet";
 
 function SetRow({ icon, title, sub, onPress, testID }: { icon: IconName; title: string; sub?: string; onPress?: () => void; testID?: string }) {
   const c = useColors();
@@ -38,6 +39,7 @@ export default function AccountControls() {
   const act = useOwnerAction();
   const [confirm, setConfirm] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState<number | null>(null);
   if (!me) return null;
   const accts = totals?.accounts ?? [];
   const allPaused = accts.length > 0 && accts.every((a) => a.paused);
@@ -118,11 +120,13 @@ export default function AccountControls() {
                 <T size={12} color="mu" testID={`account.follow.${i}.status`}>
                   {a.paused ? "Paused" : "Copying"}
                 </T>
+                <IconButton name="share" small onPress={() => setSharing(i)} testID={`account.follow.${i}.share`} />
                 <Switch on={!a.paused} onChange={(v) => act.setPaused([a], !v)} disabled={!!act.busy} testID={`account.follow.${i}.toggle`} />
               </Row>
             ))}
           </Card>
         ) : null}
+        <ShareSheet visible={sharing !== null} onClose={() => setSharing(null)} targets={sharing !== null && accts[sharing] ? followerChoices([accts[sharing]]) : []} />
 
         <Card style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
           <Row gap={12}>

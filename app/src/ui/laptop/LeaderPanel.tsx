@@ -12,6 +12,7 @@ import { Icon } from "../icons";
 import { Button, IconButton, Identicon, NansenLabel, Row, T } from "../kit";
 import { useColors } from "../theme";
 import { WhatIfMini } from "../whatif";
+import { ShareSheet } from "../shareSheet";
 
 export function LeaderPanel({ id, onClose }: { id: number; onClose: () => void }) {
   const c = useColors();
@@ -19,6 +20,7 @@ export function LeaderPanel({ id, onClose }: { id: number; onClose: () => void }
   const q = useLeader(id, "30d");
   const { totals } = useTotals();
   const [alerts, setAlerts] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const l = q.data;
   const following = totals?.accounts.find((a) => a.leader?.accountId === id);
   const policy = useMemo(() => (cfg && l ? buildPolicy({ ...defaultForm(), markets: l.markets.filter((m) => cfg.markets.some((x) => x.symbol === m)) }, id, cfg.markets) : null), [cfg, l, id]);
@@ -35,8 +37,10 @@ export function LeaderPanel({ id, onClose }: { id: number; onClose: () => void }
           <T size={17} w={500} mono>{shortAddr(l.address)}</T>
           <Row gap={6} style={{ flexWrap: "wrap" }}>{l.nansen.labels.map((x) => <NansenLabel key={x} label={x} />)}</Row>
         </View>
+        <IconButton name="share" onPress={() => setSharing(true)} testID="leader.share" />
         <IconButton name="close" onPress={onClose} testID="leaders.panel.close" />
       </Row>
+      <ShareSheet visible={sharing} onClose={() => setSharing(false)} targets={[{ key: String(l.accountId), label: shortAddr(l.address), target: { kind: "leader", leaderId: l.accountId, teamRun: l.teamRun } }]} />
       <Row align="flex-end">
         <View style={{ flex: 1 }}>
           <T size={12} w={500} color="mu" upper>PnL · 30 days</T>

@@ -73,6 +73,9 @@
     ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
-    }
+    },
+    "modulePaths": [
+      "<rootDir>/node_modules"
+    ]
   }
 }

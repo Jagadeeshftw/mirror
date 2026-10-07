@@ -11,6 +11,7 @@ import { BlockedSheet, RecentRow } from "./feed";
 import { Icon } from "./icons";
 import { Button, Card, ChipS, ErrorBanner, Identicon, Lbl, Link, NansenLabel, Press, Row, T } from "./kit";
 import { CopyDetailSheet } from "./copyDetail";
+import { followerChoices, ShareSheet } from "./shareSheet";
 import { useColors } from "./theme";
 
 function sumHistory(accounts: MirrorAccount[], wallet: bigint): number[] {
@@ -69,6 +70,7 @@ export function FundedHome({ totals, mirrorDown, monadDown, onRetry }: { totals:
   const { account: me } = useSession();
   const [blocked, setBlocked] = useState<FeedEvent | null>(null);
   const [copy, setCopy] = useState<FeedEvent | null>(null);
+  const [sharing, setSharing] = useState(false);
   const series = useMemo(() => sumHistory(totals.accounts, totals.wallet), [totals]);
   const hasFollows = totals.accounts.length > 0;
   const base = totals.equity - totals.today;
@@ -173,7 +175,10 @@ export function FundedHome({ totals, mirrorDown, monadDown, onRetry }: { totals:
                     {totals.accounts.length}
                   </T>
                 </Row>
-                <Link title="Manage" onPress={() => router.push("/account")} testID="home.manage" />
+                <Row gap={16}>
+                  <Link title="Share" icon="share" onPress={() => setSharing(true)} testID="home.share" />
+                  <Link title="Manage" onPress={() => router.push("/account")} testID="home.manage" />
+                </Row>
               </Row>
               <Card list>
                 {totals.accounts.map((a) => (
@@ -219,6 +224,7 @@ export function FundedHome({ totals, mirrorDown, monadDown, onRetry }: { totals:
           </Row>
         </Card>
       <BlockedSheet e={blocked} cfg={cfg} account={totals.accounts.find((a) => a.account === blocked?.account)} onClose={() => setBlocked(null)} />
+      <ShareSheet visible={sharing} onClose={() => setSharing(false)} targets={followerChoices(totals.accounts)} />
       <CopyDetailSheet e={copy} cfg={cfg} policy={totals.accounts.find((a) => a.account === copy?.account)?.policy} onClose={() => setCopy(null)} />
     </>
   );

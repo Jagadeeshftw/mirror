@@ -9,7 +9,8 @@ import { notionalCNS } from "../lib/format";
 import { ago, ausd, ausdSigned, bps, dateLong, leverage, lots as fmtLots, orderAction, orderSide, price as fmtPrice, shortAddr, toBig } from "../lib/format";
 import type { AppConfig, FeedEvent, MarketConfig, MirrorAccount } from "../lib/types";
 import { Icon } from "./icons";
-import { Button, Card, ChipS, CommitTrack, Identicon, KV, LatencyPill, Lbl, MarketBadge, Press, Row, Sheet, Side, T, TxLink } from "./kit";
+import { Button, Card, ChipS, CommitTrack, IconButton, Identicon, KV, LatencyPill, Lbl, MarketBadge, Press, Row, Sheet, Side, T, TxLink } from "./kit";
+import { ShareSheet } from "./shareSheet";
 import { SmallChip, TeamBadge } from "./kit2";
 import { EngineItem } from "./feedEngine";
 import { bpsText, fillDeviationBps } from "../lib/proof";
@@ -360,8 +361,10 @@ export function BlockedSheet({ e, cfg, account, onClose, demo }: { e: FeedEvent 
 /** Blocked detail: the rule, the numbers, the leader reference and the onchain record. */
 export function BlockedBody({ e, cfg, account, onClose, demo }: { e: FeedEvent; cfg: AppConfig | undefined; account?: MirrorAccount; onClose: () => void; demo?: boolean }) {
   const c = useColors();
+  const [sharing, setSharing] = React.useState(false);
   if (!e.blocked) return null;
   const x = explainBlock(cfg, e, account);
+  const teamRun = !!(demo || e.teamRun || account?.teamRun);
   return (
       <View style={{ gap: 14 }} testID="blocked.detail">
         <Row gap={12} align="flex-start">
@@ -376,6 +379,7 @@ export function BlockedBody({ e, cfg, account, onClose, demo }: { e: FeedEvent; 
               {x.title}
             </T>
           </View>
+          {e.txHash ? <IconButton name="share" onPress={() => setSharing(true)} testID="blocked.share" /> : null}
         </Row>
         <T size={16} lh={23} testID="blocked.sentence">
           {x.sentence}
@@ -418,6 +422,13 @@ export function BlockedBody({ e, cfg, account, onClose, demo }: { e: FeedEvent; 
             />
           ) : null}
         </Row>
+        {e.txHash ? (
+          <ShareSheet
+            visible={sharing}
+            onClose={() => setSharing(false)}
+            targets={[{ key: e.txHash, label: "Blocked", target: { kind: "blocked", txHash: e.txHash, account: e.account, teamRun } }]}
+          />
+        ) : null}
       </View>
   );
 }

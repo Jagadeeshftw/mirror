@@ -11,9 +11,10 @@ import { bpsText } from "../lib/proof";
 import type { Policy } from "../lib/types";
 import { useLeader } from "../state/data";
 import { Icon } from "./icons";
-import { Button, Card, Meter, Row, Seg, T } from "./kit";
+import { Button, Card, IconButton, Meter, Row, Seg, T } from "./kit";
 import { SimPill, Skel } from "./kit2";
 import { useColors } from "./theme";
+import { ShareSheet } from "./shareSheet";
 import { WhatIfChart } from "./whatifChart";
 
 function useDebounced<T>(v: T, ms: number): T {
@@ -38,6 +39,7 @@ export function limitsLine(p: Policy, depositCNS: bigint): string {
 export function WhatIfBody({ leaderId, policy, depositCNS, onEdit, title = "What if I had followed", compact }: { leaderId: number; policy: Policy; depositCNS: bigint; onEdit?: () => void; title?: string; compact?: boolean }) {
   const c = useColors();
   const [period, setPeriod] = useState<BacktestPeriod>(30);
+  const [sharing, setSharing] = useState(false);
   const body = useDebounced(backtestRequest(policy, depositCNS, period, leaderId), 500);
   const q = useQuery({ queryKey: ["backtest", backtestKey(leaderId, body)], queryFn: () => api.backtest(leaderId, body), staleTime: 5 * 60_000, retry: 0 });
   const leader = useLeader(leaderId, `${period}d` as "7d" | "30d" | "90d").data;
@@ -56,7 +58,9 @@ export function WhatIfBody({ leaderId, policy, depositCNS, onEdit, title = "What
           {title}
         </T>
         <SimPill testID="follow.whatif.sim" />
+        {r ? <IconButton name="share" small onPress={() => setSharing(true)} testID="follow.whatif.share" /> : null}
       </Row>
+      <ShareSheet visible={sharing} onClose={() => setSharing(false)} targets={[{ key: "sim", label: "Simulation", target: { kind: "sim", leaderId, request: body, teamRun: leader?.teamRun } }]} />
       <Seg testIDPrefix="follow.whatif.period" value={String(period) as "7" | "30" | "90"} onChange={(k) => setPeriod(Number(k) as BacktestPeriod)} options={BACKTEST_PERIODS.map((d) => ({ key: String(d) as "7" | "30" | "90", label: `${d} days` }))} />
       <View style={{ paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, backgroundColor: c.sf2 }}>
         <T size={12} lh={19} mono testID="follow.whatif.limits">

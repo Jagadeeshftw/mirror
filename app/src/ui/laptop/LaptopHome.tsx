@@ -10,6 +10,7 @@ import { useHomeState } from "../../state/home";
 import { LineChart } from "../charts";
 import { CopyDetailSheet } from "../copyDetail";
 import { BlockedSheet, RecentRow } from "../feed";
+import { followerChoices, ShareSheet } from "../shareSheet";
 import { Icon } from "../icons";
 import { Button, ChipS, ErrorBanner, Identicon, KV, Link, Meter, Row, T } from "../kit";
 import { useColors } from "../theme";
@@ -41,6 +42,7 @@ function FundedLaptop({ totals, mirrorDown, monadDown, onRetry, block }: { total
   const cfg = useConfig().data;
   const [blocked, setBlocked] = useState<FeedEvent | null>(null);
   const [copy, setCopy] = useState<FeedEvent | null>(null);
+  const [sharing, setSharing] = useState(false);
   const data = useMemo(() => series(totals.accounts, totals.wallet), [totals]);
   const first = totals.accounts[0]?.equityHistory?.[0]?.t;
   const base = totals.equity - totals.today;
@@ -83,7 +85,7 @@ function FundedLaptop({ totals, mirrorDown, monadDown, onRetry, block }: { total
             {data.length > 1 ? <LineChart data={data} height={240} padT={14} padB={18} padR={44} color={data[data.length - 1] >= data[0] ? c.pos : c.neg} xTicks={first ? [[0, dateShort(first), "start"], [data.length - 1, "Today", "end"]] : []} testID="home.chart" /> : null}
           </LCard>
           <LCard style={{ flex: 1 }} testID="home.laptop.leaders">
-            <Row><T size={15} w={600} style={{ flex: 1 }}>Leaders</T><T size={12} color="mu">budget · margin used · PnL · loss stop</T></Row>
+            <Row gap={16}><T size={15} w={600} style={{ flex: 1 }}>Leaders</T><T size={12} color="mu">budget · margin used · PnL · loss stop</T><Link title="Share" icon="share" onPress={() => setSharing(true)} testID="home.share" /></Row>
             <Table testIDPrefix="home.leaders" cols={cols} rows={totals.accounts} rowKey={(a) => a.account} onRow={(a) => a.leader && router.push({ pathname: "/leaders", params: { leader: String(a.leader.accountId) } })} />
             <View style={{ flex: 1 }} />
             <Row gap={12} style={{ padding: 14, borderRadius: 12, backgroundColor: c.acs }} testID="home.accountStop">
@@ -120,6 +122,7 @@ function FundedLaptop({ totals, mirrorDown, monadDown, onRetry, block }: { total
           </LCard>
         </View>
       </View>
+      <ShareSheet visible={sharing} onClose={() => setSharing(false)} targets={followerChoices(totals.accounts)} />
       <BlockedSheet e={blocked} cfg={cfg} account={totals.accounts.find((a) => a.account === blocked?.account)} onClose={() => setBlocked(null)} />
       <CopyDetailSheet e={copy} cfg={cfg} policy={totals.accounts.find((a) => a.account === copy?.account)?.policy} onClose={() => setCopy(null)} />
     </LaptopPage>

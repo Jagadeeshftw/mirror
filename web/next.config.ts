@@ -16,6 +16,8 @@ const APP_DEEP_LINK = "/app/:path((?!.*\\.[A-Za-z0-9]+$).*)";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: { unoptimized: true },
+  // Share card images read their fonts from assets/fonts at runtime (lib/cards/image.tsx).
+  outputFileTracingIncludes: { "/c/**": ["./assets/fonts/**"] },
   turbopack: {
     root: import.meta.dirname,
   },

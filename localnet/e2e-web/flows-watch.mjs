@@ -3,6 +3,7 @@
 import { decodeEventLog } from "viem";
 import { faucet, pub, sleep, X } from "./chain.mjs";
 import { calm, click, findCard, isVisible, LAPTOP, PHONE, text, tid, until, visible } from "./browser.mjs";
+import { shareCardCheck } from "./share-card.mjs";
 
 /** Builder id and fee Perpl charged on a copy, from its TakerOrderFilledV2 log. */
 export async function takerBuilder(hash) {
@@ -117,6 +118,8 @@ export async function phoneFlows(ctx) {
     await click(page, "blocked.done").catch(() => {});
     return { ok: /Not copied/.test(banner) && /leverage/i.test(banner) && /5x/.test(banner) && /5x/.test(f.limit ?? "") && /10x/.test(f.actual ?? "") && !!f.tx, banner, detail: f, reason: item.reason, limit: item.limit, actual: item.actual };
   });
+
+  await shareCardCheck(ctx, { demoFeed, shortHash });
 
   await R.check("faucet funds the wallet (POST :8547/fund); the AUSD balance chip updates", page, async () => {
     const before = await text(page, "home.balance.ausd").catch(() => null);

@@ -24,6 +24,13 @@ function flag(f: unknown): RiskFlag {
   return FLAG_TEXT[k] ?? { kind: "info", title: k.replace(/_/g, " "), detail: "" };
 }
 
+/** Win rate as a percent: the engine sends a 0..1 fraction; values above 1 are taken as percent already. */
+export function winRatePct(v: unknown): number {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return n <= 1 ? Math.round(n * 1000) / 10 : n;
+}
+
 export function normalizeLeaderSummary(raw: any): LeaderSummary {
   learnLeader(raw?.accountId, raw?.address, raw?.nansen?.labels);
   return {
@@ -34,7 +41,8 @@ export function normalizeLeaderSummary(raw: any): LeaderSummary {
     pnlUsd: num(raw?.pnlUsd),
     pnlPct: num(raw?.pnlPct),
     maxDrawdownPct: num(raw?.maxDrawdownPct),
-    winRate: num(raw?.winRate),
+    // The engine sends a fraction (0.61); the app displays percent.
+    winRate: winRatePct(raw?.winRate),
     avgLeverage: num(raw?.avgLeverage),
     trades: num(raw?.trades),
     markets: Array.isArray(raw?.markets) ? raw.markets.map(String) : [],
