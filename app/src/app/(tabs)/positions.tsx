@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { leaderAddressOf } from "../../lib/engineShape";
 import React, { useMemo, useState } from "react";
 import { View } from "react-native";
 import { ausd, ausdSigned, leverage, lots, pctSigned, price, shortAddr, toBig } from "../../lib/format";
@@ -89,9 +90,10 @@ function PhonePositions() {
   const [confirm, setConfirm] = useState(false);
   const act = useOwnerAction();
 
-  const leaderOf = (a: MirrorAccount, id: number) => (a.leader && a.leader.accountId === id ? a.leader.address : undefined);
+  const leaderOf = (a: MirrorAccount, id: number) => (a.leader && a.leader.accountId === id ? a.leader.address : leaderAddressOf(id));
+  // Several leaders share one account: each position is attributed to the leader whose copy opened it.
   const all = useMemo(
-    () => (totals?.accounts ?? []).flatMap((a) => a.positions.map((p) => ({ p, a, addr: leaderOf(a, p.leaderAccountId) ?? a.leader?.address }))),
+    () => (totals?.accounts ?? []).flatMap((a) => a.positions.map((p) => ({ p, a, addr: leaderOf(a, p.leaderAccountId) ?? (p.leaderAccountId ? undefined : a.leader?.address) }))),
     [totals],
   );
   const sorted = group === "market" ? [...all].sort((x, y) => (byPerp.get(x.p.perpId)?.symbol ?? "").localeCompare(byPerp.get(y.p.perpId)?.symbol ?? "")) : all;

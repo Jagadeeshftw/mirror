@@ -1,5 +1,6 @@
 // One position with its onchain levels: header, price-level chart, levels card, Edit levels / Share,
 // copy proof and leader rows, Close position / Stop following. Phone detail screen and laptop side panel.
+import { leaderAddressOf } from "../lib/engineShape";
 import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { View } from "react-native";
@@ -68,7 +69,7 @@ export function PositionBody({ account, p, cfg, laptop }: { account: MirrorAccou
   const m = cfg?.markets.find((x) => x.perpId === p.perpId);
   const lv = levelFor(account.levels, p);
   const leaderId = p.leaderAccountId || account.leader?.accountId || 0;
-  const leaderAddr = account.leader?.accountId === leaderId ? account.leader?.address : undefined;
+  const leaderAddr = account.leader?.accountId === leaderId ? account.leader?.address : leaderAddressOf(leaderId);
   const mine = useMemo(() => feed.events.filter((e) => e.account.toLowerCase() === account.account.toLowerCase() && e.perpId === p.perpId), [feed.events, account.account, p.perpId]);
   const setEvent = mine.find((e) => e.kind === "LevelSet") ?? null;
   const lastCopy = mine.find((e) => e.kind === "Mirrored" && (e.orderType ?? 0) <= 1) ?? null;

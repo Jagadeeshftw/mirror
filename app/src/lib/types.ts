@@ -142,6 +142,8 @@ export interface LeaderRule {
   budgetCNS: string;
   /** Stop copying this leader below -lossStopBps x budget (0 = off). */
   lossStopBps: number;
+  /** Engine read-out: the leader's loss stop fired (LeaderStopped since the last policy). Not signed. */
+  stopped?: boolean;
 }
 export interface MarketRule {
   perpId: number;
@@ -217,6 +219,11 @@ export interface LeaderAttribution {
   leaderAccountId: number;
   realisedCNS: string;
   unrealisedCNS: string;
+  /** MirrorAccount.leaderBook: margin held by this leader's positions. */
+  marginCNS?: string;
+  budgetCNS?: string;
+  /** MirrorAccount.leaderBook: the leader's loss stop fired; re-armed by a new policy. */
+  stopped?: boolean;
 }
 
 export interface MirrorAccount {

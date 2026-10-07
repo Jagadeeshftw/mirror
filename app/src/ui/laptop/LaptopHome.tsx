@@ -17,6 +17,23 @@ import { useColors } from "../theme";
 import { LaptopWatch } from "./LaptopWatch";
 import { LCard, LaptopPage } from "./Top";
 import { Table, type Col } from "./Table";
+import { isMultiLeader, leaderBooks, splitTotals, type LeaderBook } from "../../lib/budgets";
+import { useOwnerAction } from "../../state/ownerAction";
+import { lossStopText, statusChip, useLeaderNames } from "../budgets";
+
+interface HomeRow {
+  key: string;
+  a: MirrorAccount;
+  leaderId: number;
+  address?: string;
+  book?: LeaderBook;
+  status: React.ReactNode;
+  budget: bigint;
+  margin: bigint;
+  pnl: bigint;
+  loss: string;
+  open: number;
+}
 
 const COLORS = (c: ReturnType<typeof useColors>) => [c.ac, c.dark ? "#B4ABFF" : "#9C92FF", c.mu, c.wrn];
 
@@ -51,15 +68,35 @@ function FundedLaptop({ totals, mirrorDown, monadDown, onRetry, block }: { total
   const recent = feed.events.filter((e) => e.kind === "Mirrored" || e.kind === "Blocked").slice(0, 6);
   const dd = totals.accounts.map((a) => a.policy?.drawdownBps ?? 0);
   const sameDd = dd.every((x) => x === dd[0]) ? dd[0] : null;
-  const cols: Col<MirrorAccount>[] = [
-    { key: "leader", label: "Leader", flex: 1.6, render: (a) => <Row gap={8}><Identicon seed={a.leader?.address ?? a.account} size={28} /><T size={13} mono>{shortAddr(a.leader?.address ?? a.account)}</T></Row> },
-    { key: "status", label: "Status", flex: 1.3, render: (a) => (a.stops?.drawdownHit || a.stops?.dailyLossHit ? <ChipS label="Stopped by loss stop" tone="neg" icon="pause" /> : a.paused ? <ChipS label="Paused" tone="wrn" icon="pause" /> : <ChipS label="Copying" tone="ok" />) },
-    { key: "budget", label: "Budget", align: "right", render: (a) => <T size={13} mono>{ausd(a.netDepositsCNS)}</T> },
-    { key: "margin", label: "Margin used", flex: 1.6, render: (a) => <Row gap={8} style={{ alignSelf: "stretch" }}><View style={{ flex: 1 }}><Meter height={6} parts={[{ frac: Number(a.marginCNS) / Math.max(1, Number(a.netDepositsCNS)), color: c.ac }]} /></View><T size={12} mono>{ausd(a.marginCNS)}</T></Row> },
-    { key: "pnl", label: "PnL", align: "right", render: (a) => { const p = toBig(a.equityCNS) - toBig(a.netDepositsCNS); return <T size={13} mono color={p >= 0n ? "posI" : "neg"}>{ausdSigned(p)}</T>; } },
-    { key: "stop", label: "Loss stop", flex: 2, align: "right", render: (a) => { const d = a.policy?.drawdownBps ?? 0; if (!d) return <T size={12} color="mu">Off</T>; const at = (toBig(a.netDepositsCNS) * BigInt(10_000 - d)) / 10_000n; return <T size={12} mono>{`${ausd(at)} · ${ausd(toBig(a.equityCNS) - at)} away`}</T>; } },
-    { key: "open", label: "Open", flex: 0.5, align: "right", render: (a) => <T size={13} mono>{a.positions.length}</T> },
+  const names = useLeaderNames(totals.accounts);
+  const act = useOwnerAction();
+  const multi = totals.accounts.some(isMultiLeader);
+  // One row per leader: a multi-leader account shows each leader's book (leaderBook); a single-leader follow
+  // keeps its account numbers (deposit as budget, account loss stop).
+  const rows: HomeRow[] = totals.accounts.flatMap((a): HomeRow[] => {
+    if (!isMultiLeader(a)) {
+      const p = toBig(a.equityCNS) - toBig(a.netDepositsCNS);
+      const d = a.policy?.drawdownBps ?? 0;
+      const at = (toBig(a.netDepositsCNS) * BigInt(10_000 - d)) / 10_000n;
+      const status = a.stops?.drawdownHit || a.stops?.dailyLossHit ? <ChipS label="Stopped by loss stop" tone="neg" icon="pause" /> : a.paused ? <ChipS label="Paused" tone="wrn" icon="pause" /> : <ChipS label="Copying" tone="ok" />;
+      return [{ key: a.account, a, leaderId: a.leader?.accountId ?? 0, address: a.leader?.address ?? a.account, status, budget: toBig(a.netDepositsCNS), margin: toBig(a.marginCNS), pnl: p, loss: d ? `${ausd(at)} · ${ausd(toBig(a.equityCNS) - at)} away` : "Off", open: a.positions.length }];
+    }
+    return leaderBooks(a).map((b) => ({ key: `${a.account}:${b.leaderId}`, a, leaderId: b.leaderId, address: names.address(b.leaderId), book: b, status: statusChip(b), budget: b.budgetCNS, margin: b.marginCNS, pnl: b.pnlCNS, loss: lossStopText(b).replace("Loss stop at ", "").replace("Loss stop ", ""), open: b.positions.length }));
+  });
+  const cols: Col<HomeRow>[] = [
+    { key: "leader", label: "Leader", flex: 2, render: (r) => <Row gap={8}><Identicon seed={r.address ?? String(r.leaderId)} size={28} /><T size={13} mono lines={1}>{r.book ? names.name(r.leaderId) : shortAddr(r.address)}</T></Row> },
+    { key: "status", label: "Status", flex: 1.9, render: (r) => r.status },
+    { key: "budget", label: "Budget", flex: 0.8, align: "right", render: (r) => <T size={13} mono>{ausd(r.budget)}</T> },
+    { key: "margin", label: "Margin used", flex: 1.6, render: (r) => (r.book?.stopped ? <T size={12} color="mu">Positions closed</T> : <Row gap={8} style={{ alignSelf: "stretch" }}><View style={{ flex: 1 }}><Meter height={6} parts={[{ frac: Number(r.margin) / Math.max(1, Number(r.budget)), color: c.ac }]} /></View><T size={12} mono>{ausd(r.margin)}</T></Row>) },
+    { key: "pnl", label: "PnL", flex: 0.8, align: "right", render: (r) => <T size={13} mono color={r.pnl >= 0n ? "posI" : "neg"}>{ausdSigned(r.pnl)}</T> },
+    { key: "stop", label: "Loss stop", flex: 2, align: "right", render: (r) => (r.book?.status === "stopped" ? <Row gap={8}><T size={12} mono>{r.loss}</T><Link title={act.busy === "rearm" ? "Waiting" : "Re-arm"} onPress={() => act.rearm(r.a, r.leaderId)} testID={`home.leaders.rearm.${r.leaderId}`} /></Row> : <T size={12} mono color={r.loss === "Off" ? "mu" : "tx"}>{r.loss}</T>) },
+    { key: "open", label: "Open", flex: 0.5, align: "right", render: (r) => <T size={13} mono>{r.open}</T> },
   ];
+  // Deposit split: every leader's budget (multi-leader accounts) or each follow's deposit, then what is not assigned.
+  const segs = totals.accounts.flatMap((a) => (isMultiLeader(a) ? leaderBooks(a).filter((b) => b.inPolicy).map((b) => ({ key: `${a.account}:${b.leaderId}`, label: names.name(b.leaderId), v: b.budgetCNS, stopped: b.stopped })) : [{ key: a.account, label: shortAddr(a.leader?.address ?? a.account), v: toBig(a.netDepositsCNS), stopped: false }]));
+  const unassigned = totals.accounts.filter(isMultiLeader).reduce((s, a) => { const u = splitTotals(toBig(a.netDepositsCNS), leaderBooks(a).filter((b) => b.inPolicy)).unassigned; return s + (u > 0n ? u : 0n); }, 0n);
+  const capRoom = totals.accounts.reduce((s, a) => s + (toBig(a.depositCapCNS) > toBig(a.netDepositsCNS) ? toBig(a.depositCapCNS) - toBig(a.netDepositsCNS) : 0n), 0n);
+  const multiAccount = totals.accounts.find(isMultiLeader);
   return (
     <LaptopPage testID="home.screen" title="Home" sub={`All numbers read from Monad${block ? ` · block ${block.toLocaleString("en-US")}` : ""}`}>
       {mirrorDown ? <ErrorBanner testID="home.offline" title="Can't reach Mirror" body="Our server isn't answering. Balances are the last read; your follows keep running onchain." onRetry={onRetry} /> : null}
@@ -86,7 +123,7 @@ function FundedLaptop({ totals, mirrorDown, monadDown, onRetry, block }: { total
           </LCard>
           <LCard style={{ flex: 1 }} testID="home.laptop.leaders">
             <Row gap={16}><T size={15} w={600} style={{ flex: 1 }}>Leaders</T><T size={12} color="mu">budget · margin used · PnL · loss stop</T><Link title="Share" icon="share" onPress={() => setSharing(true)} testID="home.share" /></Row>
-            <Table testIDPrefix="home.leaders" cols={cols} rows={totals.accounts} rowKey={(a) => a.account} onRow={(a) => a.leader && router.push({ pathname: "/leaders", params: { leader: String(a.leader.accountId) } })} />
+            <Table testIDPrefix="home.leaders" cols={cols} rows={rows} rowKey={(r) => r.key} rowStyle={(r) => (r.book?.status === "stopped" ? { backgroundColor: c.negS } : undefined)} onRow={(r) => r.leaderId && router.push({ pathname: "/leaders", params: { leader: String(r.leaderId) } })} />
             <View style={{ flex: 1 }} />
             <Row gap={12} style={{ padding: 14, borderRadius: 12, backgroundColor: c.acs }} testID="home.accountStop">
               <Icon name="shield" size={18} color={c.ac} />
@@ -100,19 +137,24 @@ function FundedLaptop({ totals, mirrorDown, monadDown, onRetry, block }: { total
         <View style={{ width: 360, gap: 16 }}>
           <LCard testID="home.laptop.split">
             <Row><T size={15} w={600} style={{ flex: 1 }}>Deposit split</T><T size={13} mono>{ausd(totals.deposited)} AUSD</T></Row>
-            <Meter height={12} parts={totals.accounts.map((a, i) => ({ frac: Number(toBig(a.netDepositsCNS)) / Number(sumDep), color: palette[i % palette.length] }))} />
-            {totals.accounts.map((a, i) => (
-              <Row key={a.account} gap={8}><View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: palette[i % palette.length] }} /><T size={13} mono style={{ flex: 1 }}>{shortAddr(a.leader?.address ?? a.account)}</T><T size={13} mono>{ausd(a.netDepositsCNS)}</T></Row>
+            <Meter height={12} parts={segs.map((x, i) => ({ frac: Number(x.v) / Number(sumDep), color: x.stopped ? c.mu : palette[i % palette.length] }))} />
+            {segs.map((x, i) => (
+              <Row key={x.key} gap={8} testID={`home.split.row.${i}`}><View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: x.stopped ? c.mu : palette[i % palette.length] }} /><T size={13} mono style={{ flex: 1 }}>{x.label}{x.stopped ? " · stopped" : ""}</T><T size={13} mono>{ausd(x.v)}</T></Row>
             ))}
             <View>
-              <KV k="In your wallet" v={`${ausd(totals.wallet)} AUSD`} />
+              {multi ? <KV k="Not assigned" v={ausd(unassigned)} testID="home.split.unassigned" /> : <KV k="In your wallet" v={`${ausd(totals.wallet)} AUSD`} />}
               <KV k="Withdrawable now" v={`${ausd(totals.withdrawable)} AUSD`} />
-              <KV k="Beta limit" v="25.00 AUSD per follow" last />
+              <KV k="Beta cap room" v={`${ausd(capRoom)} AUSD`} last />
             </View>
             <Row gap={10}>
               <Button title="Add leader" icon="plus" kind="ton" size="md" flex onPress={() => router.push("/leaders")} testID="home.addLeader" />
-              <Button title="Withdraw" icon="arrup" kind="out" size="md" flex onPress={() => router.push("/withdraw")} testID="home.withdraw" />
+              {multiAccount ? (
+                <Button title="Edit budgets" icon="split" kind="out" size="md" flex onPress={() => router.push({ pathname: "/budgets", params: { account: multiAccount.account } })} testID="home.editBudgets" />
+              ) : (
+                <Button title="Withdraw" icon="arrup" kind="out" size="md" flex onPress={() => router.push("/withdraw")} testID="home.withdraw" />
+              )}
             </Row>
+            {act.error ? <T size={12} color="neg" testID="home.leader.error">{act.error}</T> : null}
           </LCard>
           <LCard style={{ flex: 1 }} testID="home.laptop.recent">
             <Row><T size={15} w={600} style={{ flex: 1 }}>Recent copies</T><Link title="Feed" onPress={() => router.navigate("/feed")} testID="home.feed.link" /></Row>

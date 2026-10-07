@@ -22,10 +22,16 @@ const P = (m: MarketConfig | undefined, v: unknown) => (m && v !== undefined && 
 /** "Take-profit executed by 0x12…ab" (+ the level and the mark it fired at). */
 export function stopTitle(e: FeedEvent): string {
   const who = e.keeper ? shortAddr(e.keeper) : "an address";
+  if (isLeaderStop(e)) return `${stopName(e)} for ${e.leaderAddress ? shortAddr(e.leaderAddress) : `Perpl #${e.leaderAccountId ?? e.data?.scope ?? "?"}`} executed by ${who}`;
   return `${stopName(e)} executed by ${who}`;
 }
+export const isLeaderStop = (e: Pick<FeedEvent, "reason" | "data">) => String(e.reason ?? e.data?.kind ?? "") === "LeaderLoss";
+const cns = (v: unknown) => (Number(String(v ?? "0")) / 1e6).toFixed(2);
 export function stopDetail(e: FeedEvent, m: MarketConfig | undefined): string {
-  if (!isLevelStop(e)) return `${e.data?.closed ?? e.positionsClosed ?? 0} position(s) closed, reduce-only`;
+  const closed = `${e.data?.closed ?? e.positionsClosed ?? 0} position(s) closed, reduce-only`;
+  // StopTriggered(LeaderLoss): limit = the leader's loss limit, actual = its loss (budget x lossStopBps).
+  if (isLeaderStop(e)) return `lost ${cns(e.actual ?? e.data?.actual)} of a ${cns(e.limit ?? e.data?.limit)} loss stop · ${closed} · other leaders unaffected`;
+  if (!isLevelStop(e)) return closed;
   return `${m?.symbol ?? ""} level ${P(m, e.limit ?? e.data?.limit)} · mark ${P(m, e.actual ?? e.data?.actual)} · reduce-only, caller paid nothing`.trim();
 }
 

@@ -1,0 +1,182 @@
+{
+  "run": "2026-10-07T17-26-29",
+  "network": "localnet",
+  "perpl": "PerplFoundation/dex-sdk@01b9910 (MIT), deployed as in perpl_sdk::testing::TestExchange",
+  "checks": [
+    {
+      "name": "engine up on the localnet",
+      "ok": true,
+      "chainId": 1337,
+      "keeper": "0x976EA74026E726554dB657fA54763abd0C3a0aa9"
+    },
+    {
+      "name": "relay created the demo follower's MirrorAccount at the predicted address",
+      "ok": true,
+      "tx": "0x5bcd5044f868640bbd348e182973b98154fc3af7aaf932878319cfdadbc14b26"
+    },
+    {
+      "name": "relayed permit deposit (demo follower, 50 AUSD)",
+      "ok": true,
+      "tx": "0x8f36fb54742e3e1c942ee659c4e177fc49f3e492b2379114a53c6adb72086862",
+      "gasUsed": "296574",
+      "gasLimit": "437207"
+    },
+    {
+      "name": "demo follower follows the demo leader (signed action, relayed)",
+      "ok": true,
+      "tx": "0x397fc7305ca43d02ad8b1393f06726dff14aa9844808257d8bd1869a46a972f4"
+    },
+    {
+      "name": "second leader opened a Perpl account",
+      "ok": true,
+      "leader2Id": 5
+    },
+    {
+      "name": "test user: account created and 60 AUSD deposited by permit",
+      "ok": true,
+      "account": "0xC4668F465E7BD81eba43D664EFb1a23d59a534Df",
+      "tx": "0xa7375cc3197fb35c9dc14b07326e584893e1f92010ce84a1a56114b8023fa4ce"
+    },
+    {
+      "name": "test user follows two leaders with separate budgets (30 and 2 AUSD)",
+      "ok": true,
+      "tx": "0xb5503f6ddc448306702988b52d597859a2917d07f9b49c66ad8c41e1d103dada",
+      "budgets": [
+        "30000000",
+        "2000000"
+      ]
+    },
+    {
+      "name": "Run demo trade: leader trade copied into the test user and the demo follower",
+      "ok": true,
+      "userTx": "0x39bc131c16a0484252481c3c92ec43847f782ceb4a2f921a45792475b7e7de74",
+      "demoTx": "0xc004d7e644ad4973d5005a1ad64a09a6b567ec5b3a9bf6ada8728f6319962308",
+      "latencyMs": 400
+    },
+    {
+      "name": "price proof on the copy: leader fill, leader entry, your fill, deviation",
+      "ok": true,
+      "leaderFillPNS": "855428",
+      "leaderEntryPNS": "855428",
+      "fillPNS": "855428",
+      "entryDeviationBps": 0
+    },
+    {
+      "name": "demo leader's close is copied (down to the leader's target)",
+      "ok": true,
+      "tx": "0x3a3afecb958ae82c2f1ad877efb0a073f9a49a9f3b144370e70e18adf1d8fa2b"
+    },
+    {
+      "name": "builder fee: Perpl charged builder 26 at 0.02% on the copied open",
+      "ok": true,
+      "builderId": 26,
+      "builderFeeCNS": "172",
+      "proofBuilderFeeCNS": "172"
+    },
+    {
+      "name": "builder fee: the copied close carried no builder and paid none",
+      "ok": true,
+      "builderId": 0,
+      "builderFeeCNS": "0",
+      "lotLNS": "1",
+      "price": "854573"
+    },
+    {
+      "name": "Run blocked trade: 10x copy against a 5x rule is Blocked onchain with the numbers",
+      "ok": true,
+      "reason": "LeverageTooHigh",
+      "limit": "500",
+      "actual": "1000",
+      "tx": "0xdff49fa7e2cd44ac157a57abdc3681e26b2f1d5b76edf45640747f2a31925918",
+      "onchain": true
+    },
+    {
+      "name": "second leader's ETH trade copied; its margin is booked to it alone",
+      "ok": true,
+      "leaderTx": "0xf542eea08db5103aff3d2251b329a264cdaf5a82aa8336345581ffd4df740caf",
+      "copyTx": "0xe1ff72d0b9ae5db7ca17cea8ac8ffd83d3701a4b9f4db84cd4a758a238c9575a",
+      "leader2MarginCNS": "1351330",
+      "demoLeaderMarginCNS": "0"
+    },
+    {
+      "name": "second leader's BTC copy blocked: BTC belongs to the first leader",
+      "ok": true,
+      "reason": "MarketHeldByOtherLeader",
+      "tx": "0x325fa0f22d4cd138fbee205dc37239ed435ce7b5dc93c57b217657b9263efdc8"
+    },
+    {
+      "name": "second leader's budget (2 AUSD) refuses a copy that would exceed it",
+      "ok": true,
+      "reason": "LeaderBudgetExceeded",
+      "limit": "2000000",
+      "actual": "4076420",
+      "tx": "0x1a12520e332e7d538150c98453a84bb8e6575f0a1eb412df2cb0be05340b8c92"
+    },
+    {
+      "name": "entry filter: price 3% past the leader's entry vs a 1% limit, copy refused onchain",
+      "ok": true,
+      "reason": "EntryTooFar",
+      "limit": "863922",
+      "actual": "879768",
+      "tx": "0xed8b8a2574131911fcf81825f2eb340cbf0c2a2107ba6e4e57498c7b12ca5f9b"
+    },
+    {
+      "name": "owner set a take-profit with a passkey-signed action (relayed)",
+      "ok": true,
+      "tx": "0xf8bc252654321fc1ca4f1c2c0189eb1d0b1273980fbbb59e5bb4eebf98e7bef5",
+      "takeProfitPNS": "267273"
+    },
+    {
+      "name": "a stranger executed the take-profit; the position closed; the stranger got nothing",
+      "ok": true,
+      "tx": "0xf1a10e5843c90c1efba6d67ec72fb5e94c4e6ca490131dabfb9617d8081b8a23",
+      "lotsBefore": "1",
+      "lotsAfter": "0"
+    },
+    {
+      "name": "every copied open in the feed carries its price proof",
+      "ok": true,
+      "opens": 3
+    },
+    {
+      "name": "copy-quality API: aggregates exclude the team-run follower, which is listed separately",
+      "ok": true,
+      "copies": 1,
+      "teamRunCopies": 6,
+      "medianDeviationBps": 0,
+      "source": "engine"
+    },
+    {
+      "name": "what-if backtest on the leader's recorded history returns a labelled simulation",
+      "ok": true,
+      "tradesCopied": 4,
+      "tradesBlocked": {
+        "LeverageTooHigh": 1
+      },
+      "pnlCNS": "-5173",
+      "slippage": {
+        "bps": 5,
+        "source": "default assumption; not enough measured copies of this leader"
+      },
+      "assumptions": 10
+    },
+    {
+      "name": "close all and withdraw, relayed; AUSD back in the owner's wallet",
+      "ok": true,
+      "closeTx": "0x860b549ec9ffe761a7b76f301ec44117e2d70f024a965cc43587a5350b53250c",
+      "withdrawTx": "0xa66655bcecf62bc9274f693fb9a429605c3597bb35a31059c1291dbbc44d037d",
+      "returnedCNS": "60189021"
+    }
+  ],
+  "txs": {
+    "demoTrade": {
+      "cycleId": "da382eb9-053f-43a1-924f-8b729567fd54",
+      "kind": "trade",
+      "status": "started",
+      "stream": "/v1/stream?account=demo",
+      "holdMs": 5000
+    }
+  },
+  "passed": 23,
+  "failed": 0
+}

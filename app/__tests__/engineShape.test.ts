@@ -34,7 +34,8 @@ describe("owner accounts and accounts", () => {
     const book = raw.pnlByLeader[0];
     expect(a.pnl.unrealisedCNS).toBe(book.unrealizedPnlCNS);
     expect(a.pnl.realisedCNS).toBe(book.realizedPnlCNS);
-    expect(a.pnl.byLeader[0]).toEqual({ leaderAccountId: 3, realisedCNS: book.realizedPnlCNS, unrealisedCNS: book.unrealizedPnlCNS });
+    // The engine's leaderBook read-out (margin held for the leader, its budget, loss stop fired) is kept too.
+    expect(a.pnl.byLeader[0]).toEqual({ leaderAccountId: 3, realisedCNS: book.realizedPnlCNS, unrealisedCNS: book.unrealizedPnlCNS, marginCNS: book.marginCNS, budgetCNS: book.budgetCNS, stopped: book.stopped });
     expect(a.positions).toHaveLength(1);
     const p = a.positions[0];
     expect(p).toMatchObject({ perpId: 1, side: "long", lotLNS: "2", entryPNS: "855428", marginCNS: "855428", upnlCNS: book.unrealizedPnlCNS, leaderAccountId: 3 });

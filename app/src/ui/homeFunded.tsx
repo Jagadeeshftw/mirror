@@ -13,6 +13,9 @@ import { Button, Card, ChipS, ErrorBanner, Identicon, Lbl, Link, NansenLabel, Pr
 import { CopyDetailSheet } from "./copyDetail";
 import { followerChoices, ShareSheet } from "./shareSheet";
 import { useColors } from "./theme";
+import { isMultiLeader, leaderBooks } from "../lib/budgets";
+import { useOwnerAction } from "../state/ownerAction";
+import { DepositSplitCard, LeaderBudgetRow, splitPalette, stoppedEvent, useLeaderNames } from "./budgets";
 
 function sumHistory(accounts: MirrorAccount[], wallet: bigint): number[] {
   const n = Math.max(0, ...accounts.map((a) => a.equityHistory?.length ?? 0));
@@ -59,6 +62,52 @@ export function FollowRow({ a, onPress }: { a: MirrorAccount; onPress?: () => vo
         </T>
       </View>
     </Press>
+  );
+}
+
+/** Single-leader follows as before; an account with several leaders shows its deposit split and a row per leader. */
+function FollowList({ accounts, events }: { accounts: MirrorAccount[]; events: FeedEvent[] }) {
+  const c = useColors();
+  const names = useLeaderNames(accounts);
+  const act = useOwnerAction();
+  const pal = splitPalette(c);
+  const single = accounts.filter((a) => !isMultiLeader(a));
+  const multi = accounts.filter(isMultiLeader);
+  return (
+    <>
+      {multi.map((a) => {
+        const books = leaderBooks(a);
+        return (
+          <View key={a.account} style={{ gap: 10 }}>
+            <DepositSplitCard a={a} books={books} name={names.name} testID={`home.split.${a.account}`} />
+            <Card list testID={`home.leaders.${a.account}`}>
+              {books.map((b, i) => (
+                <LeaderBudgetRow
+                  key={b.leaderId}
+                  b={b}
+                  name={names.name(b.leaderId)}
+                  address={names.address(b.leaderId)}
+                  color={pal[i % pal.length]}
+                  stop={stoppedEvent(events, b)}
+                  busy={act.busy === "rearm"}
+                  onRearm={b.status === "stopped" ? () => act.rearm(a, b.leaderId) : undefined}
+                  onPress={() => router.push({ pathname: "/leader/[id]", params: { id: String(b.leaderId) } })}
+                  testID={`home.leader.${b.leaderId}`}
+                />
+              ))}
+            </Card>
+            {act.error ? <T size={12} color="neg" testID="home.leader.error">{act.error}</T> : null}
+          </View>
+        );
+      })}
+      {single.length ? (
+        <Card list>
+          {single.map((a) => (
+            <FollowRow key={a.account} a={a} onPress={() => a.leader && router.push({ pathname: "/leader/[id]", params: { id: String(a.leader.accountId) } })} />
+          ))}
+        </Card>
+      ) : null}
+    </>
   );
 }
 
@@ -169,22 +218,19 @@ export function FundedHome({ totals, mirrorDown, monadDown, onRetry }: { totals:
               <Row justify="space-between">
                 <Row gap={6}>
                   <T size={16} w={600}>
-                    Following
+                    {totals.accounts.some(isMultiLeader) ? "Leaders" : "Following"}
                   </T>
-                  <T size={16} w={600} mono color="mu">
-                    {totals.accounts.length}
+                  <T size={16} w={600} mono color="mu" testID="home.following.count">
+                    {totals.accounts.reduce((n, a) => n + (isMultiLeader(a) ? leaderBooks(a).length : 1), 0)}
                   </T>
                 </Row>
                 <Row gap={16}>
                   <Link title="Share" icon="share" onPress={() => setSharing(true)} testID="home.share" />
+                  {totals.accounts.some(isMultiLeader) ? <Link title="Budgets" onPress={() => router.push("/budgets")} testID="home.budgets" /> : null}
                   <Link title="Manage" onPress={() => router.push("/account")} testID="home.manage" />
                 </Row>
               </Row>
-              <Card list>
-                {totals.accounts.map((a) => (
-                  <FollowRow key={a.account} a={a} onPress={() => a.leader && router.push({ pathname: "/leader/[id]", params: { id: String(a.leader.accountId) } })} />
-                ))}
-              </Card>
+              <FollowList accounts={totals.accounts} events={feed.events} />
             </View>
             <View style={{ paddingHorizontal: 20, gap: 10 }}>
               <Row justify="space-between">

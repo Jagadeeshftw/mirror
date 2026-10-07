@@ -18,6 +18,7 @@ import { bpsText, fillDeviationBps } from "../lib/proof";
 import { copyFeeCNS, feeText } from "../lib/fees";
 import { isEngineKind, RULE_NAMES as RULES } from "../lib/blockReasons";
 import { useColors } from "./theme";
+import { leaderAddressOf } from "../lib/engineShape";
 
 export function openTx(cfg: AppConfig | undefined, hash: string | null | undefined) {
   if (hash) void Linking.openURL(txUrl(cfg, hash));
@@ -121,15 +122,20 @@ export function explainBlock(cfg: AppConfig | undefined, e: FeedEvent, acct?: Mi
       break;
     }
     case "LeaderBudgetExceeded":
-      sentence = `This copy needed ${ausd(actual)} AUSD of margin for this leader. Its budget is ${ausd(limit)} AUSD. Not copied.`;
+      sentence = `This copy would bring ${leaderName(e) || "this leader"}'s margin to ${ausd(actual)} AUSD. Its budget is ${ausd(limit)} AUSD. Not copied; your other leaders' budgets are untouched.`;
       compare = { leader: ausd(actual), limit: ausd(limit), frac: Number(limit) / Math.max(1, Number(actual)) };
       break;
     case "LeaderLossStop":
-      sentence = "This leader's loss stop has fired, so its new trades are no longer copied. Your other leaders keep running.";
+      sentence = limit > 0n
+        ? `${leaderName(e) || "This leader"} lost ${ausd(actual)} AUSD, past its loss stop of ${ausd(limit)}. Its new trades are no longer copied until you re-arm it. Your other leaders keep running.`
+        : `${leaderName(e) || "This leader"}'s loss stop has fired, so its new trades are no longer copied until you re-arm it. Your other leaders keep running.`;
+      if (limit > 0n) compare = { leader: ausd(actual), limit: ausd(limit), frac: Number(limit) / Math.max(1, Number(actual)) };
       break;
-    case "MarketHeldByOtherLeader":
-      sentence = `You already hold ${sym} from another leader. A market belongs to the leader whose copy opened it, so this trade waits until that position closes.`;
+    case "MarketHeldByOtherLeader": {
+      const holder = heldByName(actual);
+      sentence = `${sym} is held by ${holder}, the leader whose copy opened it. A market belongs to one leader at a time, so ${leaderName(e) || "this leader"}'s ${sym} trades are blocked until that position closes.`;
       break;
+    }
     case "MarketHalted":
       sentence = `A stop-loss or take-profit closed your ${sym} position and paused new copies in ${sym} until you set your limits again.`;
       break;
@@ -139,7 +145,28 @@ export function explainBlock(cfg: AppConfig | undefined, e: FeedEvent, acct?: Mi
   const failIdx = CHECK_GROUPS.findIndex((g) => g.reasons.includes(b.reason));
   const chips = CHECK_GROUPS.map((g, i) => ({ label: g.label, state: i < failIdx ? "ok" : i === failIdx ? "fail" : "skip" })) as { label: string; state: "ok" | "fail" | "skip" }[];
   const name = RULE_NAMES[b.reason] ?? "account";
-  return { title: `Blocked by your ${name}${/filter|stop|budget/.test(name) ? "" : " rule"}`, sentence, compare, chips, short: b.rule ?? sentence, reasonName: RULES[b.reason] ?? b.reason };
+  const title =
+    b.reason === "MarketHeldByOtherLeader" ? `Blocked: market held by ${heldByName(actual)}`
+    : b.reason === "LeaderBudgetExceeded" ? "Blocked by this leader's budget"
+    : b.reason === "LeaderLossStop" ? "Blocked by this leader's loss stop"
+    : `Blocked by your ${name}${/filter|stop|budget/.test(name) ? "" : " rule"}`;
+  return { title, sentence, compare, chips, short: b.rule ?? sentence, reasonName: RULES[b.reason] ?? b.reason };
+}
+
+/** The leader holding a market (MarketHeldByOtherLeader's `actual`), by address when known. */
+function heldByName(id: bigint): string {
+  const a = leaderAddressOf(Number(id));
+  return a ? shortAddr(a) : `Perpl #${id}`;
+}
+
+/** Card banner after "Not copied.": the user's rule, or what another leader / a leader's own limits did. */
+export function blockBanner(cfg: AppConfig | undefined, e: FeedEvent): string {
+  const b = e.blocked;
+  if (!b) return "";
+  if (b.reason === "MarketHeldByOtherLeader") return `Blocked: market held by ${heldByName(toBig(b.actual))}`;
+  if (b.reason === "LeaderBudgetExceeded") return `Blocked: over ${leaderName(e) || "this leader"}'s ${ausd(b.limit)} budget`;
+  if (b.reason === "LeaderLossStop") return `Blocked: ${leaderName(e) || "this leader"}'s loss stop`;
+  return `Your rule: ${shortRule(cfg, e)}`;
 }
 
 export function shortRule(cfg: AppConfig | undefined, e: FeedEvent): string {
@@ -156,7 +183,7 @@ export function FeedItem({ e, cfg, onBlockedPress, onCopyPress, highlight, testI
   const m = mkt(cfg, e.perpId);
   const leaderAddr = e.leaderAddress ?? (e.leaderAccountId ? String(e.leaderAccountId) : "");
   if (isEngineKind(e.kind)) return <EngineItem e={e} cfg={cfg} testID={testID} name={leaderName(e)} />;
-  if (e.kind === "StopTriggered" || e.kind === "LevelSet" || e.kind === "MarketClosed") return <StopItem e={e} cfg={cfg} testID={testID} />;
+  if (e.kind === "StopTriggered" || e.kind === "LevelSet" || e.kind === "MarketClosed" || e.kind === "LeaderStopped") return <StopItem e={e} cfg={cfg} testID={testID} />;
   const typeLabel = e.kind === "Blocked" ? "Blocked" : e.kind === "Mirrored" ? ((e.orderType ?? 0) <= 1 ? "Copy" : "Close") : e.kind;
   const header = (
     <Row gap={8}>
@@ -209,7 +236,7 @@ export function FeedItem({ e, cfg, onBlockedPress, onCopyPress, highlight, testI
             <T size={13} w={600} color={c.neg}>
               Not copied.{" "}
             </T>
-            Your rule: {shortRule(cfg, e)}
+            {blockBanner(cfg, e)}
           </T>
           <Row gap={2}>
             <T size={13} w={600} color="ac">
@@ -286,7 +313,7 @@ export function FeedItem({ e, cfg, onBlockedPress, onCopyPress, highlight, testI
     Paused: { icon: "pause", title: e.paused ? "Following paused" : "Following resumed", tone: "nu" },
     ClosedAll: { icon: "close", title: `Closed ${e.positionsClosed ?? 0} position${e.positionsClosed === 1 ? "" : "s"}`, tone: "nu" },
     Detached: { icon: e.data?.detached ? "pause" : "check", title: e.label ?? (e.data?.detached ? "Stopped following; positions kept" : "Following again"), tone: e.data?.detached ? "nu" : "ac" },
-    LeaderStopped: { icon: "pause", title: `Leader loss stop hit for ${shortAddr(e.leaderAddress) || "a leader"}`, tone: "nu" },
+    LeaderStopped: { icon: "pause", title: `Leader loss stop hit for ${leaderName(e) || "a leader"}${e.actual ? `: lost ${ausd(toBig(e.actual) < 0n ? -toBig(e.actual) : toBig(e.actual))} of ${ausd(e.limit ?? "0")}` : ""}. Copying it stopped`, tone: "nu" },
   };
   const mm = meta[e.kind] ?? { icon: "info", title: e.kind, tone: "nu" };
   return (
@@ -337,7 +364,7 @@ export function RecentRow({ e, cfg, onPress }: { e: FeedEvent; cfg: AppConfig | 
         </T>
       </View>
       {e.kind === "Blocked" ? (
-        <ChipS label={e.blocked ? (RULES[e.blocked.reason] ?? "Blocked") : "Blocked"} tone="neg" icon="ban" />
+        <ChipS label={e.blocked ? (e.blocked.reason === "MarketHeldByOtherLeader" ? "Market held" : (RULES[e.blocked.reason] ?? "Blocked")) : "Blocked"} tone="neg" icon="ban" />
       ) : (
         <View style={{ alignItems: "flex-end" }}>
           <T size={12} mono>

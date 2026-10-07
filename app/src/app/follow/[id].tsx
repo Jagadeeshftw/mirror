@@ -6,7 +6,11 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { KeyboardAvoidingView, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { follow as followFlow, executeActions, type StepState } from "../../lib/actions";
+import { addLeader, follow as followFlow, executeActions, type StepState } from "../../lib/actions";
+import { buildSplitPolicy, splitTargets, splitWithNewLeader, validateSplit, type SplitRow } from "../../lib/budgets";
+import { signablePolicy } from "../../lib/levels";
+import { LeaderLossSection, ModeChoice, SplitSection, type FollowMode } from "../../ui/followSplit";
+import { useLeaderNames } from "../../ui/budgets";
 import { api, ApiError } from "../../lib/api";
 import { ACTION, encodeSetPolicy, validatePolicy } from "../../lib/contracts";
 import { ausd, bps, cnsToNumber, dateLong, leverage, lots as fmtLots, parseUnits, price as fmtPrice, shortAddr, toBig } from "../../lib/format";
@@ -87,6 +91,20 @@ export default function FollowSheet() {
   const l = leaderQ.data;
   const existing: MirrorAccount | undefined = editAccount ? owner.data?.accounts.find((a) => a.account.toLowerCase() === editAccount.toLowerCase()) : undefined;
   const isEdit = !!editAccount;
+  // A second (third, fourth) leader can join an existing account: one deposit, a budget per leader.
+  const names = useLeaderNames(owner.data?.accounts);
+  const targets = useMemo(() => (isEdit ? [] : splitTargets(owner.data?.accounts, leaderId)), [owner.data, leaderId, isEdit]);
+  const [modeSel, setModeSel] = useState<FollowMode | null>(null);
+  const mode: FollowMode = modeSel ?? (targets.length ? "split" : "new");
+  const [targetSel, setTargetSel] = useState<string | null>(null);
+  const target = mode === "split" ? (targets.find((a) => a.account === targetSel) ?? targets[0]) : undefined;
+  const split = !!target;
+  const [splitRows, setSplitRows] = useState<SplitRow[]>([]);
+  const [topUp, setTopUp] = useState("");
+  const [leaderLoss, setLeaderLoss] = useState(1000);
+  useEffect(() => {
+    if (target) setSplitRows(splitWithNewLeader(target, leaderId, 0, 0));
+  }, [target?.account, target?.policy?.leaders?.length]);
 
   const [form, setForm] = useState<FollowForm>(defaultForm());
   const [initialised, setInitialised] = useState(false);
@@ -107,31 +125,35 @@ export default function FollowSheet() {
   // Pre-set limits from this leader's risk (or from the existing follow).
   useEffect(() => {
     if (initialised || !l || !cfg) return;
-    if (existing?.policy) {
-      const p = existing.policy;
+    if (!isEdit && !owner.data && !owner.isError) return;
+    const from = existing ?? (isEdit ? undefined : targets[0]);
+    const maxLeaderNotional = l.positions.reduce((m, p) => {
+      const mk = byPerp.get(p.perpId);
+      if (!mk) return m;
+      const n = (toBig(p.lotLNS) * toBig(p.markPNS) * 10n ** 6n) / 10n ** BigInt(mk.lotDecimals + mk.priceDecimals);
+      return n > m ? n : m;
+    }, 0n);
+    if (from?.policy) {
+      const p = from.policy;
+      const mine = p.leaders.find((x) => x.accountId === leaderId);
       setForm({
         ...defaultForm(),
-        allocationAusd: ausd(existing.netDepositsCNS),
-        ratioBps: p.leaders[0]?.ratioBps ?? 10,
+        allocationAusd: existing ? ausd(from.netDepositsCNS) : "12.00",
+        ratioBps: mine?.ratioBps ?? (existing ? (p.leaders[0]?.ratioBps ?? 10) : suggestRatioBps(maxLeaderNotional, toBig(p.markets[0]?.maxNotionalCNS ?? "0") || 1n)),
         maxLeverage: p.maxLeverageHdths / 100,
         maxSlippageBps: p.maxSlippageBps,
         maxNotionalAusd: ausd(p.markets[0]?.maxNotionalCNS ?? "0"),
-        markets: p.markets.map((m) => byPerp.get(m.perpId)?.symbol).filter(Boolean) as string[],
+        markets: [...new Set([...(p.markets.map((m) => byPerp.get(m.perpId)?.symbol).filter(Boolean) as string[]), ...(existing ? [] : l.markets.filter((x) => bySymbol.has(x)))])],
         dailyLossPct: p.dailyLossBps / 100,
         drawdownPct: p.drawdownBps / 100,
         expiryDays: Math.max(1, Math.round((p.expiry * 1000 - Date.now()) / 86400e3)),
         entryFilterPct: (p.maxEntryDeviationBps ?? 0) / 100,
-        matchNow: false,
+        matchNow: !existing,
       });
+      if (!existing) setLeaderLoss(1000);
     } else if (!isEdit) {
       const start = limits.minCNS > 12_000_000n ? limits.minCNS : 12_000_000n;
       const alloc = wallet.cns >= start ? start : wallet.cns >= limits.minCNS ? wallet.cns : limits.minCNS;
-      const maxLeaderNotional = l.positions.reduce((m, p) => {
-        const mk = byPerp.get(p.perpId);
-        if (!mk) return m;
-        const n = (toBig(p.lotLNS) * toBig(p.markPNS) * 10n ** 6n) / 10n ** BigInt(mk.lotDecimals + mk.priceDecimals);
-        return n > m ? n : m;
-      }, 0n);
       const cap = alloc;
       const allowed = l.markets.filter((s) => bySymbol.has(s));
       setForm({
@@ -144,21 +166,40 @@ export default function FollowSheet() {
       });
     }
     setInitialised(true);
-  }, [l, cfg, existing, wallet.cns]);
+  }, [l, cfg, existing, wallet.cns, owner.data, owner.isError]);
 
   const set = <K extends keyof FollowForm>(k: K, v: FollowForm[K]) => setForm((f) => ({ ...f, [k]: v }));
-  const policy = useMemo(() => (cfg && l ? buildPolicy(form, leaderId, cfg.markets) : null), [form, cfg, l, leaderId]);
-  const allocCNS = parseUnits(form.allocationAusd, 6) ?? 0n;
+  const splitNow = useMemo(() => splitRows.map((r) => (r.isNew ? { ...r, ratioBps: form.ratioBps, lossStopBps: leaderLoss } : r)), [splitRows, form.ratioBps, leaderLoss]);
+  const policy = useMemo(() => {
+    if (!cfg || !l) return null;
+    const base = buildPolicy(form, leaderId, cfg.markets);
+    // Split: account-wide limits and markets from the form, every leader of the account with its budget.
+    if (split && target) return buildSplitPolicy(base, splitNow);
+    // Editing one leader of several: keep the others (and every budget) as they are.
+    if (isEdit && existing?.policy && existing.policy.leaders.length > 1) return { ...base, leaders: signablePolicy(existing.policy).leaders.map((x) => (x.accountId === leaderId ? { ...x, ratioBps: Math.round(form.ratioBps) } : x)) };
+    return base;
+  }, [form, cfg, l, leaderId, split, target, splitNow, isEdit, existing]);
+  const topUpCNS = topUp.trim() ? (parseUnits(topUp, 6) ?? -1n) : 0n;
+  const splitDeposit = target ? BigInt(target.netDepositsCNS || "0") + (topUpCNS > 0n ? topUpCNS : 0n) : 0n;
+  const splitIssues = split && target ? validateSplit({ depositCNS: BigInt(target.netDepositsCNS || "0"), rows: splitNow, topUpCNS, walletCNS: wallet.cns, capCNS: limits.capCNS, name: names.name }) : [];
+  const allocCNS = split ? (splitNow.find((r) => r.isNew)?.budgetCNS ?? 0n) : (parseUnits(form.allocationAusd, 6) ?? 0n);
+  /** What the account-wide loss stops are measured on: the whole deposit when several leaders share it. */
+  const acctCNS = split ? splitDeposit : allocCNS;
   const walletAvail = wallet.cns;
-  const errors = isEdit ? formErrors({ ...form, allocationAusd: ausd(limits.minCNS) }, limits.capCNS, limits).filter((e) => e.field !== "allocation") : formErrors(form, walletAvail, limits);
+  const errors = [
+    ...(isEdit || split ? formErrors({ ...form, allocationAusd: ausd(limits.minCNS) }, limits.capCNS, limits).filter((e) => e.field !== "allocation") : formErrors(form, walletAvail, limits)),
+    ...splitIssues.map((x) => ({ field: `split.${x.field}`, message: x.message })),
+  ];
+  /** Per-leader what-if: the new leader alone on its budget. */
+  const whatIfPolicy = policy && split ? { ...policy, leaders: policy.leaders.filter((x) => x.accountId === leaderId) } : policy;
   const policyErr = policy ? validatePolicy(policy) : "loading";
 
   // Live quote for "Match the leader now".
-  const quoteKey = JSON.stringify({ leaderId, p: policy && { ...policy, expiry: 0 }, a: allocCNS.toString() });
+  const quoteKey = JSON.stringify({ leaderId, p: policy && { ...policy, expiry: 0 }, a: allocCNS.toString(), t: target?.account ?? null });
   const quote = useQuery({
     queryKey: ["quote", quoteKey],
     enabled: !!me && !!policy && form.matchNow && !isEdit && policyErr === null,
-    queryFn: () => api.quoteFollow({ owner: me!.address, leaderAccountId: leaderId, policy: { ...policy!, allocationCNS: allocCNS.toString() } as any }),
+    queryFn: () => api.quoteFollow({ owner: me!.address, leaderAccountId: leaderId, policy: { ...policy!, allocationCNS: allocCNS.toString() } as any, ...(target ? { account: target.account } : {}) }),
     staleTime: 15_000,
     refetchInterval: step === "review" ? 15_000 : false,
   });
@@ -196,6 +237,11 @@ export default function FollowSheet() {
       if (isEdit && existing) {
         await executeActions(cfg, [{ account: existing, kind: ACTION.SET_POLICY, data: encodeSetPolicy(policy) }], (k, s, i) => progress(k === "sign" ? "sign" : "policy", s, i));
         setNewAccount(existing.account);
+      } else if (split && target) {
+        const orders = form.matchNow ? (q?.orders ?? []) : [];
+        const r = await addLeader(cfg, { owner: me.address, account: target, policy, orders, topUpCNS: topUpCNS > 0n ? topUpCNS : 0n }, progress);
+        setNewAccount(target.account);
+        if (r.execute?.status !== "success") throw new Error(r.deposit?.status !== "success" && r.deposit ? "The deposit reverted" : "The relayed policy reverted");
       } else {
         const orders = form.matchNow ? (q?.orders ?? []) : [];
         const r = await followFlow(cfg, { owner: me.address, leaderAccountId: leaderId, policy, allocationCNS: allocCNS, orders, existing: owner.data.accounts }, progress);
@@ -230,7 +276,7 @@ export default function FollowSheet() {
         {step === "review" || step === "whatif" ? <IconButton name="back" onPress={() => setStep(step === "review" && !laptop ? "whatif" : "limits")} testID="follow.back" /> : null}
         <Identicon seed={l?.address ?? String(leaderId)} size={40} />
         <View style={{ flex: 1 }}>
-          <Lbl>{isEdit ? "Edit limits" : step === "review" ? "Review" : (totals?.accounts.length ?? 0) > 0 ? "Follow another leader" : "Follow"}</Lbl>
+          <Lbl>{isEdit ? "Edit limits" : split ? `Follow a ${["second", "third", "fourth"][Math.min(2, (target?.policy?.leaders.length ?? 1) - 1)]} leader` : step === "review" ? "Review" : (totals?.accounts.length ?? 0) > 0 ? "Follow another leader" : "Follow"}</Lbl>
           <T size={14} w={600} mono>
             {shortAddr(l?.address)}
           </T>
@@ -278,8 +324,13 @@ export default function FollowSheet() {
   // ---------------------------------------------------------------- done / approving / error
   if (step === "approving" || step === "done" || step === "error") {
     const acct = owner.data?.accounts.find((a) => a.account === newAccount);
-    const evs = (resultFeed.data?.events ?? []).filter((e) => (e.kind === "Mirrored" && e.matchNow) || e.kind === "Blocked").slice(0, 8);
-    const items = isEdit
+    const evs = (resultFeed.data?.events ?? []).filter((e) => ((e.kind === "Mirrored" && e.matchNow) || e.kind === "Blocked") && (!split || (Number(e.leaderAccountId) === leaderId && e.timestamp >= t0 - 60_000))).slice(0, 8);
+    const splitItems = [
+      { key: "sign", title: "Sign with your passkey", sub: `${topUpCNS > 0n ? "Deposit permit + " : ""}Action ${form.matchNow && (q?.orders.length ?? 0) > 0 ? "FOLLOW" : "SET_POLICY"} with all ${policy?.leaders.length ?? 0} leaders, one prompt`, state: steps.sign ?? "now" },
+      ...(topUpCNS > 0n ? [{ key: "deposit", title: `Add ${ausd(topUpCNS)} AUSD to the deposit`, sub: results.deposit?.txHash ? <TxLink hash={results.deposit.txHash} onPress={() => openTx(cfg, results.deposit!.txHash!)} /> : "Permit, relayed before the new budgets", state: steps.deposit ?? "pending" }] : []),
+      { key: "policy", title: form.matchNow && (q?.orders.length ?? 0) > 0 ? "Split the deposit and match the leader" : "Split the deposit", sub: results.policy?.txHash ? <TxLink hash={results.policy.txHash} onPress={() => openTx(cfg, results.policy!.txHash!)} /> : "Budgets per leader, checked onchain", state: steps.policy ?? "pending" },
+    ];
+    const items = split ? splitItems : isEdit
       ? [
           { key: "sign", title: "Sign with your passkey", sub: "One EIP-712 Action: SET_POLICY", state: steps.sign ?? "now" },
           { key: "policy", title: "Write new limits onchain", sub: results.policy?.txHash ? <TxLink hash={results.policy.txHash} onPress={() => openTx(cfg, results.policy!.txHash!)} /> : "Gasless: the relayer pays", state: steps["relay:0"] ?? steps.policy ?? "pending" },
@@ -355,7 +406,7 @@ export default function FollowSheet() {
   if (step === "whatif" && policy) {
     return frame(
       <View style={{ paddingTop: 4 }}>
-        <WhatIfBody leaderId={leaderId} policy={policy} depositCNS={allocCNS} onEdit={() => setStep("limits")} />
+        <WhatIfBody leaderId={leaderId} policy={whatIfPolicy ?? policy} depositCNS={allocCNS} onEdit={() => setStep("limits")} />
       </View>,
       <Row gap={10}>
         <Button title="Change limits" kind="out" flex onPress={() => setStep("limits")} testID="follow.whatif.back" />
@@ -369,15 +420,25 @@ export default function FollowSheet() {
     return frame(
       <View style={{ gap: 14 }}>
         <View>
-          <KV k="Allocation" v={`${form.allocationAusd} AUSD`} />
+          {split && target ? (
+            <>
+              <KV k="Account" v={`Your account ${shortAddr(target.account)}`} testID="follow.review.account" />
+              <KV k="Budget for this leader" v={`${ausd(allocCNS)} AUSD`} testID="follow.review.budget" />
+              <KV k="Deposit split" v={splitNow.map((r) => `${names.name(r.accountId).slice(0, 6)} ${ausd(r.budgetCNS)}`).join(" · ")} testID="follow.review.split" />
+              <KV k="Add to the deposit" v={topUpCNS > 0n ? `${ausd(topUpCNS)} AUSD (permit)` : "None"} testID="follow.review.topUp" />
+              <KV k="Loss stop for this leader" v={leaderLoss ? `${leaderLoss / 100}% · stops at ${ausd(allocCNS - (allocCNS * BigInt(leaderLoss)) / 10000n)}` : "Off"} testID="follow.review.leaderLoss" />
+            </>
+          ) : (
+            <KV k="Allocation" v={`${form.allocationAusd} AUSD`} />
+          )}
           <KV k="Sizing" v={`${bps(form.ratioBps)} of leader size`} />
           <KV k="Max leverage" v={`${form.maxLeverage}x`} />
           <KV k="Max slippage" v={bps(form.maxSlippageBps)} testID="follow.review.slippage" />
           <KV k="Max notional per market" v={`${form.maxNotionalAusd} AUSD`} />
           <KV k="Entry filter" v={form.entryFilterPct ? `within ${form.entryFilterPct}% of the leader's entry` : "Off"} testID="follow.review.entryFilter" />
           <KV k="Allowed markets" v={form.markets.join(", ")} />
-          <KV k="Daily loss stop" v={form.dailyLossPct ? `${form.dailyLossPct}% · ${ausd((allocCNS * BigInt(Math.round(form.dailyLossPct * 100))) / 10000n)} AUSD` : "Off"} />
-          <KV k="Account loss stop" v={form.drawdownPct ? `${form.drawdownPct}% · at ${ausd((allocCNS * BigInt(10000 - Math.round(form.drawdownPct * 100))) / 10000n)} AUSD` : "Off"} />
+          <KV k="Daily loss stop" v={form.dailyLossPct ? `${form.dailyLossPct}% · ${ausd((acctCNS * BigInt(Math.round(form.dailyLossPct * 100))) / 10000n)} AUSD` : "Off"} />
+          <KV k="Account loss stop" v={form.drawdownPct ? `${form.drawdownPct}% · at ${ausd((acctCNS * BigInt(10000 - Math.round(form.drawdownPct * 100))) / 10000n)} AUSD` : "Off"} />
           <KV k="Who can execute stops" v={form.flattenOnStop ? "Anyone" : "Mirror's keeper only"} testID="follow.review.flattenOnStop" />
           <KV k="Expiry" v={dateLong(policy.expiry * 1000)} />
           <KV k="Match the leader now" v={form.matchNow ? `${willCopy.length} order${willCopy.length === 1 ? "" : "s"}${willBlock.length ? ` · ${willBlock.length} blocked` : ""}` : "Off"} last />
@@ -394,7 +455,7 @@ export default function FollowSheet() {
             You sign
           </T>
           <T size={12} color="mu">
-            1 passkey prompt · permit + Action FOLLOW
+            {split ? `1 passkey prompt · ${topUpCNS > 0n ? "permit + " : ""}Action ${form.matchNow && (q?.orders.length ?? 0) > 0 ? "FOLLOW" : "SET_POLICY"}` : "1 passkey prompt · permit + Action FOLLOW"}
           </T>
         </Row>
         <Row>
@@ -426,7 +487,22 @@ export default function FollowSheet() {
 
   return frame(
     <View>
-      {!isEdit ? (
+      {!isEdit && targets.length ? <ModeChoice mode={mode} onMode={setModeSel} targets={targets} target={target} onTarget={(a) => setTargetSel(a.account)} name={names.name} /> : null}
+      {split && target ? (
+        <>
+          <Section title="Split your deposit" icon="split" sub="One deposit, one account. Each leader trades only with its own budget." testID="follow.section.split">
+            <SplitSection target={target} rows={splitNow} onRows={(r) => setSplitRows(r)} topUp={topUp} onTopUp={setTopUp} walletCNS={walletAvail} capCNS={limits.capCNS} issues={splitIssues} name={names.name} address={names.address} leaderId={leaderId} leaderMarkets={[...new Set([...l.positions.map((p) => p.perpId), ...[...l.markets, ...form.markets].map((m) => bySymbol.get(m)?.perpId ?? -1)])]} byPerp={byPerp} />
+          </Section>
+          <Section title="Loss stop for this leader" icon="shield" sub="Stops this leader only. The other leaders keep copying." testID="follow.section.leaderLoss">
+            <LeaderLossSection bpsValue={leaderLoss} onChange={setLeaderLoss} budgetCNS={allocCNS} flatten={form.flattenOnStop} />
+          </Section>
+          <Hint>
+            <T size={12} color="mu" lh={17} testID="follow.split.shared">
+              Leverage, slippage, entry filter, markets, account loss stops and expiry below apply to every leader in this account.
+            </T>
+          </Hint>
+        </>
+      ) : !isEdit ? (
         <Section title="Allocation" icon="wallet" sub={`Deposited into a new account just for this follow. In your wallet: ${ausd(walletAvail)} AUSD.`} testID="follow.section.allocation">
           <Field big error={!!errFor("allocation")}>
             <NumInput testID="follow.amount.input" value={form.allocationAusd} onChangeText={(t) => set("allocationAusd", t)} size={24} />
@@ -558,12 +634,12 @@ export default function FollowSheet() {
       </Section>
 
       <Section title="Daily loss stop" icon="pause" sub="If losses today reach this, new exposure stops until 00:00 UTC. Open positions still follow the leader's closes." testID="follow.section.dailyLoss">
-        <BigV v={form.dailyLossPct ? `${form.dailyLossPct}%` : "Off"} right={form.dailyLossPct ? `= ${ausd((allocCNS * BigInt(form.dailyLossPct * 100)) / 10000n)} AUSD of ${ausd(allocCNS)}` : undefined} testID="follow.dailyLoss.value" />
+        <BigV v={form.dailyLossPct ? `${form.dailyLossPct}%` : "Off"} right={form.dailyLossPct ? `= ${ausd((acctCNS * BigInt(form.dailyLossPct * 100)) / 10000n)} AUSD of ${ausd(acctCNS)}` : undefined} testID="follow.dailyLoss.value" />
         <Slider testID="follow.dailyLoss.slider" steps={LOSS_STEPS.length} index={nearest(LOSS_STEPS, form.dailyLossPct)} onChange={(i) => set("dailyLossPct", LOSS_STEPS[i])} ticks={[{ label: "Off", at: 0 }, { label: "10%", at: 4 / 11 }, { label: "25%", at: 8 / 11 }, { label: "50%", at: 1 }]} />
       </Section>
 
       <Section title="Account loss stop" icon="shield" sub="If this follow falls this far below its peak, new exposure stops. On by default at 20%." testID="follow.section.drawdown">
-        <BigV v={form.drawdownPct ? `${form.drawdownPct}%` : "Off"} right={form.drawdownPct ? `peak ${ausd(allocCNS)} → stops at ${ausd((allocCNS * BigInt(10000 - form.drawdownPct * 100)) / 10000n)}` : undefined} testID="follow.drawdown.value" />
+        <BigV v={form.drawdownPct ? `${form.drawdownPct}%` : "Off"} right={form.drawdownPct ? `peak ${ausd(acctCNS)} → stops at ${ausd((acctCNS * BigInt(10000 - form.drawdownPct * 100)) / 10000n)}` : undefined} testID="follow.drawdown.value" />
         <Slider testID="follow.drawdown.slider" steps={LOSS_STEPS.length} index={nearest(LOSS_STEPS, form.drawdownPct)} onChange={(i) => set("drawdownPct", LOSS_STEPS[i])} ticks={[{ label: "Off", at: 0 }, { label: "15%", at: 6 / 11 }, { label: "25%", at: 8 / 11 }, { label: "50%", at: 1 }]} />
         <View style={{ gap: 6, padding: 12, borderRadius: 12, backgroundColor: c.sf2 }}>
           <Row>
@@ -649,7 +725,7 @@ export default function FollowSheet() {
         <Button title="See what if" onPress={() => setStep("whatif")} disabled={errors.length > 0 || !!policyErr} testID="follow.seeWhatIf" />
       )
     ),
-    !isEdit && policy && !policyErr ? <WhatIfBody leaderId={leaderId} policy={policy} depositCNS={allocCNS} title={`What if I had followed ${shortAddr(l.address)}`} compact /> : undefined,
+    !isEdit && policy && !policyErr ? <WhatIfBody leaderId={leaderId} policy={whatIfPolicy ?? policy} depositCNS={allocCNS} title={`What if I had followed ${shortAddr(l.address)}`} compact /> : undefined,
   );
 }
 

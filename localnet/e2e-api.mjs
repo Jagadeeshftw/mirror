@@ -272,9 +272,18 @@ try {
   await fetch(`${env.faucetUrl}/fund`, { method: "POST", body: JSON.stringify({ address: stranger.address, ausd: 0, mon: 1 }) });
   // Refresh the market makers' quotes (they expire after ~40 s on the localnet) so the reduce-only IOC finds bids.
   await fetch(`${env.faucetUrl}/mark`, { method: "POST", body: JSON.stringify({ perpId: 20, price: Number(ethPos.mark) / 100 }) });
-  const th = await wallet(stranger).writeContract({ address: userAccount, abi: MA, functionName: "triggerLevel", args: [20n] });
-  const tr = await pub.waitForTransactionReceipt({ hash: th });
-  const ethAfter = await position(20, userPerpl);
+  let th = await wallet(stranger).writeContract({ address: userAccount, abi: MA, functionName: "triggerLevel", args: [20n] });
+  let tr = await pub.waitForTransactionReceipt({ hash: th });
+  let ethAfter = await position(20, userPerpl);
+  // The reduce-only IOC fills only against resting bids; when the makers' quotes had just expired it fills
+  // nothing (no revert). Wait for the next quote round and execute the same level again.
+  for (let i = 0; i < 3 && ethAfter.lots !== 0n; i++) {
+    await fetch(`${env.faucetUrl}/mark`, { method: "POST", body: JSON.stringify({ perpId: 20, price: Number(ethPos.mark) / 100 }) });
+    await sleep(5000);
+    th = await wallet(stranger).writeContract({ address: userAccount, abi: MA, functionName: "triggerLevel", args: [20n] });
+    tr = await pub.waitForTransactionReceipt({ hash: th });
+    ethAfter = await position(20, userPerpl);
+  }
   const strangerAusd = await pub.readContract({ address: env.collateral, abi: T, functionName: "balanceOf", args: [stranger.address] });
   check("a stranger executed the take-profit; the position closed; the stranger got nothing", tr.status === "success" && ethAfter.lots === 0n && strangerAusd === 0n, { tx: th, lotsBefore: ethPos.lots.toString(), lotsAfter: ethAfter.lots.toString() });
 

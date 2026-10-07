@@ -20,6 +20,12 @@ export function stopCardText(e: FeedEvent, cfg: AppConfig | undefined): { icon: 
     const tp = String(e.reason ?? e.data?.kind) === "TakeProfit";
     return { icon: "flag", tone: tp ? "pos" : "neg", title: stopTitle(e), sub: isLevelStop(e) ? `${stopDetail(e, m)} · anyone can execute your stops` : `${stopDetail(e, m)} · anyone can execute your loss stops`, type: stopName(e) };
   }
+  if (e.kind === "LeaderStopped") {
+    const who = e.leaderAddress ? shortAddr(e.leaderAddress) : `Perpl #${e.leaderAccountId ?? "?"}`;
+    const loss = (Math.abs(Number(String(e.actual ?? e.data?.pnlCNS ?? "0"))) / 1e6).toFixed(2);
+    const lim = (Number(String(e.limit ?? e.data?.limitCNS ?? "0")) / 1e6).toFixed(2);
+    return { icon: "pause", tone: "neg", title: `Loss stop stopped ${who}: lost ${loss} of ${lim}`, sub: "Its new trades are no longer copied until you re-arm it · your other leaders keep copying", type: "Leader stopped" };
+  }
   if (e.kind === "LevelSet") return { icon: "flag", tone: "ac", title: levelSetTitle(e, m), sub: "Signed by you · stored in your account · anyone can execute it when hit", type: "Levels" };
   if (e.kind === "MarketClosed") return { icon: "close", tone: "nu", title: marketClosedTitle(e, m), sub: "Closed by you at market, reduce-only", type: "Close" };
   return { icon: "info", tone: "nu", title: e.kind, sub: "", type: e.kind };

@@ -471,7 +471,7 @@ export function Field({ children, big, style, error }: { children: React.ReactNo
   );
 }
 
-export function NumInput({ value, onChangeText, size = 17, testID, placeholder, ...rest }: TextInputProps & { size?: number }) {
+export function NumInput({ value, onChangeText, size = 17, testID, placeholder, style, ...rest }: TextInputProps & { size?: number }) {
   const c = useColors();
   return (
     <TextInput
@@ -483,7 +483,7 @@ export function NumInput({ value, onChangeText, size = 17, testID, placeholder, 
       placeholderTextColor={c.mu}
       cursorColor={c.ac}
       selectionColor={c.acs}
-      style={{ fontFamily: fonts.monoMedium, fontSize: size, color: c.tx, padding: 0, minWidth: 40, flexShrink: 1, fontVariant: ["tabular-nums"] }}
+      style={[{ fontFamily: fonts.monoMedium, fontSize: size, color: c.tx, padding: 0, minWidth: 40, flexShrink: 1, fontVariant: ["tabular-nums"] }, style]}
       {...rest}
     />
   );

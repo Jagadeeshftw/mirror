@@ -48,6 +48,7 @@ import {
 import { SW, adversarialFor, backtest, copyQuality, engineEvent, enrich, setSwitches } from "./engine.mjs";
 import { rpcGetLogs, EQUITY_SELECTOR } from "./rpcLogs.mjs";
 import { makeStops, STRANGER } from "./stops.mjs";
+import { applyPolicyLeaders, leaderBlock, leaderBooks, seedMulti } from "./budgets.mjs";
 
 const PORT = Number(process.env.MOCK_PORT ?? 8787);
 let defaultScenario = process.env.MOCK_SCENARIO ?? "funded";
@@ -149,6 +150,11 @@ function seedOwner(owner, scenario) {
   if (scenario === "new") return o;
   if (scenario === "empty") {
     o.wallet = 20_000_000n;
+    return o;
+  }
+  if (scenario === "multi") {
+    o.wallet = 1_000_000n;
+    seedMulti(owner, { newAccount, policyFor, ev, equity, pos, STRANGER });
     return o;
   }
   // funded: three follows, each its own MirrorAccount, 10-15 AUSD each, plus idle AUSD in the wallet.
@@ -273,6 +279,8 @@ function serializeAccount(a) {
     byLeader.set(p.leaderAccountId, x);
   }
   const L = a.leaderAccountId ? leaderById[a.leaderAccountId] : null;
+  // Engine: pnlByLeader from MirrorAccount.leaderBook for every policy leader (margin, budget, stopped).
+  const books = a.policy?.leaders?.length ? leaderBooks(a, { marginOf, upnl }) : null;
   const dl = a.policy?.dailyLossBps ?? 0;
   const ddb = a.policy?.drawdownBps ?? 0;
   return {
@@ -312,7 +320,9 @@ function serializeAccount(a) {
       realisedCNS: realised.toString(),
       unrealisedCNS: un.toString(),
       todayCNS: (eq - a.todayStart).toString(),
-      byLeader: [...byLeader.values()].map((x) => ({ leaderAccountId: x.leaderAccountId, realisedCNS: x.realisedCNS.toString(), unrealisedCNS: x.unrealisedCNS.toString() })),
+      byLeader: books
+        ? books.map((x) => ({ leaderAccountId: x.leaderAccountId, realisedCNS: x.realisedCNS.toString(), unrealisedCNS: x.unrealisedCNS.toString(), marginCNS: x.marginCNS.toString(), budgetCNS: x.budgetCNS.toString(), stopped: x.stopped }))
+        : [...byLeader.values()].map((x) => ({ leaderAccountId: x.leaderAccountId, realisedCNS: x.realisedCNS.toString(), unrealisedCNS: x.unrealisedCNS.toString() })),
     },
     equityHistory: equityHistory(a),
     leader: L ? { accountId: L.accountId, address: cs(L.address), labels: L.labels } : a.teamRun ? { accountId: DEMO_LEADER.accountId, address: cs(DEMO_LEADER.address), labels: ["Team-run demo leader"] } : null,
@@ -322,6 +332,7 @@ function serializeAccount(a) {
     },
     levels: [...stops.levelsOf(a).values()],
     halted: [...stops.haltedOf(a)],
+    stoppedLeaders: [...(a.stoppedLeaders ?? [])],
     createdAt: a.createdAt,
     teamRun: a.teamRun,
   };
@@ -586,7 +597,8 @@ function runDemo(kind) {
 function quote(owner, leaderAccountId, policy, accountAddr) {
   const L = leaderById[leaderAccountId];
   if (!L) return { status: 404, body: { error: "not_found", message: "Unknown leader" } };
-  const ratio = BigInt(policy.leaders?.[0]?.ratioBps ?? 0);
+  const rule = (policy.leaders ?? []).find((l) => Number(l.accountId) === Number(leaderAccountId)) ?? policy.leaders?.[0];
+  const ratio = BigInt(rule?.ratioBps ?? 0);
   const allowed = new Map((policy.markets ?? []).map((m) => [Number(m.perpId), BigInt(m.maxNotionalCNS)]));
   const alloc = BigInt(policy.allocationCNS ?? 12_000_000);
   const existing = accountAddr ? accounts.get(lc(accountAddr)) : null;
@@ -602,7 +614,8 @@ function quote(owner, leaderAccountId, policy, accountAddr) {
       continue;
     }
     const target = (leaderLots * ratio + BPS - 1n) / BPS;
-    const cur = existing?.positions.find((p) => p.perpId === m.perpId && p.side === lp.side)?.lots ?? 0n;
+    const cur = existing?.positions.find((p) => p.perpId === m.perpId && p.side === lp.side && (!p.leaderAccountId || p.leaderAccountId === leaderAccountId))?.lots ?? 0n;
+    const heldBy = existing?.positions.find((p) => p.perpId === m.perpId && p.leaderAccountId && p.leaderAccountId !== leaderAccountId)?.leaderAccountId;
     const lot = target - cur;
     const mark = m.markPNS;
     const slip = BigInt(policy.maxSlippageBps ?? 50);
@@ -612,7 +625,8 @@ function quote(owner, leaderAccountId, policy, accountAddr) {
     const notl = notional(m.perpId, lot > 0n ? lot : 0n, mark);
     const margin = (notl * 100n) / BigInt(lp.lev);
     let wouldBlock = null;
-    if (lot <= 0n) wouldBlock = { reason: "BelowOneLot", limit: "1", actual: "0", rule: `Rounds to 0 lots at this ratio. Smallest ${lp.sym} order is ${(1 / 10 ** m.lotDecimals).toFixed(m.lotDecimals)} ${lp.sym}` };
+    if (heldBy) wouldBlock = { reason: "MarketHeldByOtherLeader", limit: String(leaderAccountId), actual: String(heldBy), rule: `${lp.sym} is held by ${leaderById[heldBy] ? leaderById[heldBy].address.slice(0, 6) + "…" + leaderById[heldBy].address.slice(-4) : "Perpl #" + heldBy}` };
+    else if (lot <= 0n) wouldBlock = { reason: "BelowOneLot", limit: "1", actual: "0", rule: `Rounds to 0 lots at this ratio. Smallest ${lp.sym} order is ${(1 / 10 ** m.lotDecimals).toFixed(m.lotDecimals)} ${lp.sym}` };
     else if (lp.lev > policy.maxLeverageHdths) wouldBlock = { reason: "LeverageTooHigh", limit: String(policy.maxLeverageHdths), actual: String(lp.lev), rule: `Max leverage ${policy.maxLeverageHdths / 100}x` };
     else if (notl > allowed.get(m.perpId)) wouldBlock = { reason: "ExceedsMaxNotional", limit: allowed.get(m.perpId).toString(), actual: notl.toString(), rule: `Copy would be ${fmtCns(notl)} AUSD. Max per market ${fmtCns(allowed.get(m.perpId))}` };
     else if (marginSum + margin > alloc) wouldBlock = { reason: "InsufficientMargin", limit: (alloc - marginSum).toString(), actual: margin.toString(), rule: `Needs ${fmtCns(margin)} AUSD margin, ${fmtCns(alloc - marginSum)} left in this follow` };
@@ -633,7 +647,7 @@ function quote(owner, leaderAccountId, policy, accountAddr) {
     };
     rows.push(row);
     // Onchain-checkable blocks are still sent so the contract records a Blocked event; pre-trade ones are not.
-    if (!wouldBlock || ["LeverageTooHigh", "ExceedsMaxNotional"].includes(wouldBlock.reason)) {
+    if (!wouldBlock || ["LeverageTooHigh", "ExceedsMaxNotional", "MarketHeldByOtherLeader"].includes(wouldBlock.reason)) {
       orders.push({ leaderAccountId, perpId: m.perpId, orderType: row.orderType, lotLNS: row.lotLNS, pricePNS: row.pricePNS, leverageHdths: lp.lev, maxMatches: 100, leaderRef: "0x" + "0".repeat(64) });
     }
   }
@@ -724,6 +738,7 @@ async function relayExecute({ account, action, signature }) {
       };
       if (policy.maxSlippageBps === 0 || policy.maxSlippageBps > 1000) return err(400, "InvalidPolicy", "Invalid policy: maxSlippageBps", { revertReason: 'InvalidPolicy("maxSlippageBps")' });
       if (policy.expiry <= now() / 1000) return err(400, "InvalidPolicy", "Invalid policy: expiry", { revertReason: 'InvalidPolicy("expiry")' });
+      applyPolicyLeaders(a, a.policy?.leaders ?? [], policy.leaders);
       a.policy = policy;
       // A new policy lifts every halt a fired level set (MirrorAccount._setPolicy rebuilds the markets).
       stops.haltedOf(a).clear();
@@ -748,6 +763,7 @@ async function relayExecute({ account, action, signature }) {
         if (cap === 0n) block = { reason: "MarketNotAllowed", limit: "0", actual: String(m.perpId), rule: `${m.symbol} is not in your allowed markets` };
         else if (Number(o.leverageHdths) > policy.maxLeverageHdths) block = { reason: "LeverageTooHigh", limit: String(policy.maxLeverageHdths), actual: String(o.leverageHdths), rule: `Max leverage ${policy.maxLeverageHdths / 100}x` };
         else if (notl > cap) block = { reason: "ExceedsMaxNotional", limit: cap.toString(), actual: notl.toString(), rule: `Copy would be ${fmtCns(notl)} AUSD. Max per market ${fmtCns(cap)}` };
+        else block = leaderBlock(a, o, { marginOf, upnl, notionalAt: (perpId, l) => notional(perpId, l, byPerp[perpId].markPNS) });
         if (block) {
           const be = ev(a, "Blocked", { ...base, leaderLotLNS: base.lotLNS, leaderLeverageHdths: base.leverageHdths, blocked: { ...block, reasonCode: BLOCK_REASONS.indexOf(block.reason) } }, 0, "proposed");
           be.txHash = r.txHash;

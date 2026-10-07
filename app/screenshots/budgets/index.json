@@ -1,0 +1,338 @@
+[
+  {
+    "file": "home-leaders-mobile-light.png",
+    "state": "home-leaders",
+    "size": "mobile",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "home-leaders-mobile-dark.png",
+    "state": "home-leaders",
+    "size": "mobile",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "home-leaders-desktop-light.png",
+    "state": "home-leaders",
+    "size": "desktop",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "home-leaders-desktop-dark.png",
+    "state": "home-leaders",
+    "size": "desktop",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "budgets-mobile-light.png",
+    "state": "budgets",
+    "size": "mobile",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "budgets-mobile-dark.png",
+    "state": "budgets",
+    "size": "mobile",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "budgets-desktop-light.png",
+    "state": "budgets",
+    "size": "desktop",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "budgets-desktop-dark.png",
+    "state": "budgets",
+    "size": "desktop",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "budgets-over-mobile-light.png",
+    "state": "budgets-over",
+    "size": "mobile",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "budgets-over-mobile-dark.png",
+    "state": "budgets-over",
+    "size": "mobile",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "budgets-over-desktop-light.png",
+    "state": "budgets-over",
+    "size": "desktop",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "budgets-over-desktop-dark.png",
+    "state": "budgets-over",
+    "size": "desktop",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "budgets-rearm-mobile-light.png",
+    "state": "budgets-rearm",
+    "size": "mobile",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "budgets-rearm-mobile-dark.png",
+    "state": "budgets-rearm",
+    "size": "mobile",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "budgets-rearm-desktop-light.png",
+    "state": "budgets-rearm",
+    "size": "desktop",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "budgets-rearm-desktop-dark.png",
+    "state": "budgets-rearm",
+    "size": "desktop",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "leader-stopped-mobile-light.png",
+    "state": "leader-stopped",
+    "size": "mobile",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "leader-stopped-mobile-dark.png",
+    "state": "leader-stopped",
+    "size": "mobile",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "leader-stopped-desktop-light.png",
+    "state": "leader-stopped",
+    "size": "desktop",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "leader-stopped-desktop-dark.png",
+    "state": "leader-stopped",
+    "size": "desktop",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-mobile-light.png",
+    "state": "follow-split",
+    "size": "mobile",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-mobile-dark.png",
+    "state": "follow-split",
+    "size": "mobile",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-desktop-light.png",
+    "state": "follow-split",
+    "size": "desktop",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-desktop-dark.png",
+    "state": "follow-split",
+    "size": "desktop",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-ownership-mobile-light.png",
+    "state": "follow-split-ownership",
+    "size": "mobile",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-ownership-mobile-dark.png",
+    "state": "follow-split-ownership",
+    "size": "mobile",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-ownership-desktop-light.png",
+    "state": "follow-split-ownership",
+    "size": "desktop",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-ownership-desktop-dark.png",
+    "state": "follow-split-ownership",
+    "size": "desktop",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-over-mobile-light.png",
+    "state": "follow-split-over",
+    "size": "mobile",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-over-mobile-dark.png",
+    "state": "follow-split-over",
+    "size": "mobile",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-over-desktop-light.png",
+    "state": "follow-split-over",
+    "size": "desktop",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-over-desktop-dark.png",
+    "state": "follow-split-over",
+    "size": "desktop",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-review-mobile-light.png",
+    "state": "follow-split-review",
+    "size": "mobile",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-review-mobile-dark.png",
+    "state": "follow-split-review",
+    "size": "mobile",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-review-desktop-light.png",
+    "state": "follow-split-review",
+    "size": "desktop",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "follow-split-review-desktop-dark.png",
+    "state": "follow-split-review",
+    "size": "desktop",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "feed-blocks-mobile-light.png",
+    "state": "feed-blocks",
+    "size": "mobile",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "feed-blocks-mobile-dark.png",
+    "state": "feed-blocks",
+    "size": "mobile",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "feed-blocks-desktop-light.png",
+    "state": "feed-blocks",
+    "size": "desktop",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "feed-blocks-desktop-dark.png",
+    "state": "feed-blocks",
+    "size": "desktop",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "feed-leader-stop-mobile-light.png",
+    "state": "feed-leader-stop",
+    "size": "mobile",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "feed-leader-stop-mobile-dark.png",
+    "state": "feed-leader-stop",
+    "size": "mobile",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "feed-leader-stop-desktop-light.png",
+    "state": "feed-leader-stop",
+    "size": "desktop",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "feed-leader-stop-desktop-dark.png",
+    "state": "feed-leader-stop",
+    "size": "desktop",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "blocked-held-mobile-light.png",
+    "state": "blocked-held",
+    "size": "mobile",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "blocked-held-mobile-dark.png",
+    "state": "blocked-held",
+    "size": "mobile",
+    "scheme": "dark",
+    "pageErrors": []
+  },
+  {
+    "file": "blocked-held-desktop-light.png",
+    "state": "blocked-held",
+    "size": "desktop",
+    "scheme": "light",
+    "pageErrors": []
+  },
+  {
+    "file": "blocked-held-desktop-dark.png",
+    "state": "blocked-held",
+    "size": "desktop",
+    "scheme": "dark",
+    "pageErrors": []
+  }
+]

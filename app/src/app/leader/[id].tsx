@@ -5,7 +5,9 @@ import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { LeaderWindow } from "../../lib/api";
 import { MINUS, comma, dateShort, leverage, lots, pctSigned, price, shortAddr, usdCompact } from "../../lib/format";
-import { useConfig, useLeader, useMarkets, useTotals } from "../../state/data";
+import { useConfig, useFeedAll, useLeader, useMarkets, useTotals } from "../../state/data";
+import { findFollow, findUnfollowed } from "../../lib/budgets";
+import { LeaderStoppedCard, UnfollowedNote } from "../../ui/leaderStopped";
 import { useOwnerAction } from "../../state/ownerAction";
 import { AppBar, BalanceChip } from "../../ui/chrome";
 import { Columns, LineChart } from "../../ui/charts";
@@ -56,7 +58,12 @@ function LeaderProfile() {
   const q = useLeader(Number(id), window);
   const { totals } = useTotals();
   const l = q.data;
-  const following = totals?.accounts.find((a) => a.leader?.accountId === Number(id));
+  // The account whose policy follows this leader (one account can follow up to 4).
+  const follow = findFollow(totals?.accounts, Number(id));
+  const following = follow?.account;
+  const unfollowed = follow ? null : findUnfollowed(totals?.accounts, Number(id));
+  const feed = useFeedAll();
+  const lossStopped = follow?.book.status === "stopped";
   const act = useOwnerAction();
   const [stopping, setStopping] = useState(false);
 
@@ -126,6 +133,8 @@ function LeaderProfile() {
       </View>
       <ShareSheet visible={sharing} onClose={() => setSharing(false)} targets={[{ key: String(l.accountId), label: shortAddr(l.address), target: { kind: "leader", leaderId: l.accountId, teamRun: l.teamRun } }]} />
       <Scroll testID="leader.scroll" contentStyle={{ paddingHorizontal: 20, paddingTop: 4, gap: 14, paddingBottom: 24 }}>
+        {follow && lossStopped ? <LeaderStoppedCard account={follow.account} book={follow.book} events={feed.events} cfg={cfg} act={act} /> : null}
+        {unfollowed ? <UnfollowedNote book={unfollowed.book} /> : null}
         <Row gap={12}>
           <Identicon seed={l.address} size={56} />
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -340,8 +349,8 @@ function LeaderProfile() {
               <T size={11} color="mu">
                 Status
               </T>
-              <T size={13} w={600} color={following.detached ? "neg" : following.paused ? "wrnI" : "posI"} testID="follow.status">
-                {following.detached ? "Stopped" : following.paused ? "Paused" : "Following"}
+              <T size={13} w={600} color={following.detached || lossStopped ? "neg" : following.paused ? "wrnI" : "posI"} testID="follow.status">
+                {following.detached ? "Stopped" : lossStopped ? "Loss stop" : following.paused ? "Paused" : "Following"}
               </T>
             </View>
             {following.detached ? (

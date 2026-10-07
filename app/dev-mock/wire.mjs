@@ -28,14 +28,17 @@ export function wireAccount(a) {
     paused: !!a.paused,
     detached: !!a.detached,
     expiry: a.expiry ?? null,
-    policy: a.policy ? { ...a.policy, leaders: a.policy.leaders.map((l) => ({ ...l, stopped: false })), markets: a.policy.markets.map((m) => ({ ...m, halted: (a.halted ?? []).includes(m.perpId) })) } : null,
+    policy: a.policy ? { ...a.policy, leaders: a.policy.leaders.map((l) => ({ ...l, stopped: (a.stoppedLeaders ?? []).includes(l.accountId) })), markets: a.policy.markets.map((m) => ({ ...m, halted: (a.halted ?? []).includes(m.perpId) })) } : null,
     levels: (a.levels ?? []).map((l) => ({ perpId: l.perpId, side: l.side, stopLossPNS: S(l.stopLossPNS), takeProfitPNS: S(l.takeProfitPNS), slippageBps: l.slippageBps })),
     positions: (a.positions ?? []).map((p) => ({
       perpId: p.perpId, symbol: null, side: p.side, lotLNS: S(p.lotLNS), entryPricePNS: S(p.entryPNS), markPNS: S(p.markPNS),
       depositCNS: S(p.marginCNS), unrealizedPnlCNS: S(p.upnlCNS), leaderAccountId: p.leaderAccountId ?? null,
     })),
+    // Views.account: equity now minus the UTC day's first snapshot, and 30 days of snapshots {t (unix s), equityCNS}.
+    todayPnlCNS: a.pnl?.todayCNS !== undefined ? S(a.pnl.todayCNS) : null,
+    equityHistory: (a.equityHistory ?? []).map((p) => ({ t: Math.floor(Number(p.t) / 1000), equityCNS: String(p.v) })),
     pnlByLeader: (a.pnl?.byLeader ?? []).map((l) => ({
-      leaderAccountId: l.leaderAccountId, unrealizedPnlCNS: S(l.unrealisedCNS), realizedPnlCNS: S(l.realisedCNS), marginCNS: "0", budgetCNS: "0", stopped: false,
+      leaderAccountId: l.leaderAccountId, unrealizedPnlCNS: S(l.unrealisedCNS), realizedPnlCNS: S(l.realisedCNS), marginCNS: S(l.marginCNS ?? "0"), budgetCNS: S(l.budgetCNS ?? "0"), stopped: !!l.stopped,
     })),
   };
 }

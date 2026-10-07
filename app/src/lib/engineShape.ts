@@ -28,6 +28,13 @@ export function learnLeader(accountId: unknown, address: unknown, labels?: unkno
   if (typeof address === "string" && /^0x[0-9a-fA-F]{40}$/.test(address) && Number(accountId) > 0) leaderAddresses.set(Number(accountId), address as Address);
 }
 export const knowsLeader = (accountId: number) => leaderAddresses.has(Number(accountId));
+/** A leader's address when /v1/leaders (or an account) named it. */
+export const leaderAddressOf = (accountId: number | null | undefined): Address | undefined => (accountId ? leaderAddresses.get(Number(accountId)) : undefined);
+const leaderText = (id: bigint) => {
+  const a = leaderAddresses.get(Number(id));
+  return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : `Perpl #${id}`;
+};
+const cnsText = (v: bigint) => (Number(v) / 1e6).toFixed(2);
 
 /** Team-run addresses from /v1/config (demo leader and demo follower), excluded from user-facing lists. */
 export const isTeamRunAddress = (a: unknown) => typeof a === "string" && teamRunAddresses.has(a.toLowerCase());
@@ -90,6 +97,10 @@ export function normalizeAccount(raw: any): MirrorAccount {
     leaderAccountId: Number(l.leaderAccountId),
     realisedCNS: str(l.realisedCNS ?? l.realizedPnlCNS),
     unrealisedCNS: str(l.unrealisedCNS ?? l.unrealizedPnlCNS),
+    // Engine (MirrorAccount.leaderBook): margin held for the leader, its budget and whether its loss stop fired.
+    ...(l.marginCNS !== undefined && l.marginCNS !== null ? { marginCNS: str(l.marginCNS) } : {}),
+    ...(l.budgetCNS !== undefined && l.budgetCNS !== null ? { budgetCNS: str(l.budgetCNS) } : {}),
+    ...(l.stopped !== undefined ? { stopped: !!l.stopped } : {}),
   }));
   const sum = (k: "realisedCNS" | "unrealisedCNS") => byLeader.reduce((s, l) => s + big(l[k]), 0n).toString();
   const policy = raw?.policy ?? null;
@@ -150,6 +161,11 @@ export function normalizeOwnerAccounts(raw: any, owner: Address): OwnerAccounts 
 function blockRule(reason: string, limit: unknown, data: Record<string, unknown> | undefined): string | undefined {
   const lim = big(limit);
   const p = { maxLeverageHdths: 0, maxEntryDeviationBps: 0, maxSlippageBps: 0, markets: [] as { perpId: number; maxNotionalCNS: string }[], dailyLossBps: 0, drawdownBps: 0 };
+  // Several leaders in one account: MarketHeldByOtherLeader(limit = this leader, actual = the market's holder),
+  // LeaderBudgetExceeded(limit = budget, actual = margin with this copy), LeaderLossStop(limit = loss limit, actual = loss).
+  if (reason === "MarketHeldByOtherLeader") return `Market held by ${leaderText(big(data?.actual))}`;
+  if (reason === "LeaderBudgetExceeded") return `Leader budget ${cnsText(lim)} (copy needs ${cnsText(big(data?.actual))})`;
+  if (reason === "LeaderLossStop") return lim > 0n ? `Leader loss stop: lost ${cnsText(big(data?.actual))} of ${cnsText(lim)}` : "Leader loss stop hit";
   if (reason === "LeverageTooHigh") p.maxLeverageHdths = Number(lim);
   else if (reason === "ExceedsMaxNotional") p.markets = [{ perpId: 0, maxNotionalCNS: lim.toString() }];
   else if (reason === "EntryTooFar") {
@@ -174,7 +190,7 @@ export function normalizeFeedEvent(raw: any): FeedEvent {
           reasonCode: Math.max(0, BLOCK_REASONS.indexOf(reason as any)),
           limit: str(raw?.limit),
           actual: str(raw?.actual),
-          rule: blockRule(String(reason ?? ""), raw?.limit, data),
+          rule: blockRule(String(reason ?? ""), raw?.limit, { ...(data ?? {}), actual: raw?.actual }),
         }
       : undefined;
   // Closes carry fillPNS = 0 (the contract records fills for opens only): price them at the mark the

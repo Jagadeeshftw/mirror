@@ -39,7 +39,8 @@ export async function exitFlows(ctx) {
     return { ok: /builder 26/.test(f.fee ?? ""), shown: f };
   }, { needs: ["userCopy"] });
   await R.check("laptop: blocked row -> entry-filter blocked detail", page, async () => {
-    const row = await until("blocked row", () => tableRow(page, "feed.table.row.", /Not copied/), 20_000, 1000);
+    // Several leaders add their own blocked rows (market held, budget); pick the entry-filter one.
+    const row = await until("blocked row", async () => (await tableRow(page, "feed.table.row.", /Not copied[\s\S]*Entry filter/)) ?? tableRow(page, "feed.table.row.", /Not copied/), 20_000, 1000);
     await row.click();
     const f = await readBlocked(page);
     return { ok: /your limit is 1%/.test(f.sentence ?? "") || /Leverage|leverage/.test(f.sentence ?? ""), detail: f };

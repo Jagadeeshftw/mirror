@@ -3,9 +3,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { detachWith, executeActions, type OwnerAction } from "../lib/actions";
 import { ApiError } from "../lib/api";
-import { ACTION, encodeCloseAll, encodePaused } from "../lib/contracts";
+import { rearmPolicy } from "../lib/budgets";
+import { ACTION, encodeCloseAll, encodePaused, encodeSetPolicy, validatePolicy } from "../lib/contracts";
 import { closeMarketAction, resumeMarketsAction, setLevelsAction, stopPlan, type StopChoice } from "../lib/levels";
-import type { Level, MirrorAccount, RelayResult } from "../lib/types";
+import type { Level, MirrorAccount, Policy, RelayResult } from "../lib/types";
 import { describeError } from "../lib/wallet";
 import { useConfig } from "./data";
 
@@ -86,6 +87,19 @@ export function useOwnerAction() {
     resumeMarkets: (account: MirrorAccount) => {
       const a = resumeMarketsAction(account);
       return "error" in a ? Promise.resolve(fail(a.error)) : run("resume", [{ account, ...a }]);
+    },
+    /** Edit budgets (several leaders, one account): ACTION_SET_POLICY with every leader, one passkey prompt. */
+    saveBudgets: (account: MirrorAccount, policy: Policy) => {
+      const bad = validatePolicy(policy);
+      if (bad) return Promise.resolve(fail(bad === "expiry" ? "This follow has expired. Edit limits to set a new end date." : `Invalid limits (${bad})`));
+      return run("budgets", [{ account, kind: ACTION.SET_POLICY, data: encodeSetPolicy(policy) }]);
+    },
+    /** Re-arm a leader its loss stop stopped: the same limits signed again (optionally a new loss stop), one prompt. */
+    rearm: (account: MirrorAccount, leaderId: number, lossStopBps?: number) => {
+      const p = rearmPolicy(account, leaderId, lossStopBps);
+      if (!p) return Promise.resolve(fail("No limits on this account yet"));
+      if (Number(p.expiry) <= Math.floor(Date.now() / 1000)) return Promise.resolve(fail("This follow has expired. Edit limits to set a new end date."));
+      return run("rearm", [{ account, kind: ACTION.SET_POLICY, data: encodeSetPolicy(p) }]);
     },
     /** Undo "keep my positions": signed detached=false plus unpause, one prompt. */
     followAgain: (account: MirrorAccount) => runDetach("followAgain", account, false, account.paused ? [{ kind: ACTION.SET_PAUSED, data: encodePaused(false) }] : []),

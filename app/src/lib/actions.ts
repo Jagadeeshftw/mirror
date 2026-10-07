@@ -8,6 +8,7 @@ import {
   actionTypedData,
   detachTypedData,
   encodeFollow,
+  encodeSetPolicy,
   encodeWithdraw,
   followSalt,
   permitTypedData,
@@ -118,6 +119,53 @@ export async function follow(cfg: AppConfig, plan: FollowPlan, progress: Progres
   });
   progress("follow", ex.status === "success" ? "done" : "failed", ex);
   return { account, create: created, deposit: dep, execute: ex };
+}
+
+export interface AddLeaderPlan {
+  owner: Address;
+  account: MirrorAccount;
+  /** Every leader of the account, the new one included (lib/budgets buildSplitPolicy). */
+  policy: Policy;
+  /** Match-now orders for the new leader (POST /v1/quote/follow with `account`); empty = SET_POLICY only. */
+  orders: MirrorOrderJson[];
+  /** AUSD added to the account's deposit by permit in the same approval (0 = none). */
+  topUpCNS: bigint;
+}
+
+/**
+ * Follow another leader in an existing account, one passkey prompt: an optional deposit permit, then
+ * ACTION_FOLLOW (policy with all leaders + match-now orders) or ACTION_SET_POLICY when there is nothing to match.
+ * The deposit lands first so the new budget is backed before the policy that assigns it.
+ */
+export async function addLeader(cfg: AppConfig, plan: AddLeaderPlan, progress: Progress) {
+  const account = plan.account.account;
+  const deadline = nowSec() + 1800n;
+  const withOrders = plan.orders.length > 0;
+  const kind = withOrders ? ACTION.FOLLOW : ACTION.SET_POLICY;
+  const data = withOrders ? encodeFollow(plan.policy, plan.orders) : encodeSetPolicy(plan.policy);
+  progress("sign", "now");
+  const nonce = await nonceFor(cfg, plan.account);
+  const pNonce = plan.topUpCNS > 0n ? await permitNonce(cfg, plan.owner) : 0n;
+  const { permitSig, actionSig } = await withSigner(async (signer) => {
+    const permitSig =
+      plan.topUpCNS > 0n
+        ? await signer.signTypedData!(permitTypedData(cfg.contracts.collateral, cfg.chainId, { owner: plan.owner, spender: account, value: plan.topUpCNS, nonce: pNonce, deadline }))
+        : null;
+    const actionSig = await signAction(signer, cfg, account, { kind, data, nonce, deadline });
+    return { permitSig, actionSig };
+  });
+  progress("sign", "done");
+  let dep: RelayResult | null = null;
+  if (permitSig) {
+    progress("deposit", "now");
+    dep = await api.relayDeposit({ account, mode: "permit", amount: plan.topUpCNS.toString(), deadline: deadline.toString(), ...splitSignature(permitSig) });
+    progress("deposit", dep.status === "success" ? "done" : "failed", dep);
+    if (dep.status !== "success") return { account, deposit: dep, execute: null };
+  }
+  progress("policy", "now");
+  const ex = await api.relayExecute({ account, action: { kind, data, nonce: nonce.toString(), deadline: deadline.toString() }, signature: actionSig });
+  progress("policy", ex.status === "success" ? "done" : "failed", ex);
+  return { account, deposit: dep, execute: ex };
 }
 
 /** Top up an existing account with an AUSD permit (gasless). */

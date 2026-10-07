@@ -22,7 +22,7 @@ import { useColors } from "../theme";
 import { LCard, LaptopPage } from "./Top";
 import { Table, type Col } from "./Table";
 
-const isStop = (e: FeedEvent) => e.kind === "StopTriggered" || e.kind === "LevelSet" || e.kind === "MarketClosed";
+const isStop = (e: FeedEvent) => e.kind === "StopTriggered" || e.kind === "LevelSet" || e.kind === "MarketClosed" || e.kind === "LeaderStopped";
 
 export function LaptopFeed() {
   const c = useColors();
