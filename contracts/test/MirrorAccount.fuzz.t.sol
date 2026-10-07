@@ -269,3 +269,37 @@ contract NewRulesFuzzTest is MirrorBase {
         }
     }
 }
+
+/// A detached leader's copies never trade, whatever the order, and the owner's closes still do.
+contract DetachFuzzTest is MirrorBase {
+    function setUp() public override {
+        super.setUp();
+        _setUpFunded();
+        ausd.mint(address(ex), 10e6);
+        assertTrue(_mirror(_order(OPEN_LONG, BTC, 10, 859_000, 500)));
+        vm.prank(owner);
+        account.setLeaderDetached(LEADER, true);
+    }
+
+    function testFuzz_detachedLeaderNeverTrades(uint8 orderType, bool eth, uint64 lots, uint64 price, uint16 lev, uint32 leaderLots)
+        public
+    {
+        orderType = uint8(bound(orderType, 0, 3));
+        uint256 perp = eth ? ETH : BTC;
+        lots = uint64(bound(lots, 1, 1_000));
+        ex.setPosition(perp, LEADER, orderType == 1 || orderType == 3 ? SHORT : LONG, bound(leaderLots, 0, 100_000));
+        (, uint256 before) = _lots(perp);
+        vm.prank(keeper);
+        try account.mirror(_order(orderType, perp, lots, price, lev)) returns (bool ok) {
+            assertFalse(ok, "detached copy executed");
+        } catch {}
+        (, uint256 aft) = _lots(perp);
+        assertEq(aft, before, "position changed");
+        // The owner can still close.
+        vm.prank(owner);
+        account.closeMarket(uint32(BTC), 300);
+        (, uint256 btc) = _lots(BTC);
+        assertEq(btc, 0);
+    }
+}
+

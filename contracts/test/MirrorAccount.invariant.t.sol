@@ -41,6 +41,10 @@ contract MirrorHandler is Test {
     uint256[32] public blockedBy;
     uint256 public ownerWithdrawn;
     bool public expectedPaused;
+    bool[2] public expectedDetached;
+    uint256 public detachedCopiesExecuted;
+    uint256 public detachedCopiesBlocked;
+    uint256 public triggersWhileDetached;
 
     constructor(
         MirrorAccount account_,
@@ -156,6 +160,7 @@ contract MirrorHandler is Test {
         bool pausedBefore = account.paused();
         bool opening = o.orderType <= 1;
         uint32 holderBefore = account.marketLeader(perp);
+        bool detachedBefore = account.leaderDetached(o.leaderAccountId);
         (IPerplExchange.PositionInfoV2 memory lp,,) = IPerplExchange(address(ex)).getPositionV2(perp, o.leaderAccountId);
 
         bool executed;
@@ -179,6 +184,11 @@ contract MirrorHandler is Test {
         }
 
         (uint8 sideAfter, uint256 lotsAfter) = _pos(perp);
+        if (detachedBefore) {
+            // Nothing from a detached leader trades, whoever sends it and whichever way.
+            if (executed || lotsAfter != lotsBefore) ++detachedCopiesExecuted;
+            else ++detachedCopiesBlocked;
+        }
         if (reverted || !executed) {
             if (!reverted) {
                 ++mirrorsBlocked;
@@ -287,6 +297,13 @@ contract MirrorHandler is Test {
         expectedPaused = p;
     }
 
+    function ownerDetaches(uint256 seed, bool on) external {
+        uint256 i = seed % 2;
+        vm.prank(owner);
+        account.setLeaderDetached(leaderIds[i], on);
+        expectedDetached[i] = on;
+    }
+
     function ownerSetsLevel(uint256 perpSeed, uint16 slBps, uint16 tpBps) external {
         uint256 perp = perps[perpSeed % 2];
         (uint8 side, uint256 lots) = _pos(perp);
@@ -335,6 +352,7 @@ contract MirrorHandler is Test {
         if (btcAfter > btcBefore || ethAfter > ethBefore) ++triggerIncreases;
         if (ok) {
             ++triggersExecuted;
+            if (account.leaderDetached(leaderIds[0]) || account.leaderDetached(leaderIds[1])) ++triggersWhileDetached;
             if (pauses) expectedPaused = true;
         }
     }
@@ -526,6 +544,14 @@ contract MirrorInvariantTest is MirrorBase {
         }
     }
 
+    /// A detached leader's copies never trade (opens, keeper reductions, match-now), and only the owner changes
+    /// which leaders are detached.
+    function invariant_detachedLeaderNeverCopied() public view {
+        assertEq(handler.detachedCopiesExecuted(), 0, "a detached leader's copy traded");
+        assertEq(account.leaderDetached(LEADER), handler.expectedDetached(0));
+        assertEq(account.leaderDetached(LEADER2), handler.expectedDetached(1));
+    }
+
     /// Logged so a run shows the copy and trigger paths were exercised.
     function invariant_callSummary() public view {
         console.log("mirrors executed  ", handler.mirrorsExecuted());
@@ -534,7 +560,9 @@ contract MirrorInvariantTest is MirrorBase {
         console.log("owner withdrawn   ", handler.ownerWithdrawn());
         console.log("opens executed    ", handler.opensExecuted());
         console.log("closes executed   ", handler.closesExecuted());
-        for (uint256 i; i < 21; ++i) {
+        console.log("detached blocked  ", handler.detachedCopiesBlocked());
+        console.log("triggers while detached", handler.triggersWhileDetached());
+        for (uint256 i; i < 23; ++i) {
             if (handler.blockedBy(i) != 0) console.log("blocked by reason", i, handler.blockedBy(i));
         }
     }

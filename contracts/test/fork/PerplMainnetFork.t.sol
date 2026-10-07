@@ -503,4 +503,61 @@ contract PerplMainnetForkTest is Test {
         assertEq(fee, 0, "close paid a builder fee");
         vm.clearMockedCalls();
     }
+
+    /// "Stop following, keep my positions" against the live Perpl Exchange: after the owner detaches the leader,
+    /// the keeper's mirrored exit is refused onchain and the position stays; a stranger's take-profit and the
+    /// owner's closeMarket still close on the live book.
+    function test_fork_detachAgainstLivePerpl() public {
+        if (!forked) return;
+        require(leader != 0, "no suitable live leader found");
+        _depositWithRealPermit(12e6);
+        vm.prank(owner);
+        account.setPolicy(_policy());
+        uint256 acct = account.perplAccountId();
+        (, uint256 mark,) = EXCHANGE.getPositionV2(BTC, acct);
+        vm.prank(keeper);
+        assertTrue(account.mirror(_copyOrder(0, 2, mark * 10_060 / 10_000, 200)));
+
+        vm.prank(owner);
+        account.setLeaderDetached(leader, true);
+
+        // The leader exits; the keeper's reduction is refused and nothing trades.
+        vm.mockCall(
+            address(EXCHANGE),
+            abi.encodeWithSelector(IPerplExchange.getPositionV2.selector, BTC, uint256(leader)),
+            abi.encode(IPerplExchange.PositionInfoV2(leader, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), mark, true)
+        );
+        vm.recordLogs();
+        vm.prank(keeper);
+        assertFalse(account.mirror(_copyOrder(2, 2, mark * 9_940 / 10_000, 0)));
+        bool sawDetached;
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].topics[0] == MirrorAccount.Blocked.selector) {
+                (MirrorAccount.BlockReason r,,,,,,,) = abi.decode(
+                    logs[i].data, (MirrorAccount.BlockReason, uint8, uint64, uint256, uint256, bytes32, uint64, uint64)
+                );
+                sawDetached = r == MirrorAccount.BlockReason.LeaderDetached;
+            }
+        }
+        vm.clearMockedCalls();
+        assertTrue(sawDetached, "keeper exit not refused as detached");
+        (IPerplExchange.PositionInfoV2 memory pos,,) = EXCHANGE.getPositionV2(BTC, acct);
+        assertEq(pos.lotLNS, 2, "position not kept");
+        console.log("detached: keeper exit refused onchain, follower keeps", pos.lotLNS, "lots");
+
+        // A take-profit already reached is executed by a stranger, then the owner closes the rest.
+        (, uint256 mark2,) = EXCHANGE.getPositionV2(BTC, acct);
+        MirrorAccount.Level[] memory lv = new MirrorAccount.Level[](1);
+        lv[0] = MirrorAccount.Level({
+            perpId: uint32(BTC), side: 0, stopLossPNS: 0, takeProfitPNS: uint64(mark2 * 9_900 / 10_000), slippageBps: 100
+        });
+        vm.prank(owner);
+        account.setLevels(lv);
+        vm.prank(makeAddr("anyone"));
+        uint256 closed = account.triggerLevel(BTC);
+        (pos,,) = EXCHANGE.getPositionV2(BTC, acct);
+        console.log("detached: stranger's take-profit closed", closed, "lots; left", pos.lotLNS);
+        assertEq(pos.lotLNS, 0);
+    }
 }

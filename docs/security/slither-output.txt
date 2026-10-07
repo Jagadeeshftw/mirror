@@ -1,228 +1,272 @@
-Impossible to generate IR for MirrorAccount.constructor (lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol#78-87):
+'forge clean' running (wd: /Users/jagadeesh/personal/projects/grants/monad/mirror/contracts)
+'forge config --json' running
+'forge build --build-info --deny never --skip ./test/** ./script/** --force' running (wd: /Users/jagadeesh/personal/projects/grants/monad/mirror/contracts)
+ERROR:ContractSolcParsing:Impossible to generate IR for MirrorAccount.constructor (lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol#78-87):
  'NoneType' object has no attribute 'parameters'
-Impossible to generate IR for MirrorAccount._EIP712Name (lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol#155-157):
+ERROR:ContractSolcParsing:Impossible to generate IR for MirrorAccount._EIP712Name (lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol#155-157):
  'NoneType' object has no attribute 'parameters'
-Impossible to generate IR for MirrorAccount._EIP712Version (lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol#165-167):
+ERROR:ContractSolcParsing:Impossible to generate IR for MirrorAccount._EIP712Version (lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol#165-167):
  'NoneType' object has no attribute 'parameters'
-
+INFO:Detectors:
 Detector: arbitrary-send-erc20-permit
-MirrorAccount.depositWithPermit(uint256,uint256,uint8,bytes32,bytes32) (src/MirrorAccount.sol#853-872) uses arbitrary from in transferFrom in combination with permit: IERC20(address(COLLATERAL)).safeTransferFrom(o,address(this),amount) (src/MirrorAccount.sol#870)
+MirrorAccount.depositWithPermit(uint256,uint256,uint8,bytes32,bytes32) (src/MirrorAccount.sol#864-883) uses arbitrary from in transferFrom in combination with permit: IERC20(address(COLLATERAL)).safeTransferFrom(o,address(this),amount) (src/MirrorAccount.sol#881)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#arbitrary-from-in-transferfrom-used-with-permit
-
+INFO:Detectors:
 Detector: reentrancy-no-eth
-Reentrancy in MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1178-1191):
+Reentrancy in MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1221-1234):
 	External calls:
-	- _execTracked(perpId,orderType,pos.lotLNS,price,0,0,marketLeader[perpId]) (src/MirrorAccount.sol#1184)
-		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
+	- _execTracked(perpId,orderType,pos.lotLNS,price,0,0,marketLeader[perpId]) (src/MirrorAccount.sol#1227)
+		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
 	State variables written after the call(s):
-	- delete marketLeader[perpId] (src/MirrorAccount.sol#1189)
-	MirrorAccount.marketLeader (src/MirrorAccount.sol#286) can be used in cross function reentrancies:
-	- MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366)
-	- MirrorAccount.marketLeader (src/MirrorAccount.sol#286)
-Reentrancy in MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#456-530):
+	- delete marketLeader[perpId] (src/MirrorAccount.sol#1232)
+	MirrorAccount.marketLeader (src/MirrorAccount.sol#288) can be used in cross function reentrancies:
+	- MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409)
+	- MirrorAccount.marketLeader (src/MirrorAccount.sol#288)
+Reentrancy in MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#464-541):
 	External calls:
-	- _execTracked(o.perpId,o.orderType,o.lotLNS,o.pricePNS,o.leverageHdths,o.maxMatches,o.leaderAccountId) (src/MirrorAccount.sol#492-494)
-		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
-	- _execTracked(o.perpId,o.orderType,o.lotLNS,o.pricePNS,0,o.maxMatches,o.leaderAccountId) (src/MirrorAccount.sol#492-494)
-		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
+	- _execTracked(o.perpId,o.orderType,o.lotLNS,o.pricePNS,o.leverageHdths,o.maxMatches,o.leaderAccountId) (src/MirrorAccount.sol#503-505)
+		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
+	- _execTracked(o.perpId,o.orderType,o.lotLNS,o.pricePNS,0,o.maxMatches,o.leaderAccountId) (src/MirrorAccount.sol#503-505)
+		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
 	State variables written after the call(s):
-	- marketLeader[o.perpId] = o.leaderAccountId (src/MirrorAccount.sol#508)
-	MirrorAccount.marketLeader (src/MirrorAccount.sol#286) can be used in cross function reentrancies:
-	- MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366)
-	- MirrorAccount.marketLeader (src/MirrorAccount.sol#286)
-	- delete marketLeader[o.perpId] (src/MirrorAccount.sol#513)
-	MirrorAccount.marketLeader (src/MirrorAccount.sol#286) can be used in cross function reentrancies:
-	- MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366)
-	- MirrorAccount.marketLeader (src/MirrorAccount.sol#286)
-Reentrancy in MirrorAccount._deposit(address,uint256) (src/MirrorAccount.sol#880-900):
+	- marketLeader[o.perpId] = o.leaderAccountId (src/MirrorAccount.sol#519)
+	MirrorAccount.marketLeader (src/MirrorAccount.sol#288) can be used in cross function reentrancies:
+	- MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409)
+	- MirrorAccount.marketLeader (src/MirrorAccount.sol#288)
+	- delete marketLeader[o.perpId] (src/MirrorAccount.sol#524)
+	MirrorAccount.marketLeader (src/MirrorAccount.sol#288) can be used in cross function reentrancies:
+	- MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409)
+	- MirrorAccount.marketLeader (src/MirrorAccount.sol#288)
+Reentrancy in MirrorAccount._deposit(address,uint256) (src/MirrorAccount.sol#891-911):
 	External calls:
-	- id = EXCHANGE.createAccount(amount) (src/MirrorAccount.sol#889)
+	- id = EXCHANGE.createAccount(amount) (src/MirrorAccount.sol#900)
 	State variables written after the call(s):
-	- perplAccountId = uint32(id) (src/MirrorAccount.sol#890)
-	MirrorAccount.perplAccountId (src/MirrorAccount.sol#260) can be used in cross function reentrancies:
-	- MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409)
-	- MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366)
-	- MirrorAccount.perplAccountId (src/MirrorAccount.sol#260)
-Reentrancy in MirrorAccount.triggerLevel(uint256) (src/MirrorAccount.sol#755-783):
+	- perplAccountId = uint32(id) (src/MirrorAccount.sol#901)
+	MirrorAccount.perplAccountId (src/MirrorAccount.sol#262) can be used in cross function reentrancies:
+	- MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452)
+	- MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409)
+	- MirrorAccount.perplAccountId (src/MirrorAccount.sol#262)
+Reentrancy in MirrorAccount.triggerLevel(uint256) (src/MirrorAccount.sol#766-794):
 	External calls:
-	- after_ = _closeOne(perpId,acct,lv.slippageBps) (src/MirrorAccount.sol#779)
-		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
+	- after_ = _closeOne(perpId,acct,lv.slippageBps) (src/MirrorAccount.sol#790)
+		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
 	State variables written after the call(s):
-	- delete _levels[perpId] (src/MirrorAccount.sol#781)
-	MirrorAccount._levels (src/MirrorAccount.sol#291) can be used in cross function reentrancies:
-	- MirrorAccount.level(uint256) (src/MirrorAccount.sol#1235-1237)
+	- delete _levels[perpId] (src/MirrorAccount.sol#792)
+	MirrorAccount._levels (src/MirrorAccount.sol#298) can be used in cross function reentrancies:
+	- MirrorAccount.level(uint256) (src/MirrorAccount.sol#1278-1280)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-2
-
+INFO:Detectors:
 Detector: uninitialized-local
-MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[]).n (src/MirrorAccount.sol#1115) is a local variable never initialized
-MirrorAccount.triggerLevel(uint256).levelPNS (src/MirrorAccount.sol#766) is a local variable never initialized
-MirrorAccount._setPolicy(MirrorAccount.Policy).kept (src/MirrorAccount.sol#1031) is a local variable never initialized
-MirrorAccount._leaderExposure(uint32).p (src/MirrorAccount.sol#1360) is a local variable never initialized
-MirrorAccount._copy(MirrorAccount.MirrorOrder,address).leaderEntry (src/MirrorAccount.sol#469) is a local variable never initialized
-MirrorAccount.triggerLevel(uint256).kind (src/MirrorAccount.sol#765) is a local variable never initialized
+MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[]).n (src/MirrorAccount.sol#1149) is a local variable never initialized
+MirrorAccount._copy(MirrorAccount.MirrorOrder,address).limit (src/MirrorAccount.sol#475) is a local variable never initialized
+MirrorAccount._setPolicy(MirrorAccount.Policy).kept (src/MirrorAccount.sol#1050) is a local variable never initialized
+MirrorAccount._setPolicy(MirrorAccount.Policy).kept_scope_2 (src/MirrorAccount.sol#1066) is a local variable never initialized
+MirrorAccount._leaderExposure(uint32).p (src/MirrorAccount.sol#1403) is a local variable never initialized
+MirrorAccount.triggerLevel(uint256).levelPNS (src/MirrorAccount.sol#777) is a local variable never initialized
+MirrorAccount.triggerLevel(uint256).kind (src/MirrorAccount.sol#776) is a local variable never initialized
+MirrorAccount._copy(MirrorAccount.MirrorOrder,address).leaderEntry (src/MirrorAccount.sol#477) is a local variable never initialized
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#uninitialized-local-variables
-
+INFO:Detectors:
 Detector: unused-return
-MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#456-530) ignores return value by (aft,None,None) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#496)
-MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool) (src/MirrorAccount.sol#561-653) ignores return value by (lp,None,None) = EXCHANGE.getPositionV2(o.perpId,o.leaderAccountId) (src/MirrorAccount.sol#599)
-MirrorAccount.triggerLevel(uint256) (src/MirrorAccount.sol#755-783) ignores return value by (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#760)
-MirrorAccount._trustedMark(uint256) (src/MirrorAccount.sol#800-811) ignores return value by (None,mark,valid) = EXCHANGE.getPositionV2(perpId,perplAccountId) (src/MirrorAccount.sol#802)
-MirrorAccount.depositWithPermit(uint256,uint256,uint8,bytes32,bytes32) (src/MirrorAccount.sol#853-872) ignores return value by (signer,err,None) = ECDSA.tryRecover(digest,v,r,s) (src/MirrorAccount.sol#866)
-MirrorAccount.execute(MirrorAccount.Action,bytes) (src/MirrorAccount.sol#960-996) ignores return value by (signer,err,None) = ECDSA.tryRecover(digest,signature) (src/MirrorAccount.sol#964)
-MirrorAccount._closeMarket(uint32,uint16) (src/MirrorAccount.sol#1146-1154) ignores return value by (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1150)
-MirrorAccount._closePositions(uint32,bool,uint256) (src/MirrorAccount.sol#1157-1174) ignores return value by (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1168)
-MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1178-1191) ignores return value by (pos,mark,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1179)
-MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1178-1191) ignores return value by (aft,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1185)
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) ignores return value by (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1282)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) ignores return value by EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) ignores return value by EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
-MirrorAccount._targetLots(uint256,uint32,uint8) (src/MirrorAccount.sol#1340-1346) ignores return value by (lp,None,None) = EXCHANGE.getPositionV2(perpId,leader) (src/MirrorAccount.sol#1343)
-MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366) ignores return value by (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1360)
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) ignores return value by (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1404)
+MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#464-541) ignores return value by (aft,None,None) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#507)
+MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool) (src/MirrorAccount.sol#572-664) ignores return value by (lp,None,None) = EXCHANGE.getPositionV2(o.perpId,o.leaderAccountId) (src/MirrorAccount.sol#610)
+MirrorAccount.triggerLevel(uint256) (src/MirrorAccount.sol#766-794) ignores return value by (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#771)
+MirrorAccount._trustedMark(uint256) (src/MirrorAccount.sol#811-822) ignores return value by (None,mark,valid) = EXCHANGE.getPositionV2(perpId,perplAccountId) (src/MirrorAccount.sol#813)
+MirrorAccount.depositWithPermit(uint256,uint256,uint8,bytes32,bytes32) (src/MirrorAccount.sol#864-883) ignores return value by (signer,err,None) = ECDSA.tryRecover(digest,v,r,s) (src/MirrorAccount.sol#877)
+MirrorAccount.execute(MirrorAccount.Action,bytes) (src/MirrorAccount.sol#976-1015) ignores return value by (signer,err,None) = ECDSA.tryRecover(digest,signature) (src/MirrorAccount.sol#980)
+MirrorAccount._closeMarket(uint32,uint16) (src/MirrorAccount.sol#1189-1197) ignores return value by (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1193)
+MirrorAccount._closePositions(uint32,bool,uint256) (src/MirrorAccount.sol#1200-1217) ignores return value by (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1211)
+MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1221-1234) ignores return value by (pos,mark,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1222)
+MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1221-1234) ignores return value by (aft,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1228)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) ignores return value by (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1325)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) ignores return value by EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) ignores return value by EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
+MirrorAccount._targetLots(uint256,uint32,uint8) (src/MirrorAccount.sol#1383-1389) ignores return value by (lp,None,None) = EXCHANGE.getPositionV2(perpId,leader) (src/MirrorAccount.sol#1386)
+MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409) ignores return value by (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1403)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) ignores return value by (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1447)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#unused-return
-
+INFO:Detectors:
 Detector: calls-loop
-MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1360)
+MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1403)
 	Calls stack containing the loop:
 		MirrorAccount.mirror(MirrorAccount.MirrorOrder)
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1404)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1447)
 	Calls stack containing the loop:
 		MirrorAccount.mirror(MirrorAccount.MirrorOrder)
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
 		MirrorAccount._checkLossStops()
-MirrorAccount._trustedMark(uint256) (src/MirrorAccount.sol#800-811) has external calls inside a loop: (None,mark,valid) = EXCHANGE.getPositionV2(perpId,perplAccountId) (src/MirrorAccount.sol#802)
+MirrorAccount._trustedMark(uint256) (src/MirrorAccount.sol#811-822) has external calls inside a loop: (None,mark,valid) = EXCHANGE.getPositionV2(perpId,perplAccountId) (src/MirrorAccount.sol#813)
 	Calls stack containing the loop:
 		MirrorAccount.triggerAccountStop()
 		MirrorAccount._requireTrustedMarks(uint32,bool)
-MirrorAccount._trustedMark(uint256) (src/MirrorAccount.sol#800-811) has external calls inside a loop: info = EXCHANGE.getPerpetualInfoV2(perpId) (src/MirrorAccount.sol#803)
+MirrorAccount._trustedMark(uint256) (src/MirrorAccount.sol#811-822) has external calls inside a loop: info = EXCHANGE.getPerpetualInfoV2(perpId) (src/MirrorAccount.sol#814)
 	Calls stack containing the loop:
 		MirrorAccount.triggerAccountStop()
 		MirrorAccount._requireTrustedMarks(uint32,bool)
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1404)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1447)
 	Calls stack containing the loop:
 		MirrorAccount.triggerAccountStop()
 		MirrorAccount._checkLossStops()
-MirrorAccount._closePositions(uint32,bool,uint256) (src/MirrorAccount.sol#1157-1174) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1168)
+MirrorAccount._closePositions(uint32,bool,uint256) (src/MirrorAccount.sol#1200-1217) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1211)
 	Calls stack containing the loop:
 		MirrorAccount.triggerAccountStop()
-MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1178-1191) has external calls inside a loop: (pos,mark,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1179)
-	Calls stack containing the loop:
-		MirrorAccount.triggerAccountStop()
-		MirrorAccount._closePositions(uint32,bool,uint256)
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1282)
+MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1221-1234) has external calls inside a loop: (pos,mark,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1222)
 	Calls stack containing the loop:
 		MirrorAccount.triggerAccountStop()
 		MirrorAccount._closePositions(uint32,bool,uint256)
-		MirrorAccount._closeOne(uint256,uint256,uint256)
-		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) has external calls inside a loop: int256(EXCHANGE.getAccountById(acct).balanceCNS) + int256(pos.depositCNS) (src/MirrorAccount.sol#1283)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1325)
 	Calls stack containing the loop:
 		MirrorAccount.triggerAccountStop()
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) has external calls inside a loop: EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) has external calls inside a loop: int256(EXCHANGE.getAccountById(acct).balanceCNS) + int256(pos.depositCNS) (src/MirrorAccount.sol#1326)
 	Calls stack containing the loop:
 		MirrorAccount.triggerAccountStop()
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) has external calls inside a loop: EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) has external calls inside a loop: EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
 	Calls stack containing the loop:
 		MirrorAccount.triggerAccountStop()
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1178-1191) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1185)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) has external calls inside a loop: EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
 	Calls stack containing the loop:
 		MirrorAccount.triggerAccountStop()
 		MirrorAccount._closePositions(uint32,bool,uint256)
-MirrorAccount._trustedMark(uint256) (src/MirrorAccount.sol#800-811) has external calls inside a loop: (None,mark,valid) = EXCHANGE.getPositionV2(perpId,perplAccountId) (src/MirrorAccount.sol#802)
+		MirrorAccount._closeOne(uint256,uint256,uint256)
+		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
+MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1221-1234) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1228)
+	Calls stack containing the loop:
+		MirrorAccount.triggerAccountStop()
+		MirrorAccount._closePositions(uint32,bool,uint256)
+MirrorAccount._trustedMark(uint256) (src/MirrorAccount.sol#811-822) has external calls inside a loop: (None,mark,valid) = EXCHANGE.getPositionV2(perpId,perplAccountId) (src/MirrorAccount.sol#813)
 	Calls stack containing the loop:
 		MirrorAccount.triggerLeaderStop(uint32)
 		MirrorAccount._requireTrustedMarks(uint32,bool)
-MirrorAccount._trustedMark(uint256) (src/MirrorAccount.sol#800-811) has external calls inside a loop: info = EXCHANGE.getPerpetualInfoV2(perpId) (src/MirrorAccount.sol#803)
+MirrorAccount._trustedMark(uint256) (src/MirrorAccount.sol#811-822) has external calls inside a loop: info = EXCHANGE.getPerpetualInfoV2(perpId) (src/MirrorAccount.sol#814)
 	Calls stack containing the loop:
 		MirrorAccount.triggerLeaderStop(uint32)
 		MirrorAccount._requireTrustedMarks(uint32,bool)
-MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1360)
+MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1403)
 	Calls stack containing the loop:
 		MirrorAccount.triggerLeaderStop(uint32)
-MirrorAccount._closePositions(uint32,bool,uint256) (src/MirrorAccount.sol#1157-1174) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1168)
+MirrorAccount._closePositions(uint32,bool,uint256) (src/MirrorAccount.sol#1200-1217) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1211)
 	Calls stack containing the loop:
 		MirrorAccount.triggerLeaderStop(uint32)
-MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1178-1191) has external calls inside a loop: (pos,mark,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1179)
-	Calls stack containing the loop:
-		MirrorAccount.triggerLeaderStop(uint32)
-		MirrorAccount._closePositions(uint32,bool,uint256)
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1282)
+MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1221-1234) has external calls inside a loop: (pos,mark,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1222)
 	Calls stack containing the loop:
 		MirrorAccount.triggerLeaderStop(uint32)
 		MirrorAccount._closePositions(uint32,bool,uint256)
-		MirrorAccount._closeOne(uint256,uint256,uint256)
-		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) has external calls inside a loop: int256(EXCHANGE.getAccountById(acct).balanceCNS) + int256(pos.depositCNS) (src/MirrorAccount.sol#1283)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1325)
 	Calls stack containing the loop:
 		MirrorAccount.triggerLeaderStop(uint32)
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) has external calls inside a loop: EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) has external calls inside a loop: int256(EXCHANGE.getAccountById(acct).balanceCNS) + int256(pos.depositCNS) (src/MirrorAccount.sol#1326)
 	Calls stack containing the loop:
 		MirrorAccount.triggerLeaderStop(uint32)
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) has external calls inside a loop: EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) has external calls inside a loop: EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
 	Calls stack containing the loop:
 		MirrorAccount.triggerLeaderStop(uint32)
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1178-1191) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1185)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) has external calls inside a loop: EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
 	Calls stack containing the loop:
 		MirrorAccount.triggerLeaderStop(uint32)
 		MirrorAccount._closePositions(uint32,bool,uint256)
-MirrorAccount._setPolicy(MirrorAccount.Policy) (src/MirrorAccount.sol#1003-1088) has external calls inside a loop: info = EXCHANGE.getPerpetualInfoV2(mr.perpId) (src/MirrorAccount.sol#1052)
+		MirrorAccount._closeOne(uint256,uint256,uint256)
+		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
+MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1221-1234) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1228)
+	Calls stack containing the loop:
+		MirrorAccount.triggerLeaderStop(uint32)
+		MirrorAccount._closePositions(uint32,bool,uint256)
+MirrorAccount._setPolicy(MirrorAccount.Policy) (src/MirrorAccount.sol#1022-1118) has external calls inside a loop: info = EXCHANGE.getPerpetualInfoV2(mr.perpId) (src/MirrorAccount.sol#1082)
 	Calls stack containing the loop:
 		MirrorAccount.setPolicy(MirrorAccount.Policy)
-MirrorAccount._setPolicy(MirrorAccount.Policy) (src/MirrorAccount.sol#1003-1088) has external calls inside a loop: info = EXCHANGE.getPerpetualInfoV2(mr.perpId) (src/MirrorAccount.sol#1052)
+MirrorAccount._setPolicy(MirrorAccount.Policy) (src/MirrorAccount.sol#1022-1118) has external calls inside a loop: info = EXCHANGE.getPerpetualInfoV2(mr.perpId) (src/MirrorAccount.sol#1082)
 	Calls stack containing the loop:
 		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#456-530) has external calls inside a loop: (before,mark,markValid) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#462-463)
+MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#464-541) has external calls inside a loop: (before,mark,markValid) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#470-471)
 	Calls stack containing the loop:
 		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool) (src/MirrorAccount.sol#561-653) has external calls inside a loop: (lp,None,None) = EXCHANGE.getPositionV2(o.perpId,o.leaderAccountId) (src/MirrorAccount.sol#599)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1325)
 	Calls stack containing the loop:
 		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366) has external calls inside a loop: info = EXCHANGE.getAccountById(acct) (src/MirrorAccount.sol#1352)
+		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) has external calls inside a loop: int256(EXCHANGE.getAccountById(acct).balanceCNS) + int256(pos.depositCNS) (src/MirrorAccount.sol#1326)
+	Calls stack containing the loop:
+		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
+		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) has external calls inside a loop: EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+	Calls stack containing the loop:
+		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
+		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) has external calls inside a loop: EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
+	Calls stack containing the loop:
+		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
+		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
+MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#464-541) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#507)
+	Calls stack containing the loop:
+		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+MirrorAccount._targetLots(uint256,uint32,uint8) (src/MirrorAccount.sol#1383-1389) has external calls inside a loop: (lp,None,None) = EXCHANGE.getPositionV2(perpId,leader) (src/MirrorAccount.sol#1386)
+	Calls stack containing the loop:
+		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
+MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool) (src/MirrorAccount.sol#572-664) has external calls inside a loop: (lp,None,None) = EXCHANGE.getPositionV2(o.perpId,o.leaderAccountId) (src/MirrorAccount.sol#610)
+	Calls stack containing the loop:
+		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
+MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409) has external calls inside a loop: info = EXCHANGE.getAccountById(acct) (src/MirrorAccount.sol#1395)
 	Calls stack containing the loop:
 		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
-MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1360)
+MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1403)
 	Calls stack containing the loop:
 		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls inside a loop: idle = IERC20(address(COLLATERAL)).balanceOf(address(this)) (src/MirrorAccount.sol#1393)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) has external calls inside a loop: idle = IERC20(address(COLLATERAL)).balanceOf(address(this)) (src/MirrorAccount.sol#1436)
 	Calls stack containing the loop:
 		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
@@ -230,7 +274,7 @@ MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls ins
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
 		MirrorAccount._checkLossStops()
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls inside a loop: info = EXCHANGE.getAccountById(acct) (src/MirrorAccount.sol#1395)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) has external calls inside a loop: info = EXCHANGE.getAccountById(acct) (src/MirrorAccount.sol#1438)
 	Calls stack containing the loop:
 		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
@@ -238,7 +282,7 @@ MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls ins
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
 		MirrorAccount._checkLossStops()
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1404)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1447)
 	Calls stack containing the loop:
 		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
@@ -246,233 +290,205 @@ MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls ins
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
 		MirrorAccount._checkLossStops()
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1282)
-	Calls stack containing the loop:
-		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) has external calls inside a loop: int256(EXCHANGE.getAccountById(acct).balanceCNS) + int256(pos.depositCNS) (src/MirrorAccount.sol#1283)
-	Calls stack containing the loop:
-		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) has external calls inside a loop: EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-	Calls stack containing the loop:
-		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) has external calls inside a loop: EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
-	Calls stack containing the loop:
-		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#456-530) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#496)
-	Calls stack containing the loop:
-		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-MirrorAccount._targetLots(uint256,uint32,uint8) (src/MirrorAccount.sol#1340-1346) has external calls inside a loop: (lp,None,None) = EXCHANGE.getPositionV2(perpId,leader) (src/MirrorAccount.sol#1343)
-	Calls stack containing the loop:
-		MirrorAccount.follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#456-530) has external calls inside a loop: (before,mark,markValid) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#462-463)
+MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#464-541) has external calls inside a loop: (before,mark,markValid) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#470-471)
 	Calls stack containing the loop:
 		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool) (src/MirrorAccount.sol#561-653) has external calls inside a loop: (lp,None,None) = EXCHANGE.getPositionV2(o.perpId,o.leaderAccountId) (src/MirrorAccount.sol#599)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1325)
 	Calls stack containing the loop:
 		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366) has external calls inside a loop: info = EXCHANGE.getAccountById(acct) (src/MirrorAccount.sol#1352)
+		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) has external calls inside a loop: int256(EXCHANGE.getAccountById(acct).balanceCNS) + int256(pos.depositCNS) (src/MirrorAccount.sol#1326)
+	Calls stack containing the loop:
+		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
+		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) has external calls inside a loop: EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+	Calls stack containing the loop:
+		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
+		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) has external calls inside a loop: EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
+	Calls stack containing the loop:
+		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
+		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
+MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#464-541) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#507)
+	Calls stack containing the loop:
+		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+MirrorAccount._targetLots(uint256,uint32,uint8) (src/MirrorAccount.sol#1383-1389) has external calls inside a loop: (lp,None,None) = EXCHANGE.getPositionV2(perpId,leader) (src/MirrorAccount.sol#1386)
+	Calls stack containing the loop:
+		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
+MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool) (src/MirrorAccount.sol#572-664) has external calls inside a loop: (lp,None,None) = EXCHANGE.getPositionV2(o.perpId,o.leaderAccountId) (src/MirrorAccount.sol#610)
+	Calls stack containing the loop:
+		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
+MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409) has external calls inside a loop: info = EXCHANGE.getAccountById(acct) (src/MirrorAccount.sol#1395)
 	Calls stack containing the loop:
 		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
-MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1360)
+MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1403)
 	Calls stack containing the loop:
 		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls inside a loop: idle = IERC20(address(COLLATERAL)).balanceOf(address(this)) (src/MirrorAccount.sol#1393)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) has external calls inside a loop: idle = IERC20(address(COLLATERAL)).balanceOf(address(this)) (src/MirrorAccount.sol#1436)
 	Calls stack containing the loop:
 		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
 		MirrorAccount._checkLossStops()
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls inside a loop: info = EXCHANGE.getAccountById(acct) (src/MirrorAccount.sol#1395)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) has external calls inside a loop: info = EXCHANGE.getAccountById(acct) (src/MirrorAccount.sol#1438)
 	Calls stack containing the loop:
 		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
 		MirrorAccount._checkLossStops()
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1404)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1447)
 	Calls stack containing the loop:
 		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
 		MirrorAccount._checkLossStops()
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1282)
-	Calls stack containing the loop:
-		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) has external calls inside a loop: int256(EXCHANGE.getAccountById(acct).balanceCNS) + int256(pos.depositCNS) (src/MirrorAccount.sol#1283)
-	Calls stack containing the loop:
-		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) has external calls inside a loop: EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-	Calls stack containing the loop:
-		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) has external calls inside a loop: EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
-	Calls stack containing the loop:
-		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#456-530) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#496)
-	Calls stack containing the loop:
-		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-MirrorAccount._targetLots(uint256,uint32,uint8) (src/MirrorAccount.sol#1340-1346) has external calls inside a loop: (lp,None,None) = EXCHANGE.getPositionV2(perpId,leader) (src/MirrorAccount.sol#1343)
-	Calls stack containing the loop:
-		MirrorAccount.matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-MirrorAccount._closePositions(uint32,bool,uint256) (src/MirrorAccount.sol#1157-1174) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1168)
+MirrorAccount._closePositions(uint32,bool,uint256) (src/MirrorAccount.sol#1200-1217) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1211)
 	Calls stack containing the loop:
 		MirrorAccount.closeAll(uint16)
 		MirrorAccount._closeAll(uint16)
-MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1178-1191) has external calls inside a loop: (pos,mark,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1179)
-	Calls stack containing the loop:
-		MirrorAccount.closeAll(uint16)
-		MirrorAccount._closeAll(uint16)
-		MirrorAccount._closePositions(uint32,bool,uint256)
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1282)
+MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1221-1234) has external calls inside a loop: (pos,mark,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1222)
 	Calls stack containing the loop:
 		MirrorAccount.closeAll(uint16)
 		MirrorAccount._closeAll(uint16)
 		MirrorAccount._closePositions(uint32,bool,uint256)
-		MirrorAccount._closeOne(uint256,uint256,uint256)
-		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) has external calls inside a loop: int256(EXCHANGE.getAccountById(acct).balanceCNS) + int256(pos.depositCNS) (src/MirrorAccount.sol#1283)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1325)
 	Calls stack containing the loop:
 		MirrorAccount.closeAll(uint16)
 		MirrorAccount._closeAll(uint16)
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) has external calls inside a loop: EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) has external calls inside a loop: int256(EXCHANGE.getAccountById(acct).balanceCNS) + int256(pos.depositCNS) (src/MirrorAccount.sol#1326)
 	Calls stack containing the loop:
 		MirrorAccount.closeAll(uint16)
 		MirrorAccount._closeAll(uint16)
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) has external calls inside a loop: EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) has external calls inside a loop: EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
 	Calls stack containing the loop:
 		MirrorAccount.closeAll(uint16)
 		MirrorAccount._closeAll(uint16)
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1178-1191) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1185)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) has external calls inside a loop: EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
 	Calls stack containing the loop:
 		MirrorAccount.closeAll(uint16)
 		MirrorAccount._closeAll(uint16)
 		MirrorAccount._closePositions(uint32,bool,uint256)
-MirrorAccount._setPolicy(MirrorAccount.Policy) (src/MirrorAccount.sol#1003-1088) has external calls inside a loop: info = EXCHANGE.getPerpetualInfoV2(mr.perpId) (src/MirrorAccount.sol#1052)
+		MirrorAccount._closeOne(uint256,uint256,uint256)
+		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
+MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1221-1234) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1228)
+	Calls stack containing the loop:
+		MirrorAccount.closeAll(uint16)
+		MirrorAccount._closeAll(uint16)
+		MirrorAccount._closePositions(uint32,bool,uint256)
+MirrorAccount._setPolicy(MirrorAccount.Policy) (src/MirrorAccount.sol#1022-1118) has external calls inside a loop: info = EXCHANGE.getPerpetualInfoV2(mr.perpId) (src/MirrorAccount.sol#1082)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
-MirrorAccount._closePositions(uint32,bool,uint256) (src/MirrorAccount.sol#1157-1174) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1168)
+MirrorAccount._closePositions(uint32,bool,uint256) (src/MirrorAccount.sol#1200-1217) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1211)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._closeAll(uint16)
-MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1178-1191) has external calls inside a loop: (pos,mark,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1179)
+MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1221-1234) has external calls inside a loop: (pos,mark,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1222)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._closeAll(uint16)
 		MirrorAccount._closePositions(uint32,bool,uint256)
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1282)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) has external calls inside a loop: (pos,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1325)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._closeAll(uint16)
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1281-1284) has external calls inside a loop: int256(EXCHANGE.getAccountById(acct).balanceCNS) + int256(pos.depositCNS) (src/MirrorAccount.sol#1283)
+MirrorAccount._bookValue(uint256,uint256) (src/MirrorAccount.sol#1324-1327) has external calls inside a loop: int256(EXCHANGE.getAccountById(acct).balanceCNS) + int256(pos.depositCNS) (src/MirrorAccount.sol#1326)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._closeAll(uint16)
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) has external calls inside a loop: EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) has external calls inside a loop: EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._closeAll(uint16)
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1286-1322) has external calls inside a loop: EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
+MirrorAccount._execIoc(uint256,uint8,uint256,uint256,uint256,uint256) (src/MirrorAccount.sol#1329-1365) has external calls inside a loop: EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._closeAll(uint16)
 		MirrorAccount._closePositions(uint32,bool,uint256)
 		MirrorAccount._closeOne(uint256,uint256,uint256)
 		MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32)
-MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1178-1191) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1185)
+MirrorAccount._closeOne(uint256,uint256,uint256) (src/MirrorAccount.sol#1221-1234) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1228)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._closeAll(uint16)
 		MirrorAccount._closePositions(uint32,bool,uint256)
-MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#456-530) has external calls inside a loop: (before,mark,markValid) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#462-463)
+MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#464-541) has external calls inside a loop: (before,mark,markValid) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#470-471)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool) (src/MirrorAccount.sol#561-653) has external calls inside a loop: (lp,None,None) = EXCHANGE.getPositionV2(o.perpId,o.leaderAccountId) (src/MirrorAccount.sol#599)
+MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#464-541) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#507)
+	Calls stack containing the loop:
+		MirrorAccount.execute(MirrorAccount.Action,bytes)
+		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+MirrorAccount._targetLots(uint256,uint32,uint8) (src/MirrorAccount.sol#1383-1389) has external calls inside a loop: (lp,None,None) = EXCHANGE.getPositionV2(perpId,leader) (src/MirrorAccount.sol#1386)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366) has external calls inside a loop: info = EXCHANGE.getAccountById(acct) (src/MirrorAccount.sol#1352)
+MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool) (src/MirrorAccount.sol#572-664) has external calls inside a loop: (lp,None,None) = EXCHANGE.getPositionV2(o.perpId,o.leaderAccountId) (src/MirrorAccount.sol#610)
+	Calls stack containing the loop:
+		MirrorAccount.execute(MirrorAccount.Action,bytes)
+		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
+		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
+		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
+MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409) has external calls inside a loop: info = EXCHANGE.getAccountById(acct) (src/MirrorAccount.sol#1395)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
-MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1360)
+MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1403)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
 		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls inside a loop: idle = IERC20(address(COLLATERAL)).balanceOf(address(this)) (src/MirrorAccount.sol#1393)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) has external calls inside a loop: idle = IERC20(address(COLLATERAL)).balanceOf(address(this)) (src/MirrorAccount.sol#1436)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
@@ -480,7 +496,7 @@ MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls ins
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
 		MirrorAccount._checkLossStops()
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls inside a loop: info = EXCHANGE.getAccountById(acct) (src/MirrorAccount.sol#1395)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) has external calls inside a loop: info = EXCHANGE.getAccountById(acct) (src/MirrorAccount.sol#1438)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
@@ -488,7 +504,7 @@ MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls ins
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
 		MirrorAccount._checkLossStops()
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1404)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1447)
 	Calls stack containing the loop:
 		MirrorAccount.execute(MirrorAccount.Action,bytes)
 		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
@@ -496,160 +512,149 @@ MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls ins
 		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
 		MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool)
 		MirrorAccount._checkLossStops()
-MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#456-530) has external calls inside a loop: (aft,None,None) = EXCHANGE.getPositionV2(o.perpId,acct) (src/MirrorAccount.sol#496)
-	Calls stack containing the loop:
-		MirrorAccount.execute(MirrorAccount.Action,bytes)
-		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-MirrorAccount._targetLots(uint256,uint32,uint8) (src/MirrorAccount.sol#1340-1346) has external calls inside a loop: (lp,None,None) = EXCHANGE.getPositionV2(perpId,leader) (src/MirrorAccount.sol#1343)
-	Calls stack containing the loop:
-		MirrorAccount.execute(MirrorAccount.Action,bytes)
-		MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[])
-		MirrorAccount._matchNow(MirrorAccount.MirrorOrder[])
-		MirrorAccount._copy(MirrorAccount.MirrorOrder,address)
-MirrorAccount._equity() (src/MirrorAccount.sol#1391-1409) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1404)
+MirrorAccount._equity() (src/MirrorAccount.sol#1434-1452) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(b * 256 + bit,acct) (src/MirrorAccount.sol#1447)
 	Calls stack containing the loop:
 		MirrorAccount.equity()
-MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1349-1366) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1360)
+MirrorAccount._leaderExposure(uint32) (src/MirrorAccount.sol#1392-1409) has external calls inside a loop: (p,None,None) = EXCHANGE.getPositionV2(perpId,acct) (src/MirrorAccount.sol#1403)
 	Calls stack containing the loop:
 		MirrorAccount.leaderBook(uint32)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation/#calls-inside-a-loop
-
+INFO:Detectors:
 Detector: reentrancy-benign
-Reentrancy in MirrorAccount._deposit(address,uint256) (src/MirrorAccount.sol#880-900):
+Reentrancy in MirrorAccount._deposit(address,uint256) (src/MirrorAccount.sol#891-911):
 	External calls:
-	- id = EXCHANGE.createAccount(amount) (src/MirrorAccount.sol#889)
-	- EXCHANGE.depositCollateral(amount) (src/MirrorAccount.sol#893)
+	- id = EXCHANGE.createAccount(amount) (src/MirrorAccount.sol#900)
+	- EXCHANGE.depositCollateral(amount) (src/MirrorAccount.sol#904)
 	State variables written after the call(s):
-	- dayStartEquity += uint128(amount) (src/MirrorAccount.sol#897)
-	- highWaterEquity += uint128(amount) (src/MirrorAccount.sol#898)
-Reentrancy in MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32) (src/MirrorAccount.sol#1266-1279):
+	- dayStartEquity += uint128(amount) (src/MirrorAccount.sol#908)
+	- highWaterEquity += uint128(amount) (src/MirrorAccount.sol#909)
+Reentrancy in MirrorAccount._execTracked(uint256,uint8,uint256,uint256,uint256,uint256,uint32) (src/MirrorAccount.sol#1309-1322):
 	External calls:
-	- _execIoc(perpId,orderType,lots,price,leverage,maxMatches) (src/MirrorAccount.sol#1277)
-		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
+	- _execIoc(perpId,orderType,lots,price,leverage,maxMatches) (src/MirrorAccount.sol#1320)
+		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
 	State variables written after the call(s):
-	- leaderRealizedCNS[leader] += _bookValue(perpId,acct) - before (src/MirrorAccount.sol#1278)
-Reentrancy in MirrorAccount._withdraw(uint256) (src/MirrorAccount.sol#1193-1208):
+	- leaderRealizedCNS[leader] += _bookValue(perpId,acct) - before (src/MirrorAccount.sol#1321)
+Reentrancy in MirrorAccount._withdraw(uint256) (src/MirrorAccount.sol#1236-1251):
 	External calls:
-	- EXCHANGE.withdrawCollateral(amount - idle) (src/MirrorAccount.sol#1196)
+	- EXCHANGE.withdrawCollateral(amount - idle) (src/MirrorAccount.sol#1239)
 	State variables written after the call(s):
-	- dayStartEquity = dayStartEquity - a (src/MirrorAccount.sol#1205)
-	- dayStartEquity = 0 (src/MirrorAccount.sol#1205)
-	- highWaterEquity = highWaterEquity - a (src/MirrorAccount.sol#1206)
-	- highWaterEquity = 0 (src/MirrorAccount.sol#1206)
-	- netDeposits = nd (src/MirrorAccount.sol#1203)
+	- dayStartEquity = dayStartEquity - a (src/MirrorAccount.sol#1248)
+	- dayStartEquity = 0 (src/MirrorAccount.sol#1248)
+	- highWaterEquity = highWaterEquity - a (src/MirrorAccount.sol#1249)
+	- highWaterEquity = 0 (src/MirrorAccount.sol#1249)
+	- netDeposits = nd (src/MirrorAccount.sol#1246)
 Reentrancy in MirrorAccountFactory.createAccount(address,bytes32) (src/MirrorAccountFactory.sol#46-51):
 	External calls:
 	- account.initialize(owner) (src/MirrorAccountFactory.sol#48)
 	State variables written after the call(s):
 	- isAccount[address(account)] = true (src/MirrorAccountFactory.sol#49)
-Reentrancy in MirrorAccount.depositWithPermit(uint256,uint256,uint8,bytes32,bytes32) (src/MirrorAccount.sol#853-872):
+Reentrancy in MirrorAccount.depositWithPermit(uint256,uint256,uint8,bytes32,bytes32) (src/MirrorAccount.sol#864-883):
 	External calls:
-	- COLLATERAL.permit(o,address(this),amount,deadline,v,r,s) (src/MirrorAccount.sol#855-869)
+	- COLLATERAL.permit(o,address(this),amount,deadline,v,r,s) (src/MirrorAccount.sol#866-880)
 	State variables written after the call(s):
-	- frontRunPermitUsed[digest] = true (src/MirrorAccount.sol#868)
+	- frontRunPermitUsed[digest] = true (src/MirrorAccount.sol#879)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-3
-
+INFO:Detectors:
 Detector: reentrancy-events
-Reentrancy in MirrorAccount._closeAll(uint16) (src/MirrorAccount.sol#1139-1144):
+Reentrancy in MirrorAccount._closeAll(uint16) (src/MirrorAccount.sol#1182-1187):
 	External calls:
-	- closed = _closePositions(0,false,slippageBps) (src/MirrorAccount.sol#1142)
-		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
+	- closed = _closePositions(0,false,slippageBps) (src/MirrorAccount.sol#1185)
+		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
 	Event emitted after the call(s):
-	- ClosedAll(slippageBps,closed) (src/MirrorAccount.sol#1143)
-Reentrancy in MirrorAccount._closeMarket(uint32,uint16) (src/MirrorAccount.sol#1146-1154):
+	- ClosedAll(slippageBps,closed) (src/MirrorAccount.sol#1186)
+Reentrancy in MirrorAccount._closeMarket(uint32,uint16) (src/MirrorAccount.sol#1189-1197):
 	External calls:
-	- after_ = _closeOne(perpId,acct,slippageBps) (src/MirrorAccount.sol#1152)
-		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
+	- after_ = _closeOne(perpId,acct,slippageBps) (src/MirrorAccount.sol#1195)
+		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
 	Event emitted after the call(s):
-	- MarketClosed(perpId,slippageBps,pos.lotLNS,after_) (src/MirrorAccount.sol#1153)
-Reentrancy in MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#456-530):
+	- MarketClosed(perpId,slippageBps,pos.lotLNS,after_) (src/MirrorAccount.sol#1196)
+Reentrancy in MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#464-541):
 	External calls:
-	- _execTracked(o.perpId,o.orderType,o.lotLNS,o.pricePNS,o.leverageHdths,o.maxMatches,o.leaderAccountId) (src/MirrorAccount.sol#492-494)
-		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
-	- _execTracked(o.perpId,o.orderType,o.lotLNS,o.pricePNS,0,o.maxMatches,o.leaderAccountId) (src/MirrorAccount.sol#492-494)
-		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
+	- _execTracked(o.perpId,o.orderType,o.lotLNS,o.pricePNS,o.leverageHdths,o.maxMatches,o.leaderAccountId) (src/MirrorAccount.sol#503-505)
+		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
+	- _execTracked(o.perpId,o.orderType,o.lotLNS,o.pricePNS,0,o.maxMatches,o.leaderAccountId) (src/MirrorAccount.sol#503-505)
+		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
 	Event emitted after the call(s):
-	- Mirrored(actor,o.leaderAccountId,o.perpId,o.orderType,o.lotLNS,o.pricePNS,o.leverageHdths,before.lotLNS,aft.lotLNS,o.leaderRef,_proof(o,before,aft,mark,leaderEntry,orderSide,opening)) (src/MirrorAccount.sol#516-528)
-	- Mirrored(actor,o.leaderAccountId,o.perpId,o.orderType,o.lotLNS,o.pricePNS,0,before.lotLNS,aft.lotLNS,o.leaderRef,_proof(o,before,aft,mark,leaderEntry,orderSide,opening)) (src/MirrorAccount.sol#516-528)
-Reentrancy in MirrorAccount._deposit(address,uint256) (src/MirrorAccount.sol#880-900):
+	- Mirrored(actor,o.leaderAccountId,o.perpId,o.orderType,o.lotLNS,o.pricePNS,o.leverageHdths,before.lotLNS,aft.lotLNS,o.leaderRef,_proof(o,before,aft,mark,leaderEntry,orderSide,opening)) (src/MirrorAccount.sol#527-539)
+	- Mirrored(actor,o.leaderAccountId,o.perpId,o.orderType,o.lotLNS,o.pricePNS,0,before.lotLNS,aft.lotLNS,o.leaderRef,_proof(o,before,aft,mark,leaderEntry,orderSide,opening)) (src/MirrorAccount.sol#527-539)
+Reentrancy in MirrorAccount._deposit(address,uint256) (src/MirrorAccount.sol#891-911):
 	External calls:
-	- id = EXCHANGE.createAccount(amount) (src/MirrorAccount.sol#889)
+	- id = EXCHANGE.createAccount(amount) (src/MirrorAccount.sol#900)
 	Event emitted after the call(s):
-	- PerplAccountCreated(id) (src/MirrorAccount.sol#891)
-Reentrancy in MirrorAccount._deposit(address,uint256) (src/MirrorAccount.sol#880-900):
+	- PerplAccountCreated(id) (src/MirrorAccount.sol#902)
+Reentrancy in MirrorAccount._deposit(address,uint256) (src/MirrorAccount.sol#891-911):
 	External calls:
-	- id = EXCHANGE.createAccount(amount) (src/MirrorAccount.sol#889)
-	- EXCHANGE.depositCollateral(amount) (src/MirrorAccount.sol#893)
+	- id = EXCHANGE.createAccount(amount) (src/MirrorAccount.sol#900)
+	- EXCHANGE.depositCollateral(amount) (src/MirrorAccount.sol#904)
 	Event emitted after the call(s):
-	- Deposited(from,amount,wouldBe) (src/MirrorAccount.sol#899)
-Reentrancy in MirrorAccount._exchangeCall(bytes) (src/MirrorAccount.sol#1210-1215):
+	- Deposited(from,amount,wouldBe) (src/MirrorAccount.sol#910)
+Reentrancy in MirrorAccount._exchangeCall(bytes) (src/MirrorAccount.sol#1253-1258):
 	External calls:
-	- (ok,result) = address(EXCHANGE).call(data) (src/MirrorAccount.sol#1212)
+	- (ok,result) = address(EXCHANGE).call(data) (src/MirrorAccount.sol#1255)
 	Event emitted after the call(s):
-	- ExchangeCalled(data,result) (src/MirrorAccount.sol#1214)
-Reentrancy in MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[]) (src/MirrorAccount.sol#1111-1120):
+	- ExchangeCalled(data,result) (src/MirrorAccount.sol#1257)
+Reentrancy in MirrorAccount._follow(MirrorAccount.Policy,MirrorAccount.MirrorOrder[]) (src/MirrorAccount.sol#1141-1154):
 	External calls:
-	- executed = _matchNow(matches) (src/MirrorAccount.sol#1114)
-		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1315-1318)
-		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1320)
+	- executed = _matchNow(matches) (src/MirrorAccount.sol#1148)
+		- EXCHANGE.execOrderV2(d,abi.encode(ORDER_EXTENSION_VERSION,abi.encode(uint256(BUILDER_ID),uint256(BUILDER_FEE_PER_100K)))) (src/MirrorAccount.sol#1358-1361)
+		- EXCHANGE.execOrder(d) (src/MirrorAccount.sol#1363)
 	Event emitted after the call(s):
-	- Followed(matches.length,n) (src/MirrorAccount.sol#1119)
-Reentrancy in MirrorAccount._withdraw(uint256) (src/MirrorAccount.sol#1193-1208):
+	- Followed(matches.length,n) (src/MirrorAccount.sol#1153)
+Reentrancy in MirrorAccount._withdraw(uint256) (src/MirrorAccount.sol#1236-1251):
 	External calls:
-	- EXCHANGE.withdrawCollateral(amount - idle) (src/MirrorAccount.sol#1196)
+	- EXCHANGE.withdrawCollateral(amount - idle) (src/MirrorAccount.sol#1239)
 	Event emitted after the call(s):
-	- Withdrawn(o,amount,nd) (src/MirrorAccount.sol#1207)
+	- Withdrawn(o,amount,nd) (src/MirrorAccount.sol#1250)
 Reentrancy in MirrorAccountFactory.createAccount(address,bytes32) (src/MirrorAccountFactory.sol#46-51):
 	External calls:
 	- account.initialize(owner) (src/MirrorAccountFactory.sol#48)
 	Event emitted after the call(s):
 	- AccountCreated(owner,address(account),salt) (src/MirrorAccountFactory.sol#50)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-4
-
+INFO:Detectors:
 Detector: timestamp
-MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool) (src/MirrorAccount.sol#561-653) uses timestamp for comparisons
+MirrorAccount._checkOpen(MirrorAccount.MirrorOrder,IPerplExchange.PositionInfoV2,uint256,bool) (src/MirrorAccount.sol#572-664) uses timestamp for comparisons
 	Dangerous comparisons:
-	- block.timestamp > expiry (src/MirrorAccount.sol#570)
-MirrorAccount._trustedMark(uint256) (src/MirrorAccount.sol#800-811) uses timestamp for comparisons
+	- block.timestamp > expiry (src/MirrorAccount.sol#581)
+MirrorAccount._trustedMark(uint256) (src/MirrorAccount.sol#811-822) uses timestamp for comparisons
 	Dangerous comparisons:
-	- oracleFresh = ! info.ignOracle && oracle != 0 && info.oracleTimestampSec + info.refPriceMaxAgeSec >= block.timestamp (src/MirrorAccount.sol#805)
-MirrorAccount.depositWithPermit(uint256,uint256,uint8,bytes32,bytes32) (src/MirrorAccount.sol#853-872) uses timestamp for comparisons
+	- oracleFresh = ! info.ignOracle && oracle != 0 && info.oracleTimestampSec + info.refPriceMaxAgeSec >= block.timestamp (src/MirrorAccount.sol#816)
+MirrorAccount.depositWithPermit(uint256,uint256,uint8,bytes32,bytes32) (src/MirrorAccount.sol#864-883) uses timestamp for comparisons
 	Dangerous comparisons:
-	- n == 0 || block.timestamp > deadline (src/MirrorAccount.sol#858)
-MirrorAccount.execute(MirrorAccount.Action,bytes) (src/MirrorAccount.sol#960-996) uses timestamp for comparisons
+	- n == 0 || block.timestamp > deadline (src/MirrorAccount.sol#869)
+MirrorAccount.execute(MirrorAccount.Action,bytes) (src/MirrorAccount.sol#976-1015) uses timestamp for comparisons
 	Dangerous comparisons:
-	- block.timestamp > a.deadline (src/MirrorAccount.sol#961)
-MirrorAccount._setPolicy(MirrorAccount.Policy) (src/MirrorAccount.sol#1003-1088) uses timestamp for comparisons
+	- block.timestamp > a.deadline (src/MirrorAccount.sol#977)
+MirrorAccount._setPolicy(MirrorAccount.Policy) (src/MirrorAccount.sol#1022-1118) uses timestamp for comparisons
 	Dangerous comparisons:
-	- p.expiry <= block.timestamp (src/MirrorAccount.sol#1010)
+	- p.expiry <= block.timestamp (src/MirrorAccount.sol#1029)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#block-timestamp
-
+INFO:Detectors:
 Detector: cyclomatic-complexity
-MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#456-530) has a high cyclomatic complexity (15).
-MirrorAccount.execute(MirrorAccount.Action,bytes) (src/MirrorAccount.sol#960-996) has a high cyclomatic complexity (14).
-MirrorAccount._setPolicy(MirrorAccount.Policy) (src/MirrorAccount.sol#1003-1088) has a high cyclomatic complexity (26).
+MirrorAccount._copy(MirrorAccount.MirrorOrder,address) (src/MirrorAccount.sol#464-541) has a high cyclomatic complexity (16).
+MirrorAccount.execute(MirrorAccount.Action,bytes) (src/MirrorAccount.sol#976-1015) has a high cyclomatic complexity (15).
+MirrorAccount._setPolicy(MirrorAccount.Policy) (src/MirrorAccount.sol#1022-1118) has a high cyclomatic complexity (31).
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#cyclomatic-complexity
-
+INFO:Detectors:
 Detector: low-level-calls
-Low level call in MirrorAccount._exchangeCall(bytes) (src/MirrorAccount.sol#1210-1215):
-	- (ok,result) = address(EXCHANGE).call(data) (src/MirrorAccount.sol#1212)
+Low level call in MirrorAccount._exchangeCall(bytes) (src/MirrorAccount.sol#1253-1258):
+	- (ok,result) = address(EXCHANGE).call(data) (src/MirrorAccount.sol#1255)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#low-level-calls
-
+INFO:Detectors:
 Detector: naming-convention
-Variable MirrorAccount.EXCHANGE (src/MirrorAccount.sol#242) is not in mixedCase
-Variable MirrorAccount.COLLATERAL (src/MirrorAccount.sol#243) is not in mixedCase
-Variable MirrorAccount.KEEPERS (src/MirrorAccount.sol#244) is not in mixedCase
-Variable MirrorAccount.FACTORY (src/MirrorAccount.sol#245) is not in mixedCase
-Variable MirrorAccount.DEPOSIT_CAP (src/MirrorAccount.sol#247) is not in mixedCase
-Variable MirrorAccount.COLLATERAL_DECIMALS (src/MirrorAccount.sol#248) is not in mixedCase
-Variable MirrorAccount.BUILDER_ID (src/MirrorAccount.sol#251) is not in mixedCase
-Variable MirrorAccount.BUILDER_FEE_PER_100K (src/MirrorAccount.sol#253) is not in mixedCase
+Variable MirrorAccount.EXCHANGE (src/MirrorAccount.sol#244) is not in mixedCase
+Variable MirrorAccount.COLLATERAL (src/MirrorAccount.sol#245) is not in mixedCase
+Variable MirrorAccount.KEEPERS (src/MirrorAccount.sol#246) is not in mixedCase
+Variable MirrorAccount.FACTORY (src/MirrorAccount.sol#247) is not in mixedCase
+Variable MirrorAccount.DEPOSIT_CAP (src/MirrorAccount.sol#249) is not in mixedCase
+Variable MirrorAccount.COLLATERAL_DECIMALS (src/MirrorAccount.sol#250) is not in mixedCase
+Variable MirrorAccount.BUILDER_ID (src/MirrorAccount.sol#253) is not in mixedCase
+Variable MirrorAccount.BUILDER_FEE_PER_100K (src/MirrorAccount.sol#255) is not in mixedCase
 Function IAuthorizedToken.DOMAIN_SEPARATOR() (src/interfaces/IAuthorizedToken.sol#28) is not in mixedCase
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#conformance-to-solidity-naming-conventions
-. analyzed (32 contracts with 102 detectors), 135 result(s) found
+INFO:Slither:. analyzed (32 contracts with 102 detectors), 137 result(s) found

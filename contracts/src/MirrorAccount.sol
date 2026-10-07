@@ -81,6 +81,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
     uint8 public constant ACTION_MATCH_NOW = 8;
     uint8 public constant ACTION_SET_LEVELS = 9;
     uint8 public constant ACTION_CLOSE_MARKET = 10;
+    uint8 public constant ACTION_SET_LEADER_DETACHED = 11;
 
     /// leaderRef recorded on orders the owner places with match-now, so indexers can tell them apart.
     bytes32 public constant MATCH_NOW_REF = keccak256("MIRROR_MATCH_NOW");
@@ -206,7 +207,8 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         LeaderLossStop,
         MarketHalted,
         CloseBelowTarget,
-        BuilderFeeTooHigh
+        BuilderFeeTooHigh,
+        LeaderDetached
     }
 
     enum StopKind {
@@ -288,6 +290,11 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
     mapping(uint32 leaderAccountId => int256) public leaderRealizedCNS;
     /// Set when a leader's loss stop is hit; cleared when the owner sets a policy again.
     mapping(uint32 leaderAccountId => bool) public leaderStopped;
+    /// "Stop following, keep my positions": set by the owner for one leader. While set, every copy naming that
+    /// leader is refused, opens and closes alike, keeper or match-now; the positions stay held for the leader so
+    /// its budget, loss stop and the owner's levels, account stop, closeMarket and closeAll keep working.
+    /// Cleared by the owner, by follow() naming the leader again, or by removing the leader from the policy.
+    mapping(uint32 leaderAccountId => bool) public leaderDetached;
     mapping(uint256 perpId => Level) internal _levels;
     /// Permits accepted after a front-runner had already submitted them (each is honoured once).
     mapping(bytes32 permitDigest => bool) public frontRunPermitUsed;
@@ -353,6 +360,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         uint256 positionsClosed
     );
     event LeaderStopped(uint32 indexed leaderAccountId, int256 pnlCNS, uint256 limitCNS);
+    event LeaderDetachedSet(uint32 indexed leaderAccountId, bool detached);
     event ExchangeCalled(bytes data, bytes result);
     event Swept(address indexed token, uint256 amount);
     event ActionExecuted(uint8 indexed kind, uint256 nonce);
@@ -467,7 +475,10 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         uint256 limit;
         uint256 actual;
         uint256 leaderEntry;
-        if (opening) {
+        if (leaderDetached[o.leaderAccountId]) {
+            reason = BlockReason.LeaderDetached;
+            actual = o.leaderAccountId;
+        } else if (opening) {
             (reason, limit, actual, leaderEntry) = _checkOpen(o, before, mark, markValid);
         } else {
             (reason, limit, actual) = _checkClose(o, before, mark, markValid);
@@ -933,6 +944,11 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         _setPaused(p);
     }
 
+    /// @notice Stop (or resume) copying one leader while keeping the positions held for it. See {leaderDetached}.
+    function setLeaderDetached(uint32 leaderAccountId, bool detached) external onlyOwner nonReentrant {
+        _setLeaderDetached(leaderAccountId, detached);
+    }
+
     function closeAll(uint16 slippageBps) external onlyOwner nonReentrant {
         _closeAll(slippageBps);
     }
@@ -989,6 +1005,9 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         } else if (a.kind == ACTION_CLOSE_MARKET) {
             (uint32 perpId, uint16 slip) = abi.decode(a.data, (uint32, uint16));
             _closeMarket(perpId, slip);
+        } else if (a.kind == ACTION_SET_LEADER_DETACHED) {
+            (uint32 leader, bool detached) = abi.decode(a.data, (uint32, bool));
+            _setLeaderDetached(leader, detached);
         } else {
             revert UnknownAction(a.kind);
         }
@@ -1038,6 +1057,17 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
                 leaderStopped[l.accountId] = false;
             }
             _leaders.push(l);
+        }
+        // A leader removed from the policy is no longer detached (its copies are refused as not allowed anyway),
+        // so adding it back later starts clean.
+        for (uint256 j; j < old.length; ++j) {
+            uint32 id = old[j].accountId;
+            if (!leaderDetached[id]) continue;
+            bool kept;
+            for (uint256 i; i < p.leaders.length; ++i) {
+                if (p.leaders[i].accountId == id) kept = true;
+            }
+            if (!kept) _setLeaderDetached(id, false);
         }
 
         uint256 oldLen = _marketIds.length;
@@ -1111,6 +1141,10 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
     function _follow(Policy memory p, MirrorOrder[] memory matches) internal returns (bool[] memory executed) {
         _setPolicy(p);
         if (paused) _setPaused(false);
+        // Following is an explicit choice to copy these leaders again.
+        for (uint256 i; i < p.leaders.length; ++i) {
+            if (leaderDetached[p.leaders[i].accountId]) _setLeaderDetached(p.leaders[i].accountId, false);
+        }
         executed = _matchNow(matches);
         uint256 n;
         for (uint256 i; i < executed.length; ++i) {
@@ -1133,6 +1167,15 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
     function _setPaused(bool p) internal {
         paused = p;
         emit PausedSet(p);
+    }
+
+    function _setLeaderDetached(uint32 leaderAccountId, bool detached) internal {
+        if (detached) {
+            (bool allowed,) = _leaderRule(leaderAccountId);
+            if (!allowed) revert InvalidPolicy("leader");
+        }
+        leaderDetached[leaderAccountId] = detached;
+        emit LeaderDetachedSet(leaderAccountId, detached);
     }
 
     /// @dev Pauses copying and closes every open position with IOC orders bounded at mark +/- slippageBps.
