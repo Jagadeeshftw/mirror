@@ -24,6 +24,9 @@ All four transactions were sent by the wallet owner. Every gas limit after the f
 
 | Date (UTC) | Direction | Asset | Amount | What | Transaction |
 |---|---|---|---|---|---|
-| 2026-10-07 | In | MON | 20 | Testnet faucet | — |
+| 2026-10-07 | In | MON | 20 | Testnet faucet, to the ops wallet | — |
+| 2026-10-07 | In (test funds) | test AUSD | 200.000000 | From Perpl (Arich), to the ops wallet `0x299E…e82C`, as tokens in the wallet. For the testnet demo leader. The 2,000 tester pool we asked for was **not** included. | [0xed2d2361…a65cc0](https://testnet.monadvision.com/tx/0xed2d2361ced9e1b7abbcca0872f300d2b82e8bc43bd0802640250ca5a0a65cc0) |
+| 2026-10-07 | In (test funds) | test AUSD | 150.000000 | From Perpl, to the demo follower's owner `0x3aBF…6C78`, as tokens in the wallet | [0x54c511fe…df180a3](https://testnet.monadvision.com/tx/0x54c511fef9d5bfe4e522ce483cd4fa7cd3af6e882ff6adf77208588c3df180a3) |
+| 2026-10-07 | In (test funds) | test AUSD | 150.000000 | From Perpl, to the test user's owner `0x1bbD…040D`, as tokens in the wallet | [0x86024d47…d5eb617f9](https://testnet.monadvision.com/tx/0x86024d4757f17c365b20dfcd0a9eb6c399bde44e130e66194900d79d5eb617f9) |
 
-The first testnet transaction from the ops wallet must be the contract deployment, so the computed MirrorAccount addresses stay valid.
+All three Perpl transfers were sent from `0x9253…292A`. Test funds have no value. The ops wallet's testnet nonce is still 0: the contract deployment stays its first testnet transaction, so the computed MirrorAccount addresses stay valid.

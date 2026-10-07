@@ -15,7 +15,9 @@ Mirror is designed so that the worst a compromised keeper or backend can do is p
 | Anyone | Any address | Call `triggerLevel`, `triggerAccountStop` and `triggerLeaderStop`, which only succeed when the stop's condition is true onchain and only send reduce-only closes. |
 | Registry owner | Mirror team | Add or remove keepers. No access to any account's funds or policy. |
 
-There is no admin, no upgrade path and no fee path. Accounts are non-upgradeable EIP-1167 clones of one implementation.
+There is no admin and no upgrade path, and no Mirror contract has a code path that sends collateral to anyone but you. Accounts are non-upgradeable EIP-1167 clones of one implementation.
+
+Mirror's fee is a Perpl builder fee: 0.02% of the size a copy opens, charged by Perpl's exchange on the fill, like its trading fee, never transferred by Mirror's contracts. Your contract attaches it only to opening orders and refuses any copy whose fee is above the maximum you signed. See [Fees](/docs/fees).
 
 ## The keeper can trade, never withdraw
 

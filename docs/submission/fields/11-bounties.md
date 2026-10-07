@@ -2,25 +2,24 @@
 
 ### Q1. Describe the core features of your trading app.
 <!--answer-->
-Mirror is a copy-trading app for Perpl. A follower picks a leader, sets limits once, and every leader trade is copied into the follower's own contract account, with the limits checked onchain on every order.
+Mirror is a copy-trading app for Perpl. A follower picks a leader, signs limits once with a passkey, and every leader trade is copied into the follower's own contract account, with the limits checked onchain on every order.
 
 How the three integrations work together:
-- Mera is the account. One passkey prompt creates the follower's key, which owns their MirrorAccount and signs every owner action.
-- AUSD is the balance. The follower's AUSD, which is Perpl's collateral, sits in their own MirrorAccount.
-- Perpl is the venue. Every copy is an immediate-or-cancel order on Perpl's onchain order book.
+- Mera is the account. One passkey prompt creates the follower's key, which owns their MirrorAccount and signs every owner action; a second PRF namespace of the same passkey derives the key that decrypts alerts.
+- AUSD is the balance. The follower's AUSD, Perpl's collateral, sits in their own MirrorAccount and is shown on every screen; deposits are gasless permits.
+- Perpl is the venue. Every copy is an immediate-or-cancel order on Perpl's onchain order book, placed by the follower's contract.
 
-Built and tested (91 tests, including fork tests against live Perpl and AUSD on Monad mainnet):
-- per-follower contract that owns its own Perpl account
-- onchain policy: leaders, sizing ratio, max leverage, allowed markets, max notional per market, max slippage, daily loss stop, drawdown stop, expiry
-- "blocked by your rule" recorded as an onchain event
-- keeper can trade but never withdraw
-- gasless AUSD deposits (permit, ERC-3009) and gasless signed owner actions (pause, close all, withdraw)
-- match now: the follower's own passkey-signed follow places a Perpl order at once, bringing the account to the leader's current position at the sizing ratio, under the same onchain checks (fork-tested on the live book)
+What makes it more than a trading front end:
+- The follower's own contract enforces their rules on every copy: per-leader ratio, budget and loss stop for up to four leaders, max leverage, markets, notional caps, slippage, an entry filter against the leader's onchain entry, loss stops, expiry.
+- A rule hit is recorded onchain as a Blocked event with the numbers; every copy carries its price proof (leader fill, your fill, deviation, fee).
+- Stop-loss and take-profit levels the owner signs can be executed by anyone once true onchain, so stops work even if Mirror is down.
+- Watch mode: real copies land on a labelled team-run account before a new user deposits; "Run demo trade" makes one happen on demand.
+- Match now: the follower's signed follow places the Perpl order at once.
+- Android app and a web app for iPhone and laptop, the same passkey account.
 
-PENDING:
-- the Android app: passkey onboarding, AUSD balance on every screen, leaderboard, leader profiles, follow sheet, live copy feed, positions and PnL
-- mainnet deployment
-- the copy engine
+Business model: Mirror is Perpl builder 26, 0.02% of the size a copy opens, nothing on closes or stops; confirmed by Perpl on 7 Oct 2026, live once deployed. The fee is shown before the passkey prompt and on every copy, and the follower's contract caps it at the maximum they sign.
+
+Tested: 144 contract tests including fork tests against live Perpl and AUSD; the full stack passes 21 of 21 checks on a local network running Perpl's real exchange.
 <!--/answer-->
 
 ### Q2. Submit a demo video (up to 2 mins) showing a user logging in via passkey, funding or viewing an AUSD balance, and placing at least one trade on Perpl in your app
@@ -35,18 +34,18 @@ PENDING. Needs the app and the mainnet contracts. The planned cut shows exactly 
 
 ### Q1. Submit a demo video (up to 2 mins) showing your trading bot or automation system on Perpl with demonstrated real on-chain activity.
 <!--answer-->
-PENDING (video). The copy engine is built and passes an end-to-end run on a local fork of Monad mainnet; it is not deployed yet. The video will show:
-- a leader fill arriving
-- the policy pre-check
-- the copied order landing on Perpl mainnet, with latency and tx links
-- a copy blocked by a rule
+PENDING (video). The copy engine is built and tested (mainnet fork, and a local network running Perpl's real exchange); it is not deployed yet. The video will show:
+- a leader fill arriving at Monad's Proposed stage
+- the policy pre-check and the thin-book check against Perpl's order book
+- the copied order landing on Perpl, attributed to builder 26 (0.02% on the opening size, shown in Perpl's fill event and in Mirror's proof), with latency and tx links
+- a copy blocked by a rule, and a stop executed once it is true onchain
 <!--/answer-->
 
 ### Q2. Link to your trading bot or automation system on Perpl with demonstrated real on-chain activity.
 <!--answer-->
 PENDING (link). Planned: the public stats page listing every copy the engine has executed, with MonadVision links and the keeper address.
 
-Built: the engine uses Perpl's public REST context (market config, minimum sizes) and WebSocket market data (marks, best bid and ask, recent trades) to price, size and pre-check every copy and every match-now quote, and exposes them at /v1/markets. It executes onchain through each follower's MirrorAccount.
+Built: the engine uses Perpl's public REST context (market config, minimum sizes) and WebSocket market data (marks, best bid and ask, recent trades) to price, size and pre-check every copy and every match-now quote, and exposes them at /v1/markets. It executes onchain through each follower's MirrorAccount, attributing every opening order to Mirror's builder code (builder 26, 0.02% of opening size; confirmed by Perpl on 7 Oct 2026), and every closing order without one.
 <!--/answer-->
 
 ## Monad Foundation: Best Mera-Powered UX on Monad

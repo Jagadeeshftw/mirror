@@ -41,8 +41,7 @@ From onchain Perpl data indexed by Envio: PnL, maximum drawdown, win rate and co
 
 ## Does Mirror charge fees?
 
-No. Perpl's own trading fees apply to every order. Mirror has applied for a Perpl builder code, but Perpl's docs say builder fees apply to orders routed through Perpl's API, and Mirror's copies are placed onchain; Perpl is checking whether an onchain order can carry one. Whatever the answer, a fee will never be taken out of your MirrorAccount: the contract can only send collateral to you.
-
+Yes: 0.02% of the size a copy opens or adds, and nothing on closes or stops. Mirror is Perpl builder 26; Perpl charges the fee on the opening fill and pays it to Mirror. Your own contract caps it at the maximum you sign, and Mirror's contracts never transfer it: they only ever send collateral to you. Perpl's trading fees apply to every order as usual. Details: [Fees](/docs/fees).
 ## Is it audited?
 
 Not yet. That is why deposits are capped. Copy trading leveraged perpetuals is risky and you can lose what you deposit.

@@ -11,6 +11,7 @@ Requirement text **(secondhand)**: "Build a production-ready trading bot or auto
 | 3 | Production-ready | Parallel submission, confirmation tracking, retries, monitoring dashboard, runbook | todo |
 | 4 | Real trades on Perpl | Mainnet tx hashes from the engine | todo |
 | 5 | A public link showing the bot's real onchain activity (official wording) | Public stats page listing engine copies with MonadVision links + keeper address | todo |
+| Builder code | Mirror is builder 26; onchain attribution via `execOrderV2` confirmed by Perpl (Arich, 7 Oct 2026); 0.02% on opening size only, capped by the follower's signed maximum, shown before signing and on every copy (Perpl's condition: fees explicitly visible to users) | Fork test `test_fork_builderFeeOnLivePerpl`: builder 26 charged 168 CNS on a copied open, matching Mirror's proof; close charged 0 | done (contracts); UI in progress |
 | Eligibility | Does onchain execution through MirrorAccount (data via the API) count as "use of the API"? | **Confirmed by Perpl staff (Arich) in Perpl's Discord, 7 Oct 2026:** reading Perpl's REST and WebSocket API and placing orders through the Exchange contract counts. | confirmed |
 
 ## Asked for at submission (official, from the bounty page, read 6 Oct 2026)

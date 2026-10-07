@@ -58,6 +58,14 @@ Test names refer to `contracts/test` and `engine/test` in the [repository](https
 - **Permits:** a front-run permit is honoured only if it is exactly your permit for that account and amount, and only once. A junk signature can't pull in an allowance you left standing.
 - Tests: `test_execute_rejectsReplayWrongSignerAndExpiry`, `test_depositWithPermit_junkSignatureCannotUseStandingAllowance`.
 
+**8a. Mirror raises its fee, routes it elsewhere, or charges it on closes.**
+- **Contract:**
+  - The builder id (26) and the fee (0.02%) are fixed in the contract when it is deployed. A keeper order has no builder field, so it can't choose either.
+  - Each copy is checked against the maximum builder fee you signed. Above it, the copy is refused (`BuilderFeeTooHigh`) with both numbers.
+  - Only opening orders carry the builder attribution. Keeper closes, stops, close a market and close all go to Perpl without it. Perpl would charge an attributed order's fee on a close too, so this is enforced by your contract, not left to Perpl.
+- **Worst case:** your signed maximum times the notional of each opening fill. With the default that is 0.02% of what each copy opens. The fee is charged by Perpl's exchange on the fill; Mirror's contracts never transfer collateral to anyone but you.
+- Tests: `BuilderFeeTest`, `invariant_builderFeeOnlyOnOpensAtTheFixedRate`, `test_fork_builderFeeOnLivePerpl`.
+
 ## Market and oracle tricks
 
 **9. Someone pushes the price to set off your stops.**

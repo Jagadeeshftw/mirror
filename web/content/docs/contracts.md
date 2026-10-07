@@ -164,6 +164,7 @@ struct CopyProof {
 | 18 | `LeaderLossStop` | loss limit / loss (AUSD, 6 decimals); 0 / 0 if the leader was already stopped |
 | 19 | `MarketHalted` | 0 / perpId |
 | 20 | `CloseBelowTarget` | target lots / lots after the close |
+| 21 | `BuilderFeeTooHigh` | your signed `maxBuilderFeePer100K` / the account's fixed builder fee (20) |
 
 ## Action kinds
 
@@ -196,3 +197,12 @@ Action(uint8 kind,bytes data,uint256 nonce,uint256 deadline)
 ```
 
 The struct hash is `keccak256(abi.encode(ACTION_TYPEHASH, kind, keccak256(data), nonce, deadline))`. `nonce` must equal the account's current `actionNonce()` and increments on use; `deadline` is a unix timestamp after which the signature is rejected (`ActionExpired`). `actionDigest(action)` returns the digest, so clients can show exactly what is being signed.
+
+## Builder attribution
+
+- `BUILDER_ID` (26) and `BUILDER_FEE_PER_100K` (20, i.e. 0.02%) are immutables, passed by `MirrorAccountFactory` at deployment and identical for every account.
+- **Opening orders** (keeper copies and match now) go to Perpl's `execOrderV2` with the order extension `abi.encode(uint16 1, abi.encode(uint256 26, uint256 20))`, the format of Perpl's dex-sdk `BuilderAttribution::encode`.
+- **Every reducing order** goes to `execOrder` with no extension: keeper closes, stops, close a market, close all.
+- Perpl charges the builder fee on the fill and reports it in `TakerOrderFilledV2.builderFeeCNS`. Mirror's `Mirrored` proof repeats it as `builderFeeCNS`.
+- An opening copy is refused with `BuilderFeeTooHigh` when the fixed fee is above the owner's signed `maxBuilderFeePer100K`.
+- See [Fees](/docs/fees).

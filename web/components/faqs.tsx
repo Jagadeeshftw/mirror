@@ -37,13 +37,17 @@ const QUESTIONS = [
       "Automatically, from onchain Perpl data: PnL, drawdown, win rate and consistency. Nansen wallet intelligence (coming) adds labels like Smart Trader or Fund and cross-venue history.",
   },
   {
+    question: `What does ${BRAND} charge?`,
+    answer: `0.02% of the size a copy opens or adds, and nothing on closes or stops. ${BRAND} is Perpl builder 26: Perpl charges the fee on the opening fill and pays it to ${BRAND}, like its own trading fee. Your contract caps it at the maximum you sign, and ${BRAND}'s contracts never transfer it. Every copy shows the fee it paid.`,
+  },
+  {
     question: "Is the contract audited?",
     answer: `Not yet. That's why deposits are capped at ${BETA_DEPOSIT_CAP} per account during the beta. Copy trading perpetuals is risky and you can lose what you deposit.`,
   },
   {
-    question: "Why Android only?",
+    question: "Which devices can I use?",
     answer:
-      "We're starting with an Android APK so we can ship and iterate quickly during the beta. Other platforms will follow.",
+      "Android, with the app (an APK during the beta), and iPhone or a laptop with the web app at /app. It's the same passkey account on every device.",
   },
 ];
 

@@ -16,6 +16,8 @@ Each follower gets a **MirrorAccount**: a non-upgradeable contract that owns its
 
 A keeper watches leader fills on Perpl and submits the copies. It can trade through the account but can never withdraw: no code path sends collateral to anyone but the owner. A copy can never exceed the sizing ratio times the leader's current position on the same side. When a copy would break a rule the contract does not trade and emits a `Blocked` event, so "blocked by your rule" has its own transaction. **Match now** lets the follower's own signed follow open the leader's current position at once, under the same checks.
 
+Mirror's fee: Mirror is Perpl builder 26 and charges 0.02% of the size a copy opens or adds, nothing on closes or stops (confirmed by Perpl on 7 Oct 2026; live once deployed). Perpl's exchange charges it on the fill; Mirror's contracts never transfer it, and each follower's contract refuses any copy whose fee is above the maximum they signed. See https://mirror.0xo.in/docs/fees.
+
 The owner is the follower's passkey (Mera, WebAuthn PRF): one prompt, no seed phrase, no extension. Owner actions are EIP-712 signatures relayed by anyone, and deposits use AUSD permit or ERC-3009, so the follower never needs MON.
 
 ## Status (7 Oct 2026)

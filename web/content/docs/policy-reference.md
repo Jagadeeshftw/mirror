@@ -38,6 +38,7 @@ struct Policy {
 | `dailyLossBps` | basis points | 0 to 9,999 (0 = off) | Stop opening once equity is this far below the day's starting equity (UTC day). |
 | `drawdownBps` | basis points | 0 to 9,999 (0 = off) | Stop opening once equity is this far below its high-water mark. |
 | `flattenOnStop` | bool | | When true, anyone may close positions once the daily loss, drawdown or a leader's loss stop is true onchain. See [Stops anyone can trigger](/docs/safety-model#stops-anyone-can-trigger). |
+| `maxBuilderFeePer100K` | per 100,000 of opening notional | 0 to 1,000 (the app sets 20) | Highest builder fee you accept. Mirror's fixed fee is 20 (0.02%); an opening copy is refused (`BuilderFeeTooHigh`) if it is above this. Closes and stops never carry a fee. See [Fees](/docs/fees). |
 | `stopSlippageBps` | basis points | 1 to 2,000 (0.01% to 20%) | Price bound, from mark, of the closes sent by a triggered account or leader stop. |
 | `expiry` | unix seconds | in the future | After this time the account only reduces exposure. |
 

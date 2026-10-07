@@ -27,7 +27,7 @@ For: technical judges. It shows the whole loop and the onchain proof behind each
 | 6 | 1:25 | Phone: Follow sheet | Entry filter 1%, leverage cap 3x, take-profit and stop-loss, "anyone can execute my stops" on. Deposit 20 AUSD with a permit. Follow with match now | "Your limits live in your own contract, checked on every order." | Policy tx and the match-now fills | [testnet] |
 | 7 | 1:50 | Laptop: web app, two leaders | The same account on a laptop: split the budget between two leaders, each with its own loss stop | "One deposit, two leaders, separate budgets and stops." | Per-leader margin and PnL from `leaderBook` | [testnet] |
 | 8 | 2:10 | Laptop: terminal | Kill the engine. Move the mark past the stop on the localnet; a stranger's wallet executes the stop | "If our servers go down, your stops still work. Anyone can execute them, and only when they're true onchain." | `StopTriggered` event, position closed, the caller received nothing | [ready] on the localnet; [testnet] for the cut |
-| 9 | 2:30 | Phone: Positions, withdraw | Close all and withdraw, gasless | "Only you can withdraw. The keeper can't." | Withdraw tx to the owner | [testnet] |
+| 9 | 2:30 | Phone: Positions, withdraw | Close all and withdraw, gasless; the copy detail shows the 0.02% builder fee paid on the open and none on the close | "Only you can withdraw. The keeper can't." | Withdraw tx to the owner | [testnet] |
 | 10 | 2:45 | Stats page | Copy quality from onchain events: deviation distribution, latency, blocks by reason, team-run excluded | "Every number here is recomputable from chain data." | Public stats URL | [testnet] |
 
 ---
@@ -45,9 +45,9 @@ For: VC and Monad judges. Founder and market readiness.
 | 5 | 1:05 | Stats page, copy quality | Every copy's quality is public and recomputable from chain data, which the incumbents can't offer. |
 | 6 | 1:20 | Why Monad: measured blocks ~300 ms, finality ~550 ms, checked copy ~0.4M gas | Copies land in about a second, cheaply enough to check every rule on every order. |
 | 7 | 1:35 | Real numbers only: testers, copies, leaders followed | Traction so far, stated plainly. |
-| 8 | 1:48 | Roadmap card | Next: audit, then raise the deposit cap; leader opt-in profiles. Business model: pending Perpl's answer on onchain builder codes. Never a fee out of follower collateral. |
+| 8 | 1:48 | Roadmap card | Business model: Perpl builder 26, 0.02% of the size copies open, nothing on closes, capped by each follower's own contract and shown on every copy. Next: audit, then raise the deposit cap; leader opt-in profiles. |
 
-The traction and business lines get filled in with real numbers on the day. Builder fees are mentioned only as pending.
+The traction line gets real numbers on the day. Revenue is described as the fee model only, until a fee has actually accrued onchain.
 
 ---
 
