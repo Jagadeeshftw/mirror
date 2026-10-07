@@ -79,6 +79,7 @@ export function buildServer(e: Engine, log: Logger) {
     const views = await e.market.views();
     return {
       chainId: e.cfg.chainId,
+      rpc: e.cfg.env.PUBLIC_RPC_URL ?? e.cfg.rpcUrl,
       explorerTx: e.cfg.explorerTx,
       explorerAddress: e.cfg.explorerAddress,
       contracts: { factory: e.cfg.factory ?? null, keeperRegistry: e.cfg.keeperRegistry ?? null, perplExchange: e.cfg.exchange, collateral: e.cfg.collateral, deployBlock: e.cfg.deployBlock ?? null },

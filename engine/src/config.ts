@@ -61,6 +61,8 @@ const EnvSchema = z.object({
   LOCALNET_ENV_PATH: z.string().optional(),
   SHARED_CONFIG_PATH: z.string().optional(),
   RPC_URL: z.string().url().optional(),
+  /** RPC URL handed to clients in /v1/config (e.g. http://10.0.2.2:8546 for Android emulators on a localnet). */
+  PUBLIC_RPC_URL: z.string().url().optional(),
   WS_RPC_URL: z.string().optional(),
   /** auto: monadLogs/monadNewHeads when the WS endpoint supports them, else standard eth_subscribe, else polling. */
   LOG_SUBSCRIPTION: z.enum(['auto', 'monad', 'standard', 'poll']).default('auto'),
