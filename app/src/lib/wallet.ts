@@ -13,6 +13,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { utf8ToBytes } from "@noble/hashes/utils.js";
 import { base64 } from "@scure/base";
 import Constants from "expo-constants";
+import { passkeyLabel } from "./passkeyLabel";
 import { Platform } from "react-native";
 import * as SecureStore from "./secureStore";
 import type { LocalAccount } from "viem";
@@ -113,6 +114,7 @@ export async function signOutDevice(): Promise<void> {
 }
 
 // ---------- ceremonies ----------
+
 export async function createAccount(deviceName?: string): Promise<StoredAccount> {
   let credentialId: string;
   let prfOutput: Uint8Array;
@@ -121,10 +123,11 @@ export async function createAccount(deviceName?: string): Promise<StoredAccount>
     ({ credentialId, prfOutput } = await devPrf(true));
     notifyPrf = (await devPrf(false, NS_NOTIFY)).prfOutput;
   } else {
+    const label = passkeyLabel(BRAND, new Date());
     const { result: created, second } = await withSecondSalt(NS_NOTIFY, () =>
       createPasskeyWithPrfOutput({
         rp: { id: RP_ID, name: BRAND },
-        user: { name: `${BRAND} account`, displayName: `${BRAND} account` },
+        user: { name: label, displayName: label },
         webAuthnClient,
       }),
     );

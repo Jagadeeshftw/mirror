@@ -12,7 +12,9 @@ devices/
     passkey_approve.py    -> standalone: wait for passkey sheet, tap Continue, emu finger touch 1
     prf_probe.py          -> scripted PRF probe (create / 2-namespace create / encrypt key / restore)
     flow.py               -> line-based flow runner used by run-e2e.sh
-    flows/mirror-full.flow-> full app flow (placeholder until testIDs land)
+    flows/stage-a.flow    -> full Group 1 flow on the localnet (run-stage-a-android.sh)
+    flows/mirror-full.flow-> outdated placeholder (pre-1.0 testIDs)
+    contact_sheet.py      -> index.html contact sheet from report.json
     flows/prf-probe.flow  -> harness smoke test against the probe app
     TESTIDS.md            -> testIDs the app must expose
   prf-probe/              -> Expo app (Mera 0.2.0) rpId mirror.0xo.in, package com.zeroxo.mirror
@@ -143,6 +145,29 @@ The `passkey` step handles the system side. It waits for the Credential Manager 
 Why not Maestro: Maestro was evaluated and not installed. Its flows cannot run `adb emu finger touch` in the middle of a flow, a sidecar would fight it for the single UiAutomation connection, and the CLI is about 330 MB on a nearly full disk. The adb + uiautomator harness needs only stdlib Python 3.9 and the SDK. Flow syntax is documented at the top of `e2e/flow.py`.
 
 The full flow is a placeholder until the app ships the testIDs in `e2e/TESTIDS.md`. Its signing steps (follow, close all, withdraw) send **testnet** transactions when someone runs it. The harness never does that by itself.
+
+## 5b. Stage A on the localnet (native app, real passkeys)
+
+```
+devices/run-stage-a-android.sh            # builds app/dist/mirror-1.0.0-stagea.apk if missing, then runs
+devices/run-stage-a-android.sh --build    # force a rebuild first
+```
+
+- APK: `app/scripts/build-apk.sh --stage-a` is a release build (real Mera passkeys, rpId `mirror.0xo.in`, release
+  keystore so assetlinks matches, no dev tools / simulator) with API base `http://10.0.2.2:8828`. `MIRROR_LOCAL_CLEARTEXT=1`
+  adds `withLocalCleartext` (cleartext only to 10.0.2.2 / localhost / 127.0.0.1); normal release builds never set it.
+- The script starts the localnet (anvil :8546, faucet :8547), the engine on :8828 (`E2E_ENGINE_PORT`; must match the APK)
+  with `PUBLIC_RPC_URL=http://10.0.2.2:8546`, and the team-run demo follower; runs `e2e/flows/stage-a.flow`; then stops
+  the engine, the localnet and mirror-a / mirror-b. It waits while the 1-minute load is above 20.
+- Chain actions inside the flow (faucet funding of the app's address, demo leader trades with anvil test keys, mark
+  moves) go through `localnet/stage-a-hook.mjs` via the flow's `shell ${HOOK} ...` lines.
+- Evidence: `evidence/stage-a-android-<timestamp>/` with `report.json` (pass/fail per step and values read),
+  `index.html` (contact sheet), screenshots, `run.log`, logcat, engine and localnet logs. Passkey-sheet screenshots
+  show the Google account email: do not publish them.
+- Restore on mirror-b picks this run's passkey in the picker. The app names each passkey `Mirror account · <YYYY-MM-DD HH:MM>`
+  (device local time at creation); the flow records the device time around the create prompt (`${HOOK} devtime`)
+  and runs `passkey 120 "^Mirror account · (${t1}|${t2})$"`. Passkeys from builds before this change are all called
+  `Mirror account`, and Google Password Manager collapses them into one picker entry.
 
 ## 6. What an emulator cannot prove (do a short check on a physical phone)
 

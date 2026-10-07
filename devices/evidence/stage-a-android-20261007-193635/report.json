@@ -1,0 +1,1643 @@
+{
+  "flow": "/Users/jagadeesh/personal/projects/grants/monad/mirror/devices/e2e/flows/stage-a.flow",
+  "apk": "/Users/jagadeesh/personal/projects/grants/monad/mirror/app/dist/mirror-1.0.0-stagea.apk",
+  "package": "com.zeroxo.mirror",
+  "ok": true,
+  "summary": [
+    {
+      "step": "01 create account (one passkey prompt)",
+      "ok": true,
+      "commands": 9
+    },
+    {
+      "step": "02 watch mode Home with the Team-run label",
+      "ok": true,
+      "commands": 5
+    },
+    {
+      "step": "03 wallet address (Add funds)",
+      "ok": true,
+      "commands": 7
+    },
+    {
+      "step": "04 Run demo trade -> copy lands in watch mode",
+      "ok": true,
+      "commands": 6
+    },
+    {
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "ok": true,
+      "commands": 12
+    },
+    {
+      "step": "06 demo close copy detail: builder fee row 0 on the close",
+      "ok": true,
+      "commands": 8
+    },
+    {
+      "step": "07 Run blocked trade -> Blocked card and detail",
+      "ok": true,
+      "commands": 10
+    },
+    {
+      "step": "08 fund via the faucet (100 AUSD); balance chip updates",
+      "ok": true,
+      "commands": 3
+    },
+    {
+      "step": "09 Leaders tab, then the team-run demo leader's profile",
+      "ok": true,
+      "commands": 6
+    },
+    {
+      "step": "10 follow sheet: 20 AUSD, sizing 10%, entry filter 1%",
+      "ok": true,
+      "commands": 9
+    },
+    {
+      "step": "11 What if (simulation)",
+      "ok": true,
+      "commands": 6
+    },
+    {
+      "step": "12 Review with the Mirror fee line",
+      "ok": true,
+      "commands": 4
+    },
+    {
+      "step": "13 Approve with one passkey prompt -> Following",
+      "ok": true,
+      "commands": 6
+    },
+    {
+      "step": "14 leader trade (anvil key) copied into the user: feed row with fee",
+      "ok": true,
+      "commands": 11
+    },
+    {
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "ok": true,
+      "commands": 12
+    },
+    {
+      "step": "16 Positions -> Close all (one passkey prompt)",
+      "ok": true,
+      "commands": 9
+    },
+    {
+      "step": "17 Withdraw (one passkey prompt) back to the wallet",
+      "ok": true,
+      "commands": 11
+    },
+    {
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "ok": true,
+      "commands": 13
+    }
+  ],
+  "commands": [
+    {
+      "line": 8,
+      "step": "01 create account (one passkey prompt)",
+      "cmd": "step 01 create account (one passkey prompt)",
+      "ok": true,
+      "secs": 9.5,
+      "shots": []
+    },
+    {
+      "line": 9,
+      "step": "01 create account (one passkey prompt)",
+      "cmd": "device a",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 10,
+      "step": "01 create account (one passkey prompt)",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "01-emulator-5554-s10-launch.png"
+      ]
+    },
+    {
+      "line": 11,
+      "step": "01 create account (one passkey prompt)",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": true,
+      "secs": 2.4,
+      "shots": [
+        "02-emulator-5554-s11-waitFor.png"
+      ]
+    },
+    {
+      "line": 12,
+      "step": "01 create account (one passkey prompt)",
+      "cmd": "shell ${HOOK} devtime emulator-5554 t1",
+      "ok": true,
+      "secs": 0.7,
+      "values": {
+        "t1": "2026-10-07 19:37"
+      },
+      "shell": [
+        "VAR t1=2026-10-07 19:37"
+      ],
+      "shots": [
+        "03-emulator-5554-s12-shell.png"
+      ]
+    },
+    {
+      "line": 13,
+      "step": "01 create account (one passkey prompt)",
+      "cmd": "tap id:onboarding.createAccount",
+      "ok": true,
+      "secs": 3.0,
+      "shots": [
+        "04-emulator-5554-s13-tap-id_onboarding.createAccount.png"
+      ]
+    },
+    {
+      "line": 14,
+      "step": "01 create account (one passkey prompt)",
+      "cmd": "passkey 90",
+      "ok": true,
+      "secs": 13.1,
+      "shots": [
+        "05-emulator-5554-passkey-biometric.png",
+        "06-emulator-5554-s14-after-passkey.png"
+      ]
+    },
+    {
+      "line": 15,
+      "step": "01 create account (one passkey prompt)",
+      "cmd": "shell ${HOOK} devtime emulator-5554 t2",
+      "ok": true,
+      "secs": 1.4,
+      "values": {
+        "t2": "2026-10-07 19:38"
+      },
+      "shell": [
+        "VAR t2=2026-10-07 19:38"
+      ],
+      "shots": [
+        "07-emulator-5554-s15-shell.png"
+      ]
+    },
+    {
+      "line": 16,
+      "step": "01 create account (one passkey prompt)",
+      "cmd": "waitFor id:home.screen 90",
+      "ok": true,
+      "secs": 2.3,
+      "shots": [
+        "08-emulator-5554-s16-waitFor.png"
+      ]
+    },
+    {
+      "line": 18,
+      "step": "02 watch mode Home with the Team-run label",
+      "cmd": "step 02 watch mode Home with the Team-run label",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 19,
+      "step": "02 watch mode Home with the Team-run label",
+      "cmd": "waitFor id:home.watch 30",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "09-emulator-5554-s19-waitFor.png"
+      ]
+    },
+    {
+      "line": 20,
+      "step": "02 watch mode Home with the Team-run label",
+      "cmd": "expectResult id:watch.teamRun \"Team-run\" 30",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "10-emulator-5554-s20-expectResult.png"
+      ]
+    },
+    {
+      "line": 21,
+      "step": "02 watch mode Home with the Team-run label",
+      "cmd": "expectResult id:home.equity \"^0\\.00$\" 10",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "11-emulator-5554-s21-expectResult.png"
+      ]
+    },
+    {
+      "line": 22,
+      "step": "02 watch mode Home with the Team-run label",
+      "cmd": "expectResult id:watch.source \"Live\" 30",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "12-emulator-5554-s22-expectResult.png"
+      ]
+    },
+    {
+      "line": 24,
+      "step": "03 wallet address (Add funds)",
+      "cmd": "step 03 wallet address (Add funds)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 25,
+      "step": "03 wallet address (Add funds)",
+      "cmd": "open /funds",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "13-emulator-5554-s25-open.png"
+      ]
+    },
+    {
+      "line": 26,
+      "step": "03 wallet address (Add funds)",
+      "cmd": "readText id:funds.address addr \"^0x[0-9a-fA-F ]{40,60}$\" 30",
+      "ok": true,
+      "secs": 2.2,
+      "values": {
+        "addr": "0xB439 CEB9 0d8F 315D 7052 b61b 4065 865F c343 f51F"
+      },
+      "shots": [
+        "14-emulator-5554-s26-readText.png"
+      ]
+    },
+    {
+      "line": 27,
+      "step": "03 wallet address (Add funds)",
+      "cmd": "squash addr",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addr": "0xB439CEB90d8F315D7052b61b4065865Fc343f51F"
+      },
+      "shots": []
+    },
+    {
+      "line": 28,
+      "step": "03 wallet address (Add funds)",
+      "cmd": "assertVar addr \"^0x[0-9a-fA-F]{40}$\"",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addr": "0xB439CEB90d8F315D7052b61b4065865Fc343f51F"
+      },
+      "shots": []
+    },
+    {
+      "line": 29,
+      "step": "03 wallet address (Add funds)",
+      "cmd": "open /home",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "15-emulator-5554-s29-open.png"
+      ]
+    },
+    {
+      "line": 30,
+      "step": "03 wallet address (Add funds)",
+      "cmd": "waitFor id:watch.runDemo 30",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "16-emulator-5554-s30-waitFor.png"
+      ]
+    },
+    {
+      "line": 33,
+      "step": "04 Run demo trade -> copy lands in watch mode",
+      "cmd": "step 04 Run demo trade -> copy lands in watch mode",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 34,
+      "step": "04 Run demo trade -> copy lands in watch mode",
+      "cmd": "scrollTo id:watch.runDemo",
+      "ok": true,
+      "secs": 4.1,
+      "shots": [
+        "17-emulator-5554-s34-scrollTo.png"
+      ]
+    },
+    {
+      "line": 35,
+      "step": "04 Run demo trade -> copy lands in watch mode",
+      "cmd": "tap id:watch.runDemo",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "18-emulator-5554-s35-tap-id_watch.runDemo.png"
+      ]
+    },
+    {
+      "line": 36,
+      "step": "04 Run demo trade -> copy lands in watch mode",
+      "cmd": "shell ${HOOK} demo-copy open",
+      "ok": true,
+      "secs": 0.7,
+      "values": {
+        "demo_open_tx": "0xba53\u2026a343",
+        "demo_open_builder": "26",
+        "demo_open_fee": "0.000172"
+      },
+      "shell": [
+        "VAR demo_open_tx=0xba53\u2026a343\nVAR demo_open_builder=26\nVAR demo_open_fee=0.000172\n{\"ok\":true,\"tx\":\"0xba5369da3462769f76c3b2d2a74c60e7ec90cb6e668b48cead7d49c0ada8a343\",\"builderId\":26,\"builderFeeCNS\":\"172\"}"
+      ],
+      "shots": [
+        "19-emulator-5554-s36-shell.png"
+      ]
+    },
+    {
+      "line": 37,
+      "step": "04 Run demo trade -> copy lands in watch mode",
+      "cmd": "scrollTo \"idtext:watch\\.feed\\.\\d+~Open .*${demo_open_tx}\"",
+      "ok": true,
+      "secs": 13.6,
+      "shots": [
+        "20-emulator-5554-s37-scrollTo.png"
+      ]
+    },
+    {
+      "line": 38,
+      "step": "04 Run demo trade -> copy lands in watch mode",
+      "cmd": "expectResult \"idtext:watch\\.feed\\.\\d+~Open .*${demo_open_tx}\" \"fee 0\\.0*[1-9]\" 30",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "21-emulator-5554-s38-expectResult.png"
+      ]
+    },
+    {
+      "line": 40,
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "cmd": "step 05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 41,
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "cmd": "tap \"idtext:watch\\.feed\\.\\d+~Open .*${demo_open_tx}\"",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "22-emulator-5554-s41-tap-idtext_watch_.feed_._d_Open_._0xba53_a343.png"
+      ]
+    },
+    {
+      "line": 42,
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "cmd": "waitFor id:copy.detail 15",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "23-emulator-5554-s42-waitFor.png"
+      ]
+    },
+    {
+      "line": 43,
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "cmd": "expectResult id:copy.proof.leaderFill \"^[0-9][0-9,]*\\.[0-9]$\" 10",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "24-emulator-5554-s43-expectResult.png"
+      ]
+    },
+    {
+      "line": 44,
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "cmd": "expectResult id:copy.proof.yourFill \"^[0-9][0-9,]*\\.[0-9]$\" 10",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "25-emulator-5554-s44-expectResult.png"
+      ]
+    },
+    {
+      "line": 45,
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "cmd": "expectResult id:copy.proof.deviation \"bps\" 10",
+      "ok": true,
+      "secs": 2.4,
+      "shots": [
+        "26-emulator-5554-s45-expectResult.png"
+      ]
+    },
+    {
+      "line": 46,
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "cmd": "expectResult id:copy.proof.latencyMs \"[0-9] s\" 10",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "27-emulator-5554-s46-expectResult.png"
+      ]
+    },
+    {
+      "line": 47,
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "cmd": "expectResult id:copy.proof.yourTx \"${demo_open_tx}\" 10",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "28-emulator-5554-s47-expectResult.png"
+      ]
+    },
+    {
+      "line": 48,
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "cmd": "expectResult id:copy.proof.leaderTx \"^0x\" 10",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "29-emulator-5554-s48-expectResult.png"
+      ]
+    },
+    {
+      "line": 49,
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "cmd": "scrollTo id:copy.proof.fee",
+      "ok": true,
+      "secs": 5.1,
+      "shots": [
+        "30-emulator-5554-s49-scrollTo.png"
+      ]
+    },
+    {
+      "line": 50,
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "cmd": "readText id:copy.proof.fee feeOpen \"builder 26\\) \\| (0\\.0*[1-9][0-9]* AUSD)\" 10",
+      "ok": true,
+      "secs": 2.2,
+      "values": {
+        "feeOpen": "0.0002 AUSD"
+      },
+      "shots": [
+        "31-emulator-5554-s50-readText.png"
+      ]
+    },
+    {
+      "line": 51,
+      "step": "05 demo copy detail: proof (fills, deviation, latency, txs) and builder fee > 0 on the open",
+      "cmd": "tap id:copy.detail.close",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "32-emulator-5554-s51-tap-id_copy.detail.close.png"
+      ]
+    },
+    {
+      "line": 53,
+      "step": "06 demo close copy detail: builder fee row 0 on the close",
+      "cmd": "step 06 demo close copy detail: builder fee row 0 on the close",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 54,
+      "step": "06 demo close copy detail: builder fee row 0 on the close",
+      "cmd": "shell ${HOOK} demo-copy close",
+      "ok": true,
+      "secs": 0.7,
+      "values": {
+        "demo_close_tx": "0xfccd\u20262d46",
+        "demo_close_builder": "0",
+        "demo_close_fee": "0.000000"
+      },
+      "shell": [
+        "VAR demo_close_tx=0xfccd\u20262d46\nVAR demo_close_builder=0\nVAR demo_close_fee=0.000000\n{\"ok\":true,\"tx\":\"0xfccd0b5eef0b2f8fabc7fff106517cb14a56b98b2c582ddae0fda27f8e7e2d46\",\"builderId\":0,\"builderFeeCNS\":\"0\"}"
+      ],
+      "shots": [
+        "33-emulator-5554-s54-shell.png"
+      ]
+    },
+    {
+      "line": 55,
+      "step": "06 demo close copy detail: builder fee row 0 on the close",
+      "cmd": "scrollTo \"idtext:watch\\.feed\\.\\d+~Close.*${demo_close_tx}\"",
+      "ok": true,
+      "secs": 4.7,
+      "shots": [
+        "34-emulator-5554-s55-scrollTo.png"
+      ]
+    },
+    {
+      "line": 56,
+      "step": "06 demo close copy detail: builder fee row 0 on the close",
+      "cmd": "tap \"idtext:watch\\.feed\\.\\d+~Close.*${demo_close_tx}\"",
+      "ok": true,
+      "secs": 3.0,
+      "shots": [
+        "35-emulator-5554-s56-tap-idtext_watch_.feed_._d_Close._0xfccd_2d46.png"
+      ]
+    },
+    {
+      "line": 57,
+      "step": "06 demo close copy detail: builder fee row 0 on the close",
+      "cmd": "waitFor id:copy.detail 15",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "36-emulator-5554-s57-waitFor.png"
+      ]
+    },
+    {
+      "line": 58,
+      "step": "06 demo close copy detail: builder fee row 0 on the close",
+      "cmd": "scrollTo id:copy.proof.fee",
+      "ok": true,
+      "secs": 4.5,
+      "shots": [
+        "37-emulator-5554-s58-scrollTo.png"
+      ]
+    },
+    {
+      "line": 59,
+      "step": "06 demo close copy detail: builder fee row 0 on the close",
+      "cmd": "readText id:copy.proof.fee feeClose \"builder 26\\) \\| (0(\\.0+)? AUSD)\" 10",
+      "ok": true,
+      "secs": 2.9,
+      "values": {
+        "feeClose": "0.0000 AUSD"
+      },
+      "shots": [
+        "38-emulator-5554-s59-readText.png"
+      ]
+    },
+    {
+      "line": 60,
+      "step": "06 demo close copy detail: builder fee row 0 on the close",
+      "cmd": "tap id:copy.detail.close",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "39-emulator-5554-s60-tap-id_copy.detail.close.png"
+      ]
+    },
+    {
+      "line": 63,
+      "step": "07 Run blocked trade -> Blocked card and detail",
+      "cmd": "step 07 Run blocked trade -> Blocked card and detail",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 64,
+      "step": "07 Run blocked trade -> Blocked card and detail",
+      "cmd": "scrollTo id:watch.runBlocked up",
+      "ok": true,
+      "secs": 4.6,
+      "shots": [
+        "40-emulator-5554-s64-scrollTo.png"
+      ]
+    },
+    {
+      "line": 65,
+      "step": "07 Run blocked trade -> Blocked card and detail",
+      "cmd": "expectResult id:watch.runDemo \"^Run demo trade$\" 90",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "41-emulator-5554-s65-expectResult.png"
+      ]
+    },
+    {
+      "line": 66,
+      "step": "07 Run blocked trade -> Blocked card and detail",
+      "cmd": "tap id:watch.runBlocked",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "42-emulator-5554-s66-tap-id_watch.runBlocked.png"
+      ]
+    },
+    {
+      "line": 67,
+      "step": "07 Run blocked trade -> Blocked card and detail",
+      "cmd": "scrollTo \"idtext:watch\\.feed\\.\\d+~Not copied. Your rule: Max leverage 5x\"",
+      "ok": true,
+      "secs": 6.3,
+      "shots": [
+        "43-emulator-5554-s67-scrollTo.png"
+      ]
+    },
+    {
+      "line": 68,
+      "step": "07 Run blocked trade -> Blocked card and detail",
+      "cmd": "tap \"idtext:watch\\.feed\\.\\d+~Not copied. Your rule: Max leverage 5x\"",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "44-emulator-5554-s68-tap-idtext_watch_.feed_._d_Not_copied._Your_rule_Max_leverage_5x.png"
+      ]
+    },
+    {
+      "line": 69,
+      "step": "07 Run blocked trade -> Blocked card and detail",
+      "cmd": "waitFor id:blocked.detail 15",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "45-emulator-5554-s69-waitFor.png"
+      ]
+    },
+    {
+      "line": 70,
+      "step": "07 Run blocked trade -> Blocked card and detail",
+      "cmd": "expectResult id:blocked.title \"max leverage\" 10",
+      "ok": true,
+      "secs": 2.4,
+      "shots": [
+        "46-emulator-5554-s70-expectResult.png"
+      ]
+    },
+    {
+      "line": 71,
+      "step": "07 Run blocked trade -> Blocked card and detail",
+      "cmd": "expectResult id:blocked.sentence \"10x.*5x\" 10",
+      "ok": true,
+      "secs": 3.5,
+      "shots": [
+        "47-emulator-5554-s71-expectResult.png"
+      ]
+    },
+    {
+      "line": 72,
+      "step": "07 Run blocked trade -> Blocked card and detail",
+      "cmd": "tap id:blocked.done",
+      "ok": true,
+      "secs": 3.3,
+      "shots": [
+        "48-emulator-5554-s72-tap-id_blocked.done.png"
+      ]
+    },
+    {
+      "line": 75,
+      "step": "08 fund via the faucet (100 AUSD); balance chip updates",
+      "cmd": "step 08 fund via the faucet (100 AUSD); balance chip updates",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 76,
+      "step": "08 fund via the faucet (100 AUSD); balance chip updates",
+      "cmd": "shell ${HOOK} fund ${addr} 100",
+      "ok": true,
+      "secs": 1.2,
+      "values": {
+        "walletAusd": "100.000000"
+      },
+      "shell": [
+        "{\"address\":\"0xB439CEB90d8F315D7052b61b4065865Fc343f51F\",\"ausd\":100,\"mon\":10}\nVAR walletAusd=100.000000"
+      ],
+      "shots": [
+        "49-emulator-5554-s76-shell.png"
+      ]
+    },
+    {
+      "line": 77,
+      "step": "08 fund via the faucet (100 AUSD); balance chip updates",
+      "cmd": "expectResult id:home.balance.ausd \"^100\\.00$\" 60",
+      "ok": true,
+      "secs": 12.1,
+      "shots": [
+        "50-emulator-5554-s77-expectResult.png"
+      ]
+    },
+    {
+      "line": 80,
+      "step": "09 Leaders tab, then the team-run demo leader's profile",
+      "cmd": "step 09 Leaders tab, then the team-run demo leader's profile",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 81,
+      "step": "09 Leaders tab, then the team-run demo leader's profile",
+      "cmd": "tap id:home.tab.leaders",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "51-emulator-5554-s81-tap-id_home.tab.leaders.png"
+      ]
+    },
+    {
+      "line": 82,
+      "step": "09 Leaders tab, then the team-run demo leader's profile",
+      "cmd": "waitFor id:leaders.list 30",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "52-emulator-5554-s82-waitFor.png"
+      ]
+    },
+    {
+      "line": 83,
+      "step": "09 Leaders tab, then the team-run demo leader's profile",
+      "cmd": "open /leader/3",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "53-emulator-5554-s83-open.png"
+      ]
+    },
+    {
+      "line": 84,
+      "step": "09 Leaders tab, then the team-run demo leader's profile",
+      "cmd": "waitFor id:leader.screen 30",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "54-emulator-5554-s84-waitFor.png"
+      ]
+    },
+    {
+      "line": 85,
+      "step": "09 Leaders tab, then the team-run demo leader's profile",
+      "cmd": "expectResult id:leader.follow \"Follow 0x9965\" 20",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "55-emulator-5554-s85-expectResult.png"
+      ]
+    },
+    {
+      "line": 87,
+      "step": "10 follow sheet: 20 AUSD, sizing 10%, entry filter 1%",
+      "cmd": "step 10 follow sheet: 20 AUSD, sizing 10%, entry filter 1%",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 88,
+      "step": "10 follow sheet: 20 AUSD, sizing 10%, entry filter 1%",
+      "cmd": "tap id:leader.follow",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "56-emulator-5554-s88-tap-id_leader.follow.png"
+      ]
+    },
+    {
+      "line": 89,
+      "step": "10 follow sheet: 20 AUSD, sizing 10%, entry filter 1%",
+      "cmd": "waitFor id:follow.sheet 20",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "57-emulator-5554-s89-waitFor.png"
+      ]
+    },
+    {
+      "line": 90,
+      "step": "10 follow sheet: 20 AUSD, sizing 10%, entry filter 1%",
+      "cmd": "tap id:follow.amount.20",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "58-emulator-5554-s90-tap-id_follow.amount.20.png"
+      ]
+    },
+    {
+      "line": 91,
+      "step": "10 follow sheet: 20 AUSD, sizing 10%, entry filter 1%",
+      "cmd": "tapAt id:follow.ratio.slider 0.99 0.5",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "59-emulator-5554-s91-tapAt.png"
+      ]
+    },
+    {
+      "line": 92,
+      "step": "10 follow sheet: 20 AUSD, sizing 10%, entry filter 1%",
+      "cmd": "expectResult id:follow.ratio.value \"^10%$\" 10",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "60-emulator-5554-s92-expectResult.png"
+      ]
+    },
+    {
+      "line": 93,
+      "step": "10 follow sheet: 20 AUSD, sizing 10%, entry filter 1%",
+      "cmd": "scrollTo id:follow.entryFilter.1",
+      "ok": true,
+      "secs": 11.0,
+      "shots": [
+        "61-emulator-5554-s93-scrollTo.png"
+      ]
+    },
+    {
+      "line": 94,
+      "step": "10 follow sheet: 20 AUSD, sizing 10%, entry filter 1%",
+      "cmd": "tap id:follow.entryFilter.1",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "62-emulator-5554-s94-tap-id_follow.entryFilter.1.png"
+      ]
+    },
+    {
+      "line": 95,
+      "step": "10 follow sheet: 20 AUSD, sizing 10%, entry filter 1%",
+      "cmd": "expectResult id:follow.entryFilter.value \"^1%$\" 10",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "63-emulator-5554-s95-expectResult.png"
+      ]
+    },
+    {
+      "line": 97,
+      "step": "11 What if (simulation)",
+      "cmd": "step 11 What if (simulation)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 98,
+      "step": "11 What if (simulation)",
+      "cmd": "tap id:follow.seeWhatIf",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "64-emulator-5554-s98-tap-id_follow.seeWhatIf.png"
+      ]
+    },
+    {
+      "line": 99,
+      "step": "11 What if (simulation)",
+      "cmd": "waitFor id:follow.whatif 20",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "65-emulator-5554-s99-waitFor.png"
+      ]
+    },
+    {
+      "line": 100,
+      "step": "11 What if (simulation)",
+      "cmd": "expectResult id:follow.whatif.sim \"Simulation\" 45",
+      "ok": true,
+      "secs": 3.0,
+      "shots": [
+        "66-emulator-5554-s100-expectResult.png"
+      ]
+    },
+    {
+      "line": 101,
+      "step": "11 What if (simulation)",
+      "cmd": "expectResult id:follow.whatif.pnl \"[0-9]\" 45",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "67-emulator-5554-s101-expectResult.png"
+      ]
+    },
+    {
+      "line": 102,
+      "step": "11 What if (simulation)",
+      "cmd": "expectResult id:follow.whatif.limits \"within 1%\" 10",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "68-emulator-5554-s102-expectResult.png"
+      ]
+    },
+    {
+      "line": 104,
+      "step": "12 Review with the Mirror fee line",
+      "cmd": "step 12 Review with the Mirror fee line",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 105,
+      "step": "12 Review with the Mirror fee line",
+      "cmd": "tap id:follow.review",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "69-emulator-5554-s105-tap-id_follow.review.png"
+      ]
+    },
+    {
+      "line": 106,
+      "step": "12 Review with the Mirror fee line",
+      "cmd": "expectResult id:follow.review.fee \"Mirror fee: 0\\.02% of opening size \\(builder 26\\)\" 20",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "70-emulator-5554-s106-expectResult.png"
+      ]
+    },
+    {
+      "line": 107,
+      "step": "12 Review with the Mirror fee line",
+      "cmd": "expectResult id:follow.review.entryFilter \"within 1%\" 10",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "71-emulator-5554-s107-expectResult.png"
+      ]
+    },
+    {
+      "line": 109,
+      "step": "13 Approve with one passkey prompt -> Following",
+      "cmd": "step 13 Approve with one passkey prompt -> Following",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 110,
+      "step": "13 Approve with one passkey prompt -> Following",
+      "cmd": "tap id:follow.confirm",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "72-emulator-5554-s110-tap-id_follow.confirm.png"
+      ]
+    },
+    {
+      "line": 111,
+      "step": "13 Approve with one passkey prompt -> Following",
+      "cmd": "passkey 90",
+      "ok": true,
+      "secs": 12.9,
+      "shots": [
+        "73-emulator-5554-passkey-biometric.png",
+        "74-emulator-5554-s111-after-passkey.png"
+      ]
+    },
+    {
+      "line": 112,
+      "step": "13 Approve with one passkey prompt -> Following",
+      "cmd": "expectResult id:follow.status \"^(Following|Matched)$\" 120",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "75-emulator-5554-s112-expectResult.png"
+      ]
+    },
+    {
+      "line": 113,
+      "step": "13 Approve with one passkey prompt -> Following",
+      "cmd": "shell ${HOOK} follow-check ${addr}",
+      "ok": true,
+      "secs": 0.5,
+      "values": {
+        "userAccount": "0x5452Bd6cA1e8A92BABD1EFF7dc45Ec514e32bF52",
+        "entryBps": "100",
+        "deposited": "20.000000"
+      },
+      "shell": [
+        "VAR userAccount=0x5452Bd6cA1e8A92BABD1EFF7dc45Ec514e32bF52\nVAR entryBps=100\nVAR deposited=20.000000"
+      ],
+      "shots": [
+        "76-emulator-5554-s113-shell.png"
+      ]
+    },
+    {
+      "line": 114,
+      "step": "13 Approve with one passkey prompt -> Following",
+      "cmd": "tap id:follow.done",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "77-emulator-5554-s114-tap-id_follow.done.png"
+      ]
+    },
+    {
+      "line": 117,
+      "step": "14 leader trade (anvil key) copied into the user: feed row with fee",
+      "cmd": "step 14 leader trade (anvil key) copied into the user: feed row with fee",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 118,
+      "step": "14 leader trade (anvil key) copied into the user: feed row with fee",
+      "cmd": "shell ${HOOK} leader-trade 1 0 20",
+      "ok": true,
+      "secs": 0.8,
+      "values": {
+        "leaderTx": "0xaed7\u20266f9a"
+      },
+      "shell": [
+        "VAR leaderTx=0xaed7\u20266f9a"
+      ],
+      "shots": [
+        "78-emulator-5554-s118-shell.png"
+      ]
+    },
+    {
+      "line": 119,
+      "step": "14 leader trade (anvil key) copied into the user: feed row with fee",
+      "cmd": "shell ${HOOK} wait-copy ${addr}",
+      "ok": true,
+      "secs": 0.5,
+      "values": {
+        "copyTx": "0xdee8\u20267e1c",
+        "copyFee": "0.000343"
+      },
+      "shell": [
+        "VAR copyTx=0xdee8\u20267e1c\nVAR copyFee=0.000343\n{\"tx\":\"0xdee8b1a2f927b10243b2c1a451b62f1e50529c378157bb7e78c1b97f65b17e1c\",\"builderId\":26,\"builderFeeCNS\":\"343\"}"
+      ],
+      "shots": [
+        "79-emulator-5554-s119-shell.png"
+      ]
+    },
+    {
+      "line": 120,
+      "step": "14 leader trade (anvil key) copied into the user: feed row with fee",
+      "cmd": "tap id:home.tab.activity",
+      "ok": true,
+      "secs": 3.3,
+      "shots": [
+        "80-emulator-5554-s120-tap-id_home.tab.activity.png"
+      ]
+    },
+    {
+      "line": 121,
+      "step": "14 leader trade (anvil key) copied into the user: feed row with fee",
+      "cmd": "expectResult \"idtext:activity\\.item\\.\\d+~COPY.*${copyTx}\" \"fee 0\\.0*[1-9]\" 45",
+      "ok": true,
+      "secs": 2.3,
+      "shots": [
+        "81-emulator-5554-s121-expectResult.png"
+      ]
+    },
+    {
+      "line": 122,
+      "step": "14 leader trade (anvil key) copied into the user: feed row with fee",
+      "cmd": "tap \"idtext:activity\\.item\\.\\d+~COPY.*${copyTx}\"",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "82-emulator-5554-s122-tap-idtext_activity_.item_._d_COPY._0xdee8_7e1c.png"
+      ]
+    },
+    {
+      "line": 123,
+      "step": "14 leader trade (anvil key) copied into the user: feed row with fee",
+      "cmd": "waitFor id:copy.detail 15",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "83-emulator-5554-s123-waitFor.png"
+      ]
+    },
+    {
+      "line": 124,
+      "step": "14 leader trade (anvil key) copied into the user: feed row with fee",
+      "cmd": "expectResult id:copy.proof.yourTx \"${copyTx}\" 10",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "84-emulator-5554-s124-expectResult.png"
+      ]
+    },
+    {
+      "line": 125,
+      "step": "14 leader trade (anvil key) copied into the user: feed row with fee",
+      "cmd": "scrollTo id:copy.proof.fee",
+      "ok": true,
+      "secs": 4.8,
+      "shots": [
+        "85-emulator-5554-s125-scrollTo.png"
+      ]
+    },
+    {
+      "line": 126,
+      "step": "14 leader trade (anvil key) copied into the user: feed row with fee",
+      "cmd": "readText id:copy.proof.fee feeUserCopy \"builder 26\\) \\| (0\\.0*[1-9][0-9]* AUSD)\" 10",
+      "ok": true,
+      "secs": 2.1,
+      "values": {
+        "feeUserCopy": "0.0003 AUSD"
+      },
+      "shots": [
+        "86-emulator-5554-s126-readText.png"
+      ]
+    },
+    {
+      "line": 127,
+      "step": "14 leader trade (anvil key) copied into the user: feed row with fee",
+      "cmd": "tap id:copy.detail.close",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "87-emulator-5554-s127-tap-id_copy.detail.close.png"
+      ]
+    },
+    {
+      "line": 130,
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "cmd": "step 15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 131,
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "cmd": "shell ${HOOK} mark-move 1 3",
+      "ok": true,
+      "secs": 2.0,
+      "values": {
+        "markMoved": "88288.098"
+      },
+      "shell": [
+        "{\"perpId\":1,\"mark\":88325.77254415593}\nVAR markMoved=88288.098"
+      ],
+      "shots": [
+        "88-emulator-5554-s131-shell.png"
+      ]
+    },
+    {
+      "line": 132,
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "cmd": "sleep 2",
+      "ok": true,
+      "secs": 2.0,
+      "shots": []
+    },
+    {
+      "line": 133,
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "cmd": "shell ${HOOK} leader-trade 1 0 10",
+      "ok": true,
+      "secs": 0.5,
+      "values": {
+        "leaderTx": "0xaf7f\u2026e919"
+      },
+      "shell": [
+        "VAR leaderTx=0xaf7f\u2026e919"
+      ],
+      "shots": [
+        "89-emulator-5554-s133-shell.png"
+      ]
+    },
+    {
+      "line": 134,
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "cmd": "shell ${HOOK} wait-blocked ${addr} EntryTooFar",
+      "ok": true,
+      "secs": 0.5,
+      "values": {
+        "blockedTx": "0xe366\u2026e90a"
+      },
+      "shell": [
+        "VAR blockedTx=0xe366\u2026e90a\n{\"reason\":\"EntryTooFar\",\"limit\":\"865865\",\"actual\":\"883258\"}"
+      ],
+      "shots": [
+        "90-emulator-5554-s134-shell.png"
+      ]
+    },
+    {
+      "line": 135,
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "cmd": "shell ${HOOK} mark-restore 1",
+      "ok": true,
+      "secs": 3.1,
+      "shell": [
+        "{\"perpId\":1,\"mark\":85716.6}"
+      ],
+      "shots": [
+        "91-emulator-5554-s135-shell.png"
+      ]
+    },
+    {
+      "line": 136,
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "cmd": "expectResult \"idtext:activity\\.item\\.\\d+~${blockedTx}\" \"Entry filter 1%\" 45",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "92-emulator-5554-s136-expectResult.png"
+      ]
+    },
+    {
+      "line": 137,
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "cmd": "tap \"idtext:activity\\.item\\.\\d+~${blockedTx}\"",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "93-emulator-5554-s137-tap-idtext_activity_.item_._d_0xe366_e90a.png"
+      ]
+    },
+    {
+      "line": 138,
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "cmd": "waitFor id:blocked.detail 15",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "94-emulator-5554-s138-waitFor.png"
+      ]
+    },
+    {
+      "line": 139,
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "cmd": "expectResult id:blocked.title \"entry filter\" 10",
+      "ok": true,
+      "secs": 2.3,
+      "shots": [
+        "95-emulator-5554-s139-expectResult.png"
+      ]
+    },
+    {
+      "line": 140,
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "cmd": "expectResult id:blocked.sentence \"Price moved [0-9.]+% past the leader's entry; your limit is 1%\" 10",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "96-emulator-5554-s140-expectResult.png"
+      ]
+    },
+    {
+      "line": 141,
+      "step": "15 entry filter: mark +3%, leader adds -> Blocked (Entry filter 1%)",
+      "cmd": "tap id:blocked.done",
+      "ok": true,
+      "secs": 3.6,
+      "shots": [
+        "97-emulator-5554-s141-tap-id_blocked.done.png"
+      ]
+    },
+    {
+      "line": 144,
+      "step": "16 Positions -> Close all (one passkey prompt)",
+      "cmd": "step 16 Positions -> Close all (one passkey prompt)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 145,
+      "step": "16 Positions -> Close all (one passkey prompt)",
+      "cmd": "tap id:home.tab.portfolio",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "98-emulator-5554-s145-tap-id_home.tab.portfolio.png"
+      ]
+    },
+    {
+      "line": 146,
+      "step": "16 Positions -> Close all (one passkey prompt)",
+      "cmd": "expectResult id:portfolio.positions.count \"^[1-9]\" 30",
+      "ok": true,
+      "secs": 2.3,
+      "shots": [
+        "99-emulator-5554-s146-expectResult.png"
+      ]
+    },
+    {
+      "line": 147,
+      "step": "16 Positions -> Close all (one passkey prompt)",
+      "cmd": "tap id:portfolio.closeAll",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "100-emulator-5554-s147-tap-id_portfolio.closeAll.png"
+      ]
+    },
+    {
+      "line": 148,
+      "step": "16 Positions -> Close all (one passkey prompt)",
+      "cmd": "waitFor id:closeAll.dialog 10",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "101-emulator-5554-s148-waitFor.png"
+      ]
+    },
+    {
+      "line": 149,
+      "step": "16 Positions -> Close all (one passkey prompt)",
+      "cmd": "tap id:portfolio.closeAll.confirm",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "102-emulator-5554-s149-tap-id_portfolio.closeAll.confirm.png"
+      ]
+    },
+    {
+      "line": 150,
+      "step": "16 Positions -> Close all (one passkey prompt)",
+      "cmd": "passkey 90",
+      "ok": true,
+      "secs": 12.8,
+      "shots": [
+        "103-emulator-5554-passkey-biometric.png",
+        "104-emulator-5554-s150-after-passkey.png"
+      ]
+    },
+    {
+      "line": 151,
+      "step": "16 Positions -> Close all (one passkey prompt)",
+      "cmd": "shell ${HOOK} closed ${addr}",
+      "ok": true,
+      "secs": 0.5,
+      "values": {
+        "lotsAfter": "0"
+      },
+      "shell": [
+        "VAR lotsAfter=0"
+      ],
+      "shots": [
+        "105-emulator-5554-s151-shell.png"
+      ]
+    },
+    {
+      "line": 152,
+      "step": "16 Positions -> Close all (one passkey prompt)",
+      "cmd": "expectResult id:portfolio.positions.count \"^0$\" 60",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "106-emulator-5554-s152-expectResult.png"
+      ]
+    },
+    {
+      "line": 155,
+      "step": "17 Withdraw (one passkey prompt) back to the wallet",
+      "cmd": "step 17 Withdraw (one passkey prompt) back to the wallet",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 156,
+      "step": "17 Withdraw (one passkey prompt) back to the wallet",
+      "cmd": "open /withdraw",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "107-emulator-5554-s156-open.png"
+      ]
+    },
+    {
+      "line": 157,
+      "step": "17 Withdraw (one passkey prompt) back to the wallet",
+      "cmd": "tap id:withdraw.max 20",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "108-emulator-5554-s157-tap-id_withdraw.max.png"
+      ]
+    },
+    {
+      "line": 158,
+      "step": "17 Withdraw (one passkey prompt) back to the wallet",
+      "cmd": "readText id:withdraw.amount.input withdrawAmount \"^[0-9.]+$\" 10",
+      "ok": true,
+      "secs": 2.1,
+      "values": {
+        "withdrawAmount": "19.998996"
+      },
+      "shots": [
+        "109-emulator-5554-s158-readText.png"
+      ]
+    },
+    {
+      "line": 159,
+      "step": "17 Withdraw (one passkey prompt) back to the wallet",
+      "cmd": "tap id:withdraw.continue",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "110-emulator-5554-s159-tap-id_withdraw.continue.png"
+      ]
+    },
+    {
+      "line": 160,
+      "step": "17 Withdraw (one passkey prompt) back to the wallet",
+      "cmd": "waitFor id:withdraw.sheet 10",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "111-emulator-5554-s160-waitFor.png"
+      ]
+    },
+    {
+      "line": 161,
+      "step": "17 Withdraw (one passkey prompt) back to the wallet",
+      "cmd": "tap id:withdraw.confirm",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "112-emulator-5554-s161-tap-id_withdraw.confirm.png"
+      ]
+    },
+    {
+      "line": 162,
+      "step": "17 Withdraw (one passkey prompt) back to the wallet",
+      "cmd": "passkey 90",
+      "ok": true,
+      "secs": 14.3,
+      "shots": [
+        "113-emulator-5554-passkey-biometric.png",
+        "114-emulator-5554-s162-after-passkey.png"
+      ]
+    },
+    {
+      "line": 163,
+      "step": "17 Withdraw (one passkey prompt) back to the wallet",
+      "cmd": "expectResult id:withdraw.status \"^Confirmed$\" 120",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "115-emulator-5554-s163-expectResult.png"
+      ]
+    },
+    {
+      "line": 164,
+      "step": "17 Withdraw (one passkey prompt) back to the wallet",
+      "cmd": "shell ${HOOK} wallet ${addr}",
+      "ok": true,
+      "secs": 1.0,
+      "values": {
+        "walletAusd": "99.998996"
+      },
+      "shell": [
+        "VAR walletAusd=99.998996"
+      ],
+      "shots": [
+        "116-emulator-5554-s164-shell.png"
+      ]
+    },
+    {
+      "line": 165,
+      "step": "17 Withdraw (one passkey prompt) back to the wallet",
+      "cmd": "tap id:withdraw.done",
+      "ok": true,
+      "secs": 3.1,
+      "shots": [
+        "117-emulator-5554-s165-tap-id_withdraw.done.png"
+      ]
+    },
+    {
+      "line": 168,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "step 18 restore on mirror-b with the synced passkey -> same address",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 169,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "device b",
+      "ok": true,
+      "secs": 9.5,
+      "shots": []
+    },
+    {
+      "line": 170,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "install",
+      "ok": true,
+      "secs": 3.4,
+      "shots": []
+    },
+    {
+      "line": 171,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 3.8,
+      "shots": [
+        "01-emulator-5556-s171-launch.png"
+      ]
+    },
+    {
+      "line": 172,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "02-emulator-5556-s172-waitFor.png"
+      ]
+    },
+    {
+      "line": 175,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "retry 15 60 tapIfPresent id:onboarding.restore ;; tapIfPresent id:restore.retry ;; passkey 60 \"^Mirror account \u00b7 (${t1}|${t2})$\"",
+      "ok": true,
+      "secs": 23.0,
+      "shots": [
+        "03-emulator-5556-passkey-picker.png",
+        "04-emulator-5556-passkey-biometric.png",
+        "05-emulator-5556-s175-after-passkey.png",
+        "06-emulator-5556-s175-retry.png"
+      ]
+    },
+    {
+      "line": 176,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "waitFor id:restore.go.home 90",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "07-emulator-5556-s176-waitFor.png"
+      ]
+    },
+    {
+      "line": 177,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "expectResult id:restore.welcome.back \"Welcome back\" 10",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "08-emulator-5556-s177-expectResult.png"
+      ]
+    },
+    {
+      "line": 178,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "tap id:restore.go.home",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "09-emulator-5556-s178-tap-id_restore.go.home.png"
+      ]
+    },
+    {
+      "line": 179,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "open /funds",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "10-emulator-5556-s179-open.png"
+      ]
+    },
+    {
+      "line": 180,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "readText id:funds.address addrB \"^0x[0-9a-fA-F ]{40,60}$\" 30",
+      "ok": true,
+      "secs": 2.2,
+      "values": {
+        "addrB": "0xB439 CEB9 0d8F 315D 7052 b61b 4065 865F c343 f51F"
+      },
+      "shots": [
+        "11-emulator-5556-s180-readText.png"
+      ]
+    },
+    {
+      "line": 181,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "squash addrB",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addrB": "0xB439CEB90d8F315D7052b61b4065865Fc343f51F"
+      },
+      "shots": []
+    },
+    {
+      "line": 182,
+      "step": "18 restore on mirror-b with the synced passkey -> same address",
+      "cmd": "assertVar addrB \"^${addr}$\"",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addrB": "0xB439CEB90d8F315D7052b61b4065865Fc343f51F"
+      },
+      "shots": []
+    }
+  ]
+}

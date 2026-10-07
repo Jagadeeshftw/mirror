@@ -54,6 +54,7 @@ class Node:
     clickable: bool
     enabled: bool
     bounds: tuple
+    alltext: str = ""  # texts of this node and its descendants, joined with " | "
 
     @property
     def center(self):
@@ -105,7 +106,18 @@ class Device:
                 time.sleep(1)
                 self.sh(f"input text {pin}")
                 self.sh("input keyevent 66")
-                time.sleep(1)
+                time.sleep(1.5)
+            if self.is_keyguard():
+                # After a cold boot the PIN pad can ignore `input text`: tap its keys instead.
+                nodes = self.dump()
+                keys = {n.rid.split("/")[-1]: n for n in nodes}
+                if "key_enter" in keys:
+                    for ch in pin:
+                        if f"key{ch}" in keys:
+                            self.tap_xy(*keys[f"key{ch}"].center); time.sleep(0.3)
+                    self.tap_xy(*keys["key_enter"].center)
+                    time.sleep(2)
+                self.log(f"  unlock via keypad -> keyguard={self.is_keyguard()}")
 
     def is_keyguard(self) -> bool:
         out = self.sh("dumpsys window")
@@ -115,7 +127,8 @@ class Device:
     def dump(self, retries: int = 3) -> List[Node]:
         last = ""
         for _ in range(retries):
-            xml = self.adb("exec-out", "uiautomator", "dump", "--compressed", "/dev/tty", check=False, timeout=30)
+            args = ["exec-out", "uiautomator", "dump"] + ([] if os.environ.get("FLOW_DUMP_FULL") == "1" else ["--compressed"]) + ["/dev/tty"]
+            xml = self.adb(*args, check=False, timeout=30)
             last = xml
             i = xml.find("<?xml")
             j = xml.rfind("</hierarchy>")
@@ -140,6 +153,9 @@ class Device:
         nodes = nodes if nodes is not None else self.dump()
         m = match_fn(sel)
         for n in nodes:
+            x1, y1, x2, y2 = n.bounds
+            if x2 <= x1 or y2 <= y1:  # scrolled out of view: uiautomator reports clipped, empty bounds
+                continue
             if m(n):
                 return n
         return None
@@ -177,7 +193,16 @@ class Device:
         self.shot_idx += 1
         safe = re.sub(r"[^A-Za-z0-9._-]+", "_", name)
         path = os.path.join(self.evidence_dir, f"{self.shot_idx:02d}-{self.serial}-{safe}.png")
-        data = subprocess.run([ADB, "-s", self.serial, "exec-out", "screencap", "-p"], capture_output=True, timeout=30).stdout
+        data = b""
+        for t in (30, 60):  # screencap can stall under host load; a missing screenshot never fails a step
+            try:
+                data = subprocess.run([ADB, "-s", self.serial, "exec-out", "screencap", "-p"], capture_output=True, timeout=t).stdout
+                break
+            except subprocess.TimeoutExpired:
+                self.log(f"  screencap timed out after {t}s")
+        if not data:
+            self.log(f"  screenshot skipped: {name}")
+            return None
         with open(path, "wb") as f:
             f.write(data)
         self.log(f"  screenshot {path}")
@@ -198,7 +223,7 @@ class Device:
 
     # ---------- passkey approval ----------
     def approve_passkey(self, timeout: float = 90, finger_id: int = 1, pin: str = DEFAULT_PIN,
-                        settle: float = 4.0) -> dict:
+                        settle: float = 4.0, choose: Optional[str] = None) -> dict:
         """Wait for the Credential Manager / GPM sheet, press its confirm button,
         satisfy the biometric prompt with `emu finger touch`, and return once
         the system UI is gone. Returns a dict describing what happened, with the
@@ -226,6 +251,23 @@ class Device:
             pin_prompt = any(PIN_TEXT.search(n.text or n.desc or "") for n in sys_nodes)
             button = next((n for n in nodes if n.pkg in CREDMAN_PKGS and n.enabled
                            and PASSKEY_BUTTONS.match((n.text or n.desc or "").strip())), None)
+            if choose and not any(e.startswith("choose:") for e in events):
+                # Account picker ("Choose a saved passkey for ..."): tap the first entry matching `choose`.
+                pick = next((n for n in nodes if n.pkg in CREDMAN_PKGS and n.text and re.search(choose, n.text)), None)
+                if pick is None and any(n.pkg in CREDMAN_PKGS for n in nodes) and re.search(r"Choose a saved passkey", visible_text):
+                    stalled_since = stalled_since or time.time()
+                    if time.time() - stalled_since > 8:  # e.g. the passkey has not synced to this device yet
+                        self.screenshot("passkey-choice-missing")
+                        self.key("KEYCODE_BACK")
+                        return {"ok": False, "events": events + ["back"], "texts": texts_seen, "error": "choice-not-listed"}
+                if pick is not None:
+                    events.append(f"choose:{pick.text}")
+                    self.log(f"  passkey: choose '{pick.text}'")
+                    self.screenshot("passkey-picker")
+                    self.tap_xy(*pick.center)
+                    acted, quiet_since = True, None
+                    time.sleep(1.5)
+                    continue
             if bio:
                 events.append("biometric->finger")
                 self.log("  passkey: biometric prompt -> emu finger touch")
@@ -287,14 +329,26 @@ def parse_nodes(xml: str) -> List[Node]:
             pkg=a.get("package", ""), cls=a.get("class", ""), clickable=a.get("clickable") == "true",
             enabled=a.get("enabled") != "false", bounds=parse_bounds(a.get("bounds", "")),
         ))
+    # alltext: texts of every node drawn inside this node's bounds (a compressed dump flattens containers,
+    # so the tree alone does not say which texts belong to a card / note).
+    for n in out:
+        x1, y1, x2, y2 = n.bounds
+        if x2 <= x1 or y2 <= y1:
+            continue
+        n.alltext = " | ".join(m.text or m.desc for m in out if (m.text or m.desc) and m.bounds[0] >= x1
+                               and m.bounds[1] >= y1 and m.bounds[2] <= x2 and m.bounds[3] <= y2)
     return out
 
 
 def match_fn(sel: str) -> Callable[[Node], bool]:
-    """Selectors:  id:<testID>  text:<exact>  text~:<regex>  desc:<exact>  desc~:<regex>  <bare text>
+    """Selectors:  idtext:<id regex>~<text regex>  id:<testID>  text:<exact>  text~:<regex>  desc:<exact>  desc~:<regex>  <bare text>
     React Native exposes `testID` as the Android resource-id (with or without a package prefix)."""
     kind, _, val = sel.partition(":") if ":" in sel and sel.split(":", 1)[0] in (
-        "id", "text", "text~", "desc", "desc~", "pkg") else ("text", "", sel)
+        "id", "text", "text~", "desc", "desc~", "pkg", "idtext") else ("text", "", sel)
+    if kind == "idtext":  # idtext:<resource-id regex>~<subtree text regex>, e.g. idtext:watch\.feed\.\d+~Copy
+        idrx, _, txrx = val.partition("~")
+        ri, rt = re.compile(idrx), re.compile(txrx, re.I | re.S)
+        return lambda n: bool(ri.fullmatch(n.rid.split("/")[-1])) and bool(rt.search(n.alltext))
     if kind == "id":
         return lambda n: n.rid == val or n.rid.endswith("/" + val)
     if kind == "text":

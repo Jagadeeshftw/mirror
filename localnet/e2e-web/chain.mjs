@@ -52,11 +52,11 @@ const demoOwner = acct(env.testKeys.demoFollowerOwner);
 export const demoAccountP = pub.readContract({ address: env.mirror.factory, abi: F, functionName: "predictAccount", args: [demoOwner.address, zeroHash] });
 
 /** Starts the engine (same env as e2e-api.mjs plus PUBLIC_RPC_URL and CORS). Returns { stop, log }. */
-export async function startEngine({ port, dbPath, logFile }) {
+export async function startEngine({ port, dbPath, logFile, publicRpcUrl = env.rpcUrl }) {
   const demoAccount = await demoAccountP;
   const engineEnv = {
     ...process.env,
-    NETWORK: "localnet", PORT: String(port), PUBLIC_RPC_URL: env.rpcUrl, CORS_ORIGINS: "*", LOG_SUBSCRIPTION: "standard", LOG_LEVEL: "info",
+    NETWORK: "localnet", PORT: String(port), PUBLIC_RPC_URL: publicRpcUrl, CORS_ORIGINS: "*", LOG_SUBSCRIPTION: "standard", LOG_LEVEL: "info",
     PERPL_WS_ENABLED: "0", PERPL_API_URL: "http://127.0.0.1:9/none", THIN_BOOK_GUARD_ENABLED: "0",
     KEEPER_PRIVATE_KEYS: env.testKeys.ops, RELAYER_PRIVATE_KEY: env.testKeys.ops, DEMO_LEADER_PRIVATE_KEY: env.testKeys.demoLeader,
     DEMO_FOLLOWER_ACCOUNT: demoAccount, DEMO_HOLD_MS: "5000", DEMO_IP_HOURLY: "50", DEMO_DAILY_CAP: "500",

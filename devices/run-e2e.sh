@@ -52,10 +52,14 @@ boot() { # avd serial extra-args...
   local avd="$1" ser="$2"; shift 2
   local win=(); [[ $HEADLESS == 1 ]] && win=(-no-window)
   echo "booting $avd on $ser $*"
-  nohup "$EMU" -avd "$avd" -port "${ser#emulator-}" -no-snapshot -no-boot-anim -gpu host "${win[@]}" "$@" \
+  nohup "$EMU" -avd "$avd" -port "${ser#emulator-}" -no-snapshot -no-boot-anim -gpu "${EMU_GPU:-host}" -crash-report-mode never ${win[@]+"${win[@]}"} "$@" \
     > "$HERE/logs/emulator-$avd.log" 2>&1 < /dev/null & disown
-  "$ADB" -s "$ser" wait-for-device
-  until [[ "$("$ADB" -s "$ser" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == 1 ]]; do sleep 3; done
+  local t0=$SECONDS  # bounded: a crashed emulator (e.g. a GPU crash dialog) must fail the run, not hang it
+  until [[ "$("$ADB" -s "$ser" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == 1 ]]; do
+    (( SECONDS - t0 > 420 )) && { echo "error: $avd did not boot in 420 s (see logs/emulator-$avd.log)" >&2; exit 3; }
+    sleep 3
+  done
+  until "$ADB" -s "$ser" shell pm path android 2>/dev/null | grep -q package:; do sleep 2; done
 }
 stop_emu() { "$ADB" -s "$1" emu kill >/dev/null 2>&1 || true; while running "$1"; do sleep 2; done; }
 
@@ -73,13 +77,22 @@ if grep -Eq '^[[:space:]]*device[[:space:]]+b\b' "$FLOW"; then running "$SER_B" 
 
 PKG="$("$ANDROID_HOME"/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort | tail -1)/aapt2 dump badging "$APK" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
 for s in "$SER_A" "$SER_B"; do running "$s" && "$ADB" -s "$s" uninstall "$PKG" >/dev/null 2>&1 || true; done
-"$ADB" -s "$SER_A" install -r -g "$APK"
+for try in 1 2 3; do  # the package manager can refuse right after boot
+  "$ADB" -s "$SER_A" install -r -g "$APK" && break
+  [[ $try == 3 ]] && exit 1
+  "$ADB" -s "$SER_A" uninstall "$PKG" >/dev/null 2>&1; sleep 5
+done
 "$ADB" -s "$SER_A" logcat -c || true
 
 set +e
 python3 "$HERE/e2e/flow.py" "$FLOW" --apk "$APK" --evidence "$EVID" --device "a=$SER_A" --device "b=$SER_B"
 rc=$?
 set -e
-for s in "$SER_A" "$SER_B"; do running "$s" && "$ADB" -s "$s" logcat -d > "$EVID/logcat-$s.txt" 2>/dev/null || true; done
+for s in "$SER_A" "$SER_B"; do  # bounded: a hung emulator must not stall the run
+  running "$s" || continue
+  "$ADB" -s "$s" logcat -d > "$EVID/logcat-$s.txt" 2>/dev/null & lp=$!
+  for _ in $(seq 1 30); do kill -0 $lp 2>/dev/null || break; sleep 1; done
+  kill $lp 2>/dev/null || true
+done
 echo "exit $rc  evidence: $EVID"
 exit $rc

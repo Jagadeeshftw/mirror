@@ -23,8 +23,10 @@ export function fillDeviationBps(p: CopyProof, orderType: number): number | null
   return deviationBps(p.leaderFillPNS, p.fillPNS, orderType);
 }
 
-/** Price difference in PNS units, positive = worse for the follower. */
-export function worseByPNS(p: CopyProof, orderType: number): bigint {
+/** Price difference in PNS units, positive = worse for the follower. null when either fill is unknown
+ * (the contract records no fill price for closes: fillPNS = 0). */
+export function worseByPNS(p: CopyProof, orderType: number): bigint | null {
+  if (BigInt(p.fillPNS) === 0n || BigInt(p.leaderFillPNS) === 0n) return null;
   const d = BigInt(p.fillPNS) - BigInt(p.leaderFillPNS);
   return isBuy(orderType) ? d : -d;
 }

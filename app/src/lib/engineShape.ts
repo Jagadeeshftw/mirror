@@ -174,7 +174,10 @@ export function normalizeFeedEvent(raw: any): FeedEvent {
           rule: blockRule(String(reason ?? ""), raw?.limit, data),
         }
       : undefined;
-  const fill = proof?.fillPNS ?? raw?.pricePNS ?? (kind === "Blocked" ? (data?.markPNS as string | undefined) : undefined);
+  // Closes carry fillPNS = 0 (the contract records fills for opens only): price them at the mark the
+  // contract checked the close against instead of 0.
+  const nz = (v: unknown) => (v === undefined || v === null || String(v) === "0" ? undefined : String(v));
+  const fill = nz(proof?.fillPNS) ?? nz(proof?.markPNS) ?? raw?.pricePNS ?? (kind === "Blocked" ? (data?.markPNS as string | undefined) : undefined);
   const n = raw?.notionalCNS ?? (perpId !== undefined && kind === "Mirrored" ? notional(perpId, raw?.lotLNS, fill)?.toString() : undefined);
   let leverageHdths = numOr(raw?.leverageHdths, undefined) as number | undefined;
   if (kind === "Blocked" && leverageHdths === undefined && reason === "LeverageTooHigh") leverageHdths = Number(raw?.actual ?? 0);

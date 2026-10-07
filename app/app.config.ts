@@ -6,6 +6,9 @@ const rpId = process.env.MERA_RP_ID ?? "mirror.0xo.in";
 const applicationId = "com.zeroxo.mirror";
 const apiBase = process.env.EXPO_PUBLIC_API_BASE ?? "";
 const devTools = process.env.EXPO_PUBLIC_MIRROR_DEV_TOOLS === "1";
+// Stage-A emulator builds (scripts/build-apk.sh --stage-a): release app, cleartext only to the emulator's
+// host loopback (10.0.2.2) / localhost, where the localnet engine runs. Never set for normal release builds.
+const localCleartext = devTools || process.env.MIRROR_LOCAL_CLEARTEXT === "1";
 
 const config: ExpoConfig = {
   name: BRAND,
@@ -80,8 +83,8 @@ const config: ExpoConfig = {
     ],
     "./plugins/withReleaseSigning.js",
     "./plugins/withNoAnimations.js",
-    // Cleartext to the local mock only exists in dev-tools builds.
-    ...(devTools ? ["./plugins/withLocalCleartext.js"] : []),
+    // Cleartext to the local mock / localnet engine only exists in dev-tools and stage-a builds.
+    ...(localCleartext ? ["./plugins/withLocalCleartext.js"] : []),
   ],
   web: {
     bundler: "metro",

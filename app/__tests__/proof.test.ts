@@ -13,6 +13,9 @@ describe("copy proof", () => {
     expect(fillDeviationBps(proof, 2)).toBeCloseTo(-1.01, 2);
     expect(worseByPNS(proof, 0)).toBe(120n);
   });
+  it("has no price difference for a close (no recorded fill)", () => {
+    expect(worseByPNS({ ...proof, fillPNS: "0" }, 2)).toBeNull();
+  });
   it("has no deviation without a leader fill", () => {
     expect(deviationBps("0", "100", 0)).toBeNull();
   });

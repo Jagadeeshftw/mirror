@@ -13,15 +13,28 @@ Flow syntax (one command per line, '#' comments, blank lines ignored):
   waitGone <sel> [secs]
   assertText <sel> <regex>      node text must match regex
   input <sel> <text...>         tap a field and type text
-  scrollTo <sel>                swipe up until visible (max 8 swipes)
-  passkey                       approve the system passkey sheet (tap Continue/..., emu finger touch)
+  scrollTo <sel> [up]           swipe (500 px) until visible inside the content area (max 14 swipes)
+  passkey [secs] [choose-regex] approve the system passkey sheet (tap Continue/..., emu finger touch);
+                                with choose-regex, first tap the matching entry in the account picker
   passkeyExpectFail             same, but the step passes if the sheet ends in an error
   key <KEYCODE> | back | home | sleep <secs> | screenshot <name> | log <text...>
   expectResult <sel> <regex> [secs]   wait for a node whose text matches regex
+  step <title...>               start a named step (report.json groups commands; pass/fail per step)
+  readText <sel> <var> [regex] [secs]  store the node text (or regex group 1) in ${var}; waits for a match
+  squash <var>                  remove whitespace from ${var} (e.g. the grouped wallet address)
+  assertVar <var> <regex>       ${var} must match regex (regex may contain ${other})
+  shell <cmd...>                run a host command (sh -c); ${var} substituted; non-zero exit fails;
+                                stdout lines "VAR name=value" set ${name}
+  open <path>                   deep link mirror://<path> on the active device (e.g. /funds)
+  tapAt <sel> <fx> <fy>         tap a point inside the node's bounds (fractions 0..1, e.g. a slider end)
+  swipeUp                       one upward swipe (scroll)
+  retry <n> <pause> <cmd> ;; <cmd> ...  run the commands; on a failure wait <pause> s and start over (n tries)
 
-Selectors: id:<testID>  text:<exact>  text~:<regex>  desc:<exact>  desc~:<regex>  (bare = text)
+${name} is replaced in every line before it is parsed (environment variables work too).
+Every step saves a screenshot to the evidence dir; at the end report.json and index.html are written.
+
+Selectors: idtext:<id-regex>~<subtree-text-regex>  id:<testID>  text:<exact>  text~:<regex>  desc:<exact>  desc~:<regex>  (bare = text)
 Lines are split with shlex: quote any selector or text that contains spaces or backslashes.
-Every tap / passkey / assert step saves a screenshot to the evidence dir.
 """
 import argparse
 import json
@@ -34,6 +47,11 @@ import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 from device import Device, SDK  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Commands that take their own screenshot or change nothing visible.
+NO_SHOT = {"tap", "assertText", "expectResult", "passkey", "passkeyExpectFail", "screenshot", "log", "sleep",
+           "device", "step", "squash", "assertVar", "stop", "uninstall", "install", "clear"}
 
 
 def apk_package(apk: str) -> str:
@@ -53,6 +71,9 @@ class Runner:
         self.devs = {}
         self.report = []
         self.d = None
+        self.vars = dict(os.environ)
+        self.cur_step = "setup"
+        self.extra = {}
         self.log_f = open(os.path.join(evidence, "run.log"), "a")
 
     def log(self, msg):
@@ -70,8 +91,19 @@ class Runner:
             self.devs[serial] = dev
         self.d = self.devs[serial]
 
+    def subst(self, raw):
+        def rep(m):
+            k = m.group(1)
+            if k not in self.vars:
+                raise KeyError(f"unset variable ${{{k}}}")
+            return self.vars[k]
+        return re.sub(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}", rep, raw)
+
     def step(self, n, raw):
-        parts = shlex.split(raw)
+        if raw.split(None, 1)[0] in ("step", "log"):  # free text: no shlex (apostrophes)
+            parts = self.subst(raw).split()
+        else:
+            parts = shlex.split(self.subst(raw))
         cmd, args = parts[0], parts[1:]
         d = self.d
         if cmd == "device":
@@ -79,7 +111,14 @@ class Runner:
         if d is None:
             self.use(next(iter(self.aliases), "emulator-5554")); d = self.d
         if cmd == "install":
-            d.adb("install", "-r", "-g", self.apk, timeout=300)
+            for attempt in range(3):  # right after boot the package manager can refuse with an empty error
+                try:
+                    d.adb("install", "-r", "-g", self.apk, timeout=300); break
+                except RuntimeError as e:
+                    self.log(f"  install failed ({e}); uninstall + retry")
+                    d.adb("uninstall", self.pkg, check=False); time.sleep(5)
+            else:
+                raise RuntimeError("install failed 3 times")
         elif cmd == "uninstall":
             d.adb("uninstall", self.pkg, check=False)
         elif cmd == "clear":
@@ -107,7 +146,7 @@ class Runner:
             t0 = time.time(); txt = None
             while time.time() - t0 < secs:
                 node = d.find(sel)
-                txt = node.text if node else None
+                txt = (node.text or node.desc or node.alltext) if node else None
                 if txt is not None and re.search(rx, txt):
                     break
                 time.sleep(1)
@@ -119,13 +158,15 @@ class Runner:
         elif cmd == "input":
             d.tap(args[0]); d.type_text(" ".join(args[1:])); time.sleep(0.5)
         elif cmd == "scrollTo":
-            for _ in range(8):
-                if d.find(args[0]):
+            up = len(args) > 1 and args[1] == "up"  # scrollTo <sel> [up]: content moves down (back to the top)
+            for _ in range(14):
+                n = d.find(args[0])
+                if n and n.bounds[3] < 2150 and n.bounds[1] > 300:
                     break
-                d.sh("input swipe 540 1700 540 800 350"); time.sleep(0.8)
+                d.sh("input swipe 540 1000 540 1500 400" if up else "input swipe 540 1500 540 1000 400"); time.sleep(0.9)
             d.wait_for(args[0], 3)
         elif cmd in ("passkey", "passkeyExpectFail"):
-            res = d.approve_passkey(timeout=float(args[0]) if args else 90)
+            res = d.approve_passkey(timeout=float(args[0]) if args else 90, choose=args[1] if len(args) > 1 else None)
             self.log(f"  passkey -> {res}")
             d.screenshot(f"s{n}-after-passkey")
             if cmd == "passkey" and not res.get("ok"):
@@ -140,6 +181,77 @@ class Runner:
             time.sleep(float(args[0]))
         elif cmd == "screenshot":
             d.screenshot(args[0])
+        elif cmd == "step":
+            self.cur_step = raw.split(None, 1)[1]
+        elif cmd == "readText":
+            sel, var = args[0], args[1]
+            rx = args[2] if len(args) > 2 else None
+            secs = float(args[3]) if len(args) > 3 else 30
+            t0 = time.time(); txt = None
+            while True:
+                node = d.find(sel)
+                txt = (node.text or node.desc or node.alltext) if node else None
+                m = re.search(rx, txt) if (txt is not None and rx) else None
+                if txt is not None and (rx is None or m):
+                    val = (m.group(1) if m and m.groups() else m.group(0)) if rx else txt
+                    break
+                if time.time() - t0 > secs:
+                    raise AssertionError(f"readText {sel}: {txt!r} !~ /{rx}/")
+                time.sleep(1)
+            self.vars[var] = val
+            self.extra.setdefault("values", {})[var] = val
+            self.log(f"  {var} = {val!r}")
+        elif cmd == "squash":
+            self.vars[args[0]] = re.sub(r"\s+", "", self.vars[args[0]])
+            self.extra.setdefault("values", {})[args[0]] = self.vars[args[0]]
+        elif cmd == "assertVar":
+            val = self.vars.get(args[0])
+            if val is None or not re.search(args[1], val):
+                raise AssertionError(f"${{{args[0]}}} = {val!r} !~ /{args[1]}/")
+            self.extra.setdefault("values", {})[args[0]] = val
+            self.log(f"  {args[0]} = {val!r} ~ /{args[1]}/")
+        elif cmd == "shell":
+            line = self.subst(raw).split(None, 1)[1]
+            self.log(f"  $ {line}")
+            p = subprocess.run(["sh", "-c", line], capture_output=True, text=True, timeout=300)
+            out = (p.stdout or "").strip()
+            for l in out.splitlines():
+                mm = re.match(r"^VAR ([A-Za-z_][A-Za-z0-9_]*)=(.*)$", l)
+                if mm:
+                    self.vars[mm.group(1)] = mm.group(2)
+                    self.extra.setdefault("values", {})[mm.group(1)] = mm.group(2)
+            if out:
+                self.log("  > " + out[-800:].replace("\n", "\n  > "))
+            self.extra.setdefault("shell", []).append(out[-1500:])
+            if p.returncode != 0:
+                raise AssertionError(f"shell exit {p.returncode}: {(p.stderr or out)[-500:]}")
+        elif cmd == "open":
+            d.sh(f"am start -a android.intent.action.VIEW -d 'mirror://{args[0]}' {self.pkg}")
+            time.sleep(1.5)
+        elif cmd == "tapAt":
+            node = d.wait_for(args[0], 30)
+            x1, y1, x2, y2 = node.bounds
+            x = int(x1 + (x2 - x1) * float(args[1])); y = int(y1 + (y2 - y1) * float(args[2]))
+            d.tap_xy(x, y); self.log(f"  tapAt {args[0]} @({x},{y})"); time.sleep(0.6)
+        elif cmd == "swipeUp":
+            d.sh("input swipe 540 1700 540 900 350"); time.sleep(0.8)
+        elif cmd == "retry":
+            # retry <times> <pause-secs> <cmd> ;; <cmd> ...   run the sub-commands; on a failure pause and start over
+            times, pause = int(args[0]), float(args[1])
+            subs = [c.strip() for c in self.subst(raw).split(None, 3)[3].split(";;") if c.strip()]
+            for attempt in range(1, times + 1):
+                try:
+                    for c in subs:
+                        self.log(f"  retry {attempt}/{times}: {c}")
+                        self.step(n, c)
+                    break
+                except Exception as e:  # noqa: BLE001
+                    self.log(f"  attempt {attempt} failed: {e}")
+                    self.extra.setdefault("attempts", []).append(str(e)[:300])
+                    if attempt == times:
+                        raise
+                    d.screenshot(f"s{n}-retry-{attempt}")
+                    time.sleep(pause)
         elif cmd == "log":
             self.log("  # " + " ".join(args))
         else:
@@ -154,9 +266,15 @@ class Runner:
                 continue
             self.log(f"[{i}] {s}")
             t0 = time.time()
+            self.extra = {}
+            cmd0 = s.split()[0]
+            before = set(os.listdir(self.evidence))
             try:
                 self.step(i, s)
-                self.report.append({"line": i, "cmd": s, "ok": True, "secs": round(time.time() - t0, 1)})
+                if self.d and cmd0 not in NO_SHOT:
+                    self.d.screenshot(f"s{i}-{cmd0}")
+                self.extra["shots"] = sorted(f for f in set(os.listdir(self.evidence)) - before if f.endswith(".png"))
+                self.report.append({"line": i, "step": self.cur_step, "cmd": s, "ok": True, "secs": round(time.time() - t0, 1), **self.extra})
             except Exception as e:  # noqa: BLE001
                 ok = False
                 self.log(f"  FAILED: {e}")
@@ -165,10 +283,23 @@ class Runner:
                         self.d.screenshot(f"s{i}-FAILED"); self.d.save_ui(f"s{i}-FAILED")
                     except Exception:  # noqa: BLE001
                         pass
-                self.report.append({"line": i, "cmd": s, "ok": False, "error": str(e)})
+                self.extra["shots"] = sorted(f for f in set(os.listdir(self.evidence)) - before if f.endswith(".png"))
+                self.report.append({"line": i, "step": self.cur_step, "cmd": s, "ok": False, "error": str(e), **self.extra})
                 break
+        steps = []
+        for r in self.report:
+            if not steps or steps[-1]["step"] != r["step"]:
+                steps.append({"step": r["step"], "ok": True, "commands": 0})
+            steps[-1]["commands"] += 1
+            steps[-1]["ok"] = steps[-1]["ok"] and r["ok"]
         with open(os.path.join(self.evidence, "report.json"), "w") as f:
-            json.dump({"flow": flow, "apk": self.apk, "package": self.pkg, "ok": ok, "steps": self.report}, f, indent=2)
+            json.dump({"flow": flow, "apk": self.apk, "package": self.pkg, "ok": ok, "summary": steps,
+                       "commands": self.report}, f, indent=2)
+        try:
+            from contact_sheet import write_index
+            write_index(self.evidence)
+        except Exception as e:  # noqa: BLE001
+            self.log(f"contact sheet failed: {e}")
         self.log(f"RESULT {'PASS' if ok else 'FAIL'}  evidence: {self.evidence}")
         return ok
 

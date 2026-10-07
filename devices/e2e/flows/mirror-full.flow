@@ -1,3 +1,5 @@
+# OUTDATED placeholder (pre-1.0 testIDs, testnet). The current full flow is stage-a.flow, run on the localnet with
+# devices/run-stage-a-android.sh. Kept for reference only.
 # Mirror full app flow (PLACEHOLDER until the app ships the testIDs in ../TESTIDS.md).
 # Run:  devices/run-e2e.sh <mirror.apk>            (this file is the default flow)
 # Needs: both emulators signed in to a Google account (same account for the restore step),
