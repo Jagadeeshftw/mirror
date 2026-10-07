@@ -7,14 +7,10 @@
 // Mera's React Native client makes. Google Password Manager returns both outputs in one prompt
 // (verified on device: devices/evidence/prf-signedin-*). If a provider ignores `second`, the caller
 // evaluates the notification namespace on its own with one more prompt.
-import { sha256 } from "@noble/hashes/sha2.js";
-import { utf8ToBytes } from "@noble/hashes/utils.js";
 import { Passkey } from "react-native-passkey";
+import { decodeOutput, toBase64Url } from "./prfShared";
 
-export const NS_ACCOUNT_LABEL = "mera.prf.salt.v1";
-export const NS_NOTIFY_LABEL = "mirror.prf.ns.notify.v1";
-export const NS_ACCOUNT = sha256(utf8ToBytes(NS_ACCOUNT_LABEL));
-export const NS_NOTIFY = sha256(utf8ToBytes(NS_NOTIFY_LABEL));
+export { NS_ACCOUNT, NS_ACCOUNT_LABEL, NS_NOTIFY, NS_NOTIFY_LABEL, decodeOutput, toBase64Url } from "./prfShared";
 
 type NativeFn = (request: any) => Promise<any>;
 type PasskeyStatics = { createPlatformKey?: NativeFn; getPlatformKey?: NativeFn; create?: NativeFn; get?: NativeFn };
@@ -51,23 +47,4 @@ export async function withSecondSalt<T>(
   } finally {
     for (const [name, orig] of originals) (passkey as any)[name] = orig;
   }
-}
-
-export function decodeOutput(v: unknown): Uint8Array | undefined {
-  if (v === undefined || v === null) return undefined;
-  let out: Uint8Array;
-  if (typeof v === "string") {
-    const b64 = v.replace(/-/g, "+").replace(/_/g, "/");
-    const bin = atob(b64 + "===".slice((b64.length + 3) % 4));
-    out = Uint8Array.from(bin, (c) => c.charCodeAt(0));
-  } else {
-    out = Uint8Array.from(v as ArrayLike<number>);
-  }
-  return out.length === 32 ? out : undefined;
-}
-
-export function toBase64Url(b: Uint8Array): string {
-  let s = "";
-  for (const x of b) s += String.fromCharCode(x);
-  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }

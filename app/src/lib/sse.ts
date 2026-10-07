@@ -59,8 +59,8 @@ export function openSse(url: string, opts: SseOptions): SseHandle {
     const x = new XMLHttpRequest();
     xhr = x;
     x.open("GET", url);
+    // Only CORS-safelisted headers on the first connect, so browsers don't need a preflight.
     x.setRequestHeader("Accept", "text/event-stream");
-    x.setRequestHeader("Cache-Control", "no-cache");
     if (lastId) x.setRequestHeader("Last-Event-ID", lastId);
     x.onprogress = () => {
       const text = x.responseText ?? "";

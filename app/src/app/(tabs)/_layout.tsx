@@ -3,6 +3,7 @@ import React from "react";
 import { useFeedAll } from "../../state/data";
 import { BottomNav } from "../../ui/chrome";
 import { useColors } from "../../ui/theme";
+import { useLayout } from "../../ui/layout";
 
 function Bar({ state, navigation }: any) {
   const feed = useFeedAll();
@@ -13,9 +14,11 @@ function Bar({ state, navigation }: any) {
 
 export default function TabsLayout() {
   const c = useColors();
+  // Laptop: the sidebar (ui/laptop/Frame.tsx) replaces the bottom navigation.
+  const laptop = useLayout() === "laptop";
   return (
     <Tabs
-      tabBar={(props) => <Bar {...props} />}
+      tabBar={(props) => (laptop ? null : <Bar {...props} />)}
       screenOptions={{ headerShown: false, animation: "none", sceneStyle: { backgroundColor: c.bg } }}
     >
       <Tabs.Screen name="home" />

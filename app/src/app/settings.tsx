@@ -1,10 +1,10 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { TextInput, View } from "react-native";
+import { Platform, TextInput, View } from "react-native";
 import { DEFAULT_API_BASE, getApiBase, setApiBaseOverride } from "../lib/api";
-import { addressUrl, blockNumber } from "../lib/chain";
+import { addressUrl } from "../lib/chain";
 import { dateShort, shortAddr } from "../lib/format";
 import { fingerprint } from "../lib/notifyKey";
 import { NS_NOTIFY_LABEL } from "../lib/prfNamespaces";
@@ -14,7 +14,11 @@ import { useConfig, useTotals } from "../state/data";
 import { useSession } from "../state/session";
 import { AppBar } from "../ui/chrome";
 import { Icon, type IconName } from "../ui/icons";
-import { Button, Card, Dialog, Lbl, Note, Press, Row, Screen, Scroll, Seg, T } from "../ui/kit";
+import { Button, Card, Dialog, Lbl, Note, Press, Row, Screen, Scroll, Seg, Switch, T } from "../ui/kit";
+import { NetworkRows } from "../ui/netRows";
+import { useAlerts } from "../state/alerts";
+import { VERSION_LABEL } from "../lib/version";
+import { BUILDER_ID, FEE_PCT, FEES_DOC_URL } from "../lib/fees";
 import { fonts, useColors, useTheme, type ThemePref } from "../ui/theme";
 
 // Module-local so the minifier folds it to false in release builds and drops dev-only UI.
@@ -63,7 +67,7 @@ export default function Settings() {
   const [phraseErr, setPhraseErr] = useState<string | null>(null);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [api, setApi] = useState(getApiBase());
-  const rpc = useQuery({ queryKey: ["rpcHealth", cfg?.rpc], queryFn: () => blockNumber(cfg!), enabled: !!cfg, refetchInterval: 10_000 });
+  const alerts = useAlerts(account?.address);
 
   useEffect(() => {
     loadNotifyKey().then((k) => setFp(k ? fingerprint(k.publicKey) : null));
@@ -79,7 +83,7 @@ export default function Settings() {
       <Scroll contentStyle={{ paddingHorizontal: 20, paddingTop: 4, gap: 10 }} testID="settings.screen">
         <Lbl style={{ marginTop: 8 }}>Security</Lbl>
         <Card list>
-          <SetRow icon="fp" title="Passkey" sub={`${DEV_TOOLS && devPasskeyActive() ? "Dev passkey simulator (emulator build)" : "Synced by Google Password Manager"} · ${RP_ID} · ${account.restored ? "restored" : "created"} ${dateShort(account.createdAt)}`} />
+          <SetRow icon="fp" title="Passkey" sub={`${DEV_TOOLS && devPasskeyActive() ? "Dev passkey simulator (dev build)" : Platform.OS === "web" ? "Synced passkey, or your phone via QR" : "Synced by Google Password Manager"} · ${RP_ID} · ${account.restored ? "restored" : "created"} ${dateShort(account.createdAt)}`} />
           <SetRow
             icon="phone"
             title={account.device ?? "This phone"}
@@ -144,21 +148,16 @@ export default function Settings() {
         </Card>
 
         <Lbl style={{ marginTop: 8 }}>Network</Lbl>
+        <NetworkRows />
+        <Lbl style={{ marginTop: 8 }}>Alerts</Lbl>
         <Card list>
           <SetRow
-            icon="globe"
-            title={`Monad mainnet · chain ${cfg?.chainId ?? 143}`}
-            sub={rpc.data ? `RPC healthy · ${rpc.data.ms} ms · block ${rpc.data.block.toLocaleString("en-US")}` : rpc.isError ? "RPC unreachable" : "Checking RPC"}
-            right={
-              <Row gap={6}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: rpc.data ? c.pos : c.mu }} />
-                <T size={12} w={600} color={rpc.data ? "posI" : "mu"}>
-                  {rpc.data ? "Online" : "Offline"}
-                </T>
-              </Row>
-            }
+            icon="bell"
+            title="Notifications"
+            sub={alerts.on ? (alerts.permission === "denied" ? "On in Mirror · blocked in system settings" : "On · copies, blocked trades, stops") : "Off · asked only when you turn alerts on"}
+            right={<Switch on={alerts.on} onChange={(v) => (v ? alerts.turnOn() : alerts.turnOff())} testID="settings.alerts.toggle" />}
           />
-          <SetRow icon="bell" title="Notifications" sub="Copies, blocked trades, stops, account" onPress={() => router.push("/notifications")} right={<Icon name="chev" size={18} color={c.mu} />} />
+          <SetRow icon="clock" title="Notification history" sub="Decrypted on this device only" onPress={() => router.push("/notifications")} right={<Icon name="chev" size={18} color={c.mu} />} testID="settings.notifications" />
         </Card>
 
         <Lbl style={{ marginTop: 8 }}>About</Lbl>
@@ -167,8 +166,9 @@ export default function Settings() {
             <SetRow key={a.account} icon="wallet" title={`Follow account · ${shortAddr(a.leader?.address)}`} sub={<T size={12} mono color="mu">{shortAddr(a.account)}</T>} right={ext} onPress={() => Linking.openURL(addressUrl(cfg, a.account))} />
           ))}
           {cfg?.contracts.factory ? <SetRow icon="doc" title="Account factory" sub={<T size={12} mono color="mu">{shortAddr(cfg.contracts.factory)}</T>} right={ext} onPress={() => Linking.openURL(addressUrl(cfg, cfg.contracts.factory!))} /> : null}
+          <SetRow icon="doc" title="Fees" sub={`Mirror fee ${FEE_PCT} of opening size (Perpl builder ${BUILDER_ID}) · none on closes · gas sponsored`} right={ext} onPress={() => Linking.openURL(FEES_DOC_URL)} testID="settings.fees" />
           <SetRow icon="warn" title="Unaudited beta" sub="Deposits capped at 25 AUSD per follow account" />
-          <SetRow icon="info" title="Mirror 0.9.2 (beta)" sub="Balance in AUSD by Agora · Passkeys by Mera · Labels by Nansen" />
+          <SetRow icon="info" title={`Mirror ${VERSION_LABEL}`} sub="Balance in AUSD by Agora · Passkeys by Mera · Labels by Nansen" testID="settings.version" />
         </Card>
 
         {DEV_TOOLS ? (

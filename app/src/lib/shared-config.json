@@ -29,23 +29,129 @@
         "demoFollowerAccount": null
       },
       "markets": [
-        { "perpId": 1, "symbol": "BTC", "lotDecimals": 5, "priceDecimals": 1 },
-        { "perpId": 10, "symbol": "MON", "lotDecimals": 0, "priceDecimals": 6 },
-        { "perpId": 20, "symbol": "ETH", "lotDecimals": 3, "priceDecimals": 2 },
-        { "perpId": 31, "symbol": "SOL", "lotDecimals": 3, "priceDecimals": 3 },
-        { "perpId": 40, "symbol": "HYPE", "lotDecimals": 2, "priceDecimals": 4 },
-        { "perpId": 50, "symbol": "ZEC", "lotDecimals": 4, "priceDecimals": 2 },
-        { "perpId": 60, "symbol": "LIT", "lotDecimals": 1, "priceDecimals": 5 },
-        { "perpId": 70, "symbol": "VVV", "lotDecimals": 2, "priceDecimals": 4 },
-        { "perpId": 90, "symbol": "PUMP", "lotDecimals": 0, "priceDecimals": 6 },
-        { "perpId": 100, "symbol": "NEAR", "lotDecimals": 2, "priceDecimals": 4 },
-        { "perpId": 110, "symbol": "UNI", "lotDecimals": 2, "priceDecimals": 4 }
+        {
+          "perpId": 1,
+          "symbol": "BTC",
+          "lotDecimals": 5,
+          "priceDecimals": 1
+        },
+        {
+          "perpId": 10,
+          "symbol": "MON",
+          "lotDecimals": 0,
+          "priceDecimals": 6
+        },
+        {
+          "perpId": 20,
+          "symbol": "ETH",
+          "lotDecimals": 3,
+          "priceDecimals": 2
+        },
+        {
+          "perpId": 31,
+          "symbol": "SOL",
+          "lotDecimals": 3,
+          "priceDecimals": 3
+        },
+        {
+          "perpId": 40,
+          "symbol": "HYPE",
+          "lotDecimals": 2,
+          "priceDecimals": 4
+        },
+        {
+          "perpId": 50,
+          "symbol": "ZEC",
+          "lotDecimals": 4,
+          "priceDecimals": 2
+        },
+        {
+          "perpId": 60,
+          "symbol": "LIT",
+          "lotDecimals": 1,
+          "priceDecimals": 5
+        },
+        {
+          "perpId": 70,
+          "symbol": "VVV",
+          "lotDecimals": 2,
+          "priceDecimals": 4
+        },
+        {
+          "perpId": 90,
+          "symbol": "PUMP",
+          "lotDecimals": 0,
+          "priceDecimals": 6
+        },
+        {
+          "perpId": 100,
+          "symbol": "NEAR",
+          "lotDecimals": 2,
+          "priceDecimals": 4
+        },
+        {
+          "perpId": 110,
+          "symbol": "UNI",
+          "lotDecimals": 2,
+          "priceDecimals": 4
+        }
       ]
     },
     "localFork": {
       "chainId": 143,
       "rpc": "http://127.0.0.1:8545",
       "note": "anvil --fork-url https://rpc.monad.xyz --chain-id 143; same addresses as mainnet; test funds only"
+    },
+    "testnet": {
+      "chainId": 10143,
+      "rpc": "https://testnet-rpc.monad.xyz",
+      "wss": "wss://testnet-rpc.monad.xyz",
+      "explorerTx": "https://testnet.monadvision.com/tx/",
+      "explorerAddress": "https://testnet.monadvision.com/address/",
+      "perplExchange": "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
+      "perplDeployBlock": 54964161,
+      "perplApi": "https://testnet.perpl.xyz/api",
+      "perplWs": "wss://testnet.perpl.xyz",
+      "collateral": "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
+      "collateralDecimals": 6,
+      "minAccountOpenCNS": "100000000",
+      "mirror": {
+        "factory": null,
+        "implementation": null,
+        "keeperRegistry": null,
+        "deployBlock": null
+      },
+      "teamRun": {
+        "demoLeaderAddress": "0x299E77E58DD37607e4890C761924D829F8ACe82C",
+        "demoLeaderAccountId": null,
+        "demoFollowerAccount": "0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896"
+      },
+      "markets": [
+        {
+          "perpId": 16,
+          "symbol": "BTC",
+          "lotDecimals": 5,
+          "priceDecimals": 1
+        },
+        {
+          "perpId": 32,
+          "symbol": "ETH",
+          "lotDecimals": 3,
+          "priceDecimals": 2
+        },
+        {
+          "perpId": 48,
+          "symbol": "SOL",
+          "lotDecimals": 3,
+          "priceDecimals": 2
+        },
+        {
+          "perpId": 64,
+          "symbol": "MON",
+          "lotDecimals": 0,
+          "priceDecimals": 5
+        }
+      ]
     }
   }
 }

@@ -9,6 +9,8 @@ import { CloseAllDialog } from "../../ui/closeAll";
 import { useOwnerAction } from "../../state/ownerAction";
 import { Button, Card, ErrorBanner, Identicon, Lbl, LoadingBlock, MarketBadge, Row, Screen, Scroll, Seg, Side, T } from "../../ui/kit";
 import { useColors } from "../../ui/theme";
+import { LaptopPositions } from "../../ui/laptop/LaptopPositions";
+import { useLayout } from "../../ui/layout";
 
 function PosRow({ p, leaderAddr, sym, lotDec, priceDec }: { p: Position; leaderAddr?: string; sym: string; lotDec: number; priceDec: number }) {
   const c = useColors();
@@ -63,6 +65,10 @@ function PosRow({ p, leaderAddr, sym, lotDec, priceDec }: { p: Position; leaderA
 }
 
 export default function Positions() {
+  return useLayout() === "laptop" ? <LaptopPositions /> : <PhonePositions />;
+}
+
+function PhonePositions() {
   const c = useColors();
   const cfg = useConfig().data;
   const { byPerp } = useMarkets(cfg);

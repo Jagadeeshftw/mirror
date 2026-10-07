@@ -11,7 +11,7 @@ import { api, ApiError } from "../../lib/api";
 import { ACTION, encodeSetPolicy, validatePolicy } from "../../lib/contracts";
 import { ausd, bps, cnsToNumber, dateLong, leverage, lots as fmtLots, parseUnits, price as fmtPrice, shortAddr, toBig } from "../../lib/format";
 import { sealNote } from "../../lib/notifyKey";
-import { ALL_MARKETS, BETA_CAP_CNS, EXPIRY_PRESETS, MIN_FOLLOW_CNS, SLIPPAGE_PRESETS, buildPolicy, defaultForm, formErrors, ratioPresets, suggestRatioBps, type FollowForm } from "../../lib/policy";
+import { ALL_MARKETS, BETA_CAP_CNS, EXPIRY_PRESETS, MIN_FOLLOW_CNS, SLIPPAGE_PRESETS, buildPolicy, defaultForm, followLimits, formErrors, ratioPresets, suggestRatioBps, type FollowForm } from "../../lib/policy";
 import type { FeedEvent, FollowQuote, MirrorAccount, QuoteRow, RelayResult } from "../../lib/types";
 import { describeError, loadNotifyKey } from "../../lib/wallet";
 import { useConfig, useLeader, useMarkets, useOwner, useTotals, useWallet } from "../../state/data";
@@ -20,6 +20,12 @@ import { BlockedSheet, FeedItem, openTx } from "../../ui/feed";
 import { Icon, type IconName } from "../../ui/icons";
 import { Button, Card, Checklist, Chip, ChipS, Field, Hint, IconButton, Identicon, KV, Lbl, LatencyPill, NumInput, Note, Row, Scroll, Side, Slider, Switch, T, TxLink } from "../../ui/kit";
 import { fonts, useColors } from "../../ui/theme";
+import { StepTabs } from "../../ui/kit2";
+import { WhatIfBody } from "../../ui/whatif";
+import { useLayout } from "../../ui/layout";
+import { FollowModal } from "../../ui/laptop/FollowModal";
+import { AlertsCard } from "../../ui/alertsCard";
+import { BUILDER_ID, FEE_PCT, feeFor, feeText, plannedFeeCNS } from "../../lib/fees";
 
 const LEV_STEPS = Array.from({ length: 15 }, (_, i) => i + 1);
 const LOSS_STEPS = [0, 2, 5, 8, 10, 12, 15, 20, 25, 30, 40, 50];
@@ -71,6 +77,7 @@ export default function FollowSheet() {
   const leaderId = Number(id);
   const { account: me } = useSession();
   const cfg = useConfig().data;
+  const limits = followLimits(cfg);
   const { bySymbol, byPerp } = useMarkets(cfg);
   const leaderQ = useLeader(leaderId);
   const owner = useOwner();
@@ -82,7 +89,8 @@ export default function FollowSheet() {
 
   const [form, setForm] = useState<FollowForm>(defaultForm());
   const [initialised, setInitialised] = useState(false);
-  const [step, setStep] = useState<"limits" | "review" | "approving" | "done" | "error">("limits");
+  const [step, setStep] = useState<"limits" | "whatif" | "review" | "approving" | "done" | "error">("limits");
+  const laptop = useLayout() === "laptop";
   const [steps, setSteps] = useState<Record<string, StepState>>({});
   const [results, setResults] = useState<Record<string, Partial<RelayResult>>>({});
   const [error, setError] = useState<{ title: string; detail: string } | null>(null);
@@ -114,7 +122,8 @@ export default function FollowSheet() {
         matchNow: false,
       });
     } else if (!isEdit) {
-      const alloc = wallet.cns >= BETA_CAP_CNS ? 12_000_000n : wallet.cns >= MIN_FOLLOW_CNS ? (wallet.cns > 12_000_000n ? 12_000_000n : wallet.cns) : MIN_FOLLOW_CNS;
+      const start = limits.minCNS > 12_000_000n ? limits.minCNS : 12_000_000n;
+      const alloc = wallet.cns >= start ? start : wallet.cns >= limits.minCNS ? wallet.cns : limits.minCNS;
       const maxLeaderNotional = l.positions.reduce((m, p) => {
         const mk = byPerp.get(p.perpId);
         if (!mk) return m;
@@ -139,7 +148,7 @@ export default function FollowSheet() {
   const policy = useMemo(() => (cfg && l ? buildPolicy(form, leaderId, cfg.markets) : null), [form, cfg, l, leaderId]);
   const allocCNS = parseUnits(form.allocationAusd, 6) ?? 0n;
   const walletAvail = wallet.cns;
-  const errors = isEdit ? formErrors({ ...form, allocationAusd: "10" }, BETA_CAP_CNS).filter((e) => e.field !== "allocation") : formErrors(form, walletAvail);
+  const errors = isEdit ? formErrors({ ...form, allocationAusd: ausd(limits.minCNS) }, limits.capCNS, limits).filter((e) => e.field !== "allocation") : formErrors(form, walletAvail, limits);
   const policyErr = policy ? validatePolicy(policy) : "loading";
 
   // Live quote for "Match the leader now".
@@ -216,34 +225,29 @@ export default function FollowSheet() {
   const header = (
     <View style={{ gap: 12, paddingBottom: 12 }}>
       <Row gap={12}>
-        {step === "review" ? <IconButton name="back" onPress={() => setStep("limits")} testID="follow.back" /> : null}
+        {step === "review" || step === "whatif" ? <IconButton name="back" onPress={() => setStep(step === "review" && !laptop ? "whatif" : "limits")} testID="follow.back" /> : null}
         <Identicon seed={l?.address ?? String(leaderId)} size={40} />
         <View style={{ flex: 1 }}>
-          <Lbl>{isEdit ? "Edit limits" : step === "review" ? "Review" : "Follow"}</Lbl>
+          <Lbl>{isEdit ? "Edit limits" : step === "review" ? "Review" : (totals?.accounts.length ?? 0) > 0 ? "Follow another leader" : "Follow"}</Lbl>
           <T size={14} w={600} mono>
             {shortAddr(l?.address)}
           </T>
         </View>
         <IconButton name="close" onPress={close} testID="follow.close" />
       </Row>
-      {!isEdit && (step === "limits" || step === "review") ? (
-        <Row gap={6}>
-          {["1 Set limits", "2 Review"].map((s, i) => {
-            const on = (i === 0 && step === "limits") || (i === 1 && step === "review");
-            return (
-              <View key={s} style={{ flex: 1, paddingTop: 6, borderTopWidth: 3, borderTopColor: on ? c.ac : c.sf2 }}>
-                <T size={12} w={500} color={on ? "tx" : "mu"}>
-                  {s}
-                </T>
-              </View>
-            );
-          })}
-        </Row>
+      {!isEdit && (step === "limits" || step === "whatif" || step === "review") ? (
+        <StepTabs testIDPrefix="follow.step" steps={["Set limits", "What if", "Review"]} current={step === "limits" ? (laptop ? 1 : 0) : step === "whatif" ? 1 : 2} />
       ) : null}
     </View>
   );
 
-  const frame = (body: React.ReactNode, cta: React.ReactNode) => (
+  const frame = (body: React.ReactNode, cta: React.ReactNode, side?: React.ReactNode) =>
+    laptop ? (
+      <FollowModal header={header} side={side} footer={cta} onClose={close}>
+        {body}
+        <BlockedSheet e={blocked} cfg={cfg} account={existing ?? owner.data?.accounts.find((a) => a.account === newAccount)} onClose={() => setBlocked(null)} />
+      </FollowModal>
+    ) : (
     <View style={{ flex: 1, backgroundColor: c.scrim }}>
       <View style={{ height: insets.top + 24 }} />
       <KeyboardAvoidingView behavior="height" style={{ flex: 1 }}>
@@ -258,7 +262,7 @@ export default function FollowSheet() {
       </KeyboardAvoidingView>
       <BlockedSheet e={blocked} cfg={cfg} account={existing ?? owner.data?.accounts.find((a) => a.account === newAccount)} onClose={() => setBlocked(null)} />
     </View>
-  );
+    );
 
   if (!l || !cfg) {
     return frame(
@@ -325,6 +329,7 @@ export default function FollowSheet() {
             ))}
           </View>
         ) : null}
+        {step === "done" && !isEdit && me ? <AlertsCard owner={me.address} /> : null}
         {step === "done" && results.follow?.latencyMs ? <LatencyPill ms={Date.now() - t0 > 0 ? results.follow.latencyMs : undefined} label="Landed in" /> : null}
         {acct ? null : null}
       </View>,
@@ -344,6 +349,19 @@ export default function FollowSheet() {
     );
   }
 
+  // ---------------------------------------------------------------- what if (phone; on a laptop it sits next to the limits)
+  if (step === "whatif" && policy) {
+    return frame(
+      <View style={{ paddingTop: 4 }}>
+        <WhatIfBody leaderId={leaderId} policy={policy} depositCNS={allocCNS} onEdit={() => setStep("limits")} />
+      </View>,
+      <Row gap={10}>
+        <Button title="Change limits" kind="out" flex onPress={() => setStep("limits")} testID="follow.whatif.back" />
+        <Button title="Review follow" flex onPress={() => setStep("review")} testID="follow.review" />
+      </Row>,
+    );
+  }
+
   // ---------------------------------------------------------------- review
   if (step === "review" && policy) {
     return frame(
@@ -356,11 +374,13 @@ export default function FollowSheet() {
           <KV k="Max notional per market" v={`${form.maxNotionalAusd} AUSD`} />
           <KV k="Allowed markets" v={form.markets.join(", ")} />
           <KV k="Daily loss stop" v={form.dailyLossPct ? `${form.dailyLossPct}% · ${ausd((allocCNS * BigInt(Math.round(form.dailyLossPct * 100))) / 10000n)} AUSD` : "Off"} />
-          <KV k="Drawdown stop" v={form.drawdownPct ? `${form.drawdownPct}% · at ${ausd((allocCNS * BigInt(10000 - Math.round(form.drawdownPct * 100))) / 10000n)} AUSD` : "Off"} />
+          <KV k="Account loss stop" v={form.drawdownPct ? `${form.drawdownPct}% · at ${ausd((allocCNS * BigInt(10000 - Math.round(form.drawdownPct * 100))) / 10000n)} AUSD` : "Off"} />
+          <KV k="Who can execute stops" v={form.flattenOnStop ? "Anyone" : "Mirror's keeper only"} testID="follow.review.flattenOnStop" />
           <KV k="Expiry" v={dateLong(policy.expiry * 1000)} />
           <KV k="Match the leader now" v={form.matchNow ? `${willCopy.length} order${willCopy.length === 1 ? "" : "s"}${willBlock.length ? ` · ${willBlock.length} blocked` : ""}` : "Off"} last />
         </View>
         {form.matchNow && q?.rows.length ? <QuoteTable rows={q.rows} cfg={cfg} /> : null}
+        <FeeNote rows={form.matchNow ? (q?.rows ?? []) : []} capCNS={capCNS} />
         <Note tone="ac" icon="shield">
           <T size={13} lh={19}>
             These limits are written to your own MirrorAccount and checked onchain on every copied order. Mirror can trade within them but can never withdraw. Daily loss and drawdown stops pause new exposure; existing positions still follow the leader's closes.
@@ -416,9 +436,9 @@ export default function FollowSheet() {
               <Chip key={v} label={String(v)} on={allocCNS === BigInt(v * 1e6)} onPress={() => set("allocationAusd", v.toFixed(2))} testID={`follow.amount.${v}`} />
             ))}
             <Chip
-              label={`Max ${ausd(walletAvail < BETA_CAP_CNS ? walletAvail : BETA_CAP_CNS)}`}
-              on={allocCNS === (walletAvail < BETA_CAP_CNS ? walletAvail : BETA_CAP_CNS)}
-              onPress={() => set("allocationAusd", ausd(walletAvail < BETA_CAP_CNS ? walletAvail : BETA_CAP_CNS))}
+              label={`Max ${ausd(walletAvail < limits.capCNS ? walletAvail : limits.capCNS)}`}
+              on={allocCNS === (walletAvail < limits.capCNS ? walletAvail : limits.capCNS)}
+              onPress={() => set("allocationAusd", ausd(walletAvail < limits.capCNS ? walletAvail : limits.capCNS))}
               testID="follow.amount.max"
             />
           </Row>
@@ -530,9 +550,20 @@ export default function FollowSheet() {
         <Slider testID="follow.dailyLoss.slider" steps={LOSS_STEPS.length} index={nearest(LOSS_STEPS, form.dailyLossPct)} onChange={(i) => set("dailyLossPct", LOSS_STEPS[i])} ticks={[{ label: "Off", at: 0 }, { label: "10%", at: 4 / 11 }, { label: "25%", at: 8 / 11 }, { label: "50%", at: 1 }]} />
       </Section>
 
-      <Section title="Drawdown stop" icon="shield" sub="If this follow falls this far below its peak, new exposure stops. Existing positions still follow the leader's closes." testID="follow.section.drawdown">
+      <Section title="Account loss stop" icon="shield" sub="If this follow falls this far below its peak, new exposure stops. On by default at 20%." testID="follow.section.drawdown">
         <BigV v={form.drawdownPct ? `${form.drawdownPct}%` : "Off"} right={form.drawdownPct ? `peak ${ausd(allocCNS)} → stops at ${ausd((allocCNS * BigInt(10000 - form.drawdownPct * 100)) / 10000n)}` : undefined} testID="follow.drawdown.value" />
         <Slider testID="follow.drawdown.slider" steps={LOSS_STEPS.length} index={nearest(LOSS_STEPS, form.drawdownPct)} onChange={(i) => set("drawdownPct", LOSS_STEPS[i])} ticks={[{ label: "Off", at: 0 }, { label: "15%", at: 6 / 11 }, { label: "25%", at: 8 / 11 }, { label: "50%", at: 1 }]} />
+        <View style={{ gap: 6, padding: 12, borderRadius: 12, backgroundColor: c.sf2 }}>
+          <Row>
+            <T size={13} w={600} style={{ flex: 1 }}>
+              Loss stops can be executed by anyone
+            </T>
+            <Switch on={form.flattenOnStop} onChange={(v) => set("flattenOnStop", v)} testID="follow.flattenOnStop.toggle" />
+          </Row>
+          <T size={12} color="mu" lh={17}>
+            If a stop is hit, anyone can trigger it onchain and close your positions, so it still works if Mirror's servers are down. The caller is paid nothing.
+          </T>
+        </View>
       </Section>
 
       <Section title="Expiry" icon="cal" sub="After this date the follow stops opening positions" testID="follow.section.expiry">
@@ -595,8 +626,26 @@ export default function FollowSheet() {
     isEdit ? (
       <Button title="Save with passkey" icon="fp" onPress={approve} disabled={errors.length > 0 || !!policyErr} testID="rules.save" />
     ) : (
-      <Button title="Review follow" onPress={() => setStep("review")} disabled={errors.length > 0 || !!policyErr} testID="follow.review" />
+      laptop ? (
+        <Button title="Review follow" onPress={() => setStep("review")} disabled={errors.length > 0 || !!policyErr} testID="follow.review" />
+      ) : (
+        <Button title="See what if" onPress={() => setStep("whatif")} disabled={errors.length > 0 || !!policyErr} testID="follow.seeWhatIf" />
+      )
     ),
+    !isEdit && policy && !policyErr ? <WhatIfBody leaderId={leaderId} policy={policy} depositCNS={allocCNS} title={`What if I had followed ${shortAddr(l.address)}`} compact /> : undefined,
+  );
+}
+
+/** Builder fee, stated before the passkey prompt. */
+function FeeNote({ rows, capCNS }: { rows: QuoteRow[]; capCNS: bigint }) {
+  const planned = plannedFeeCNS(rows);
+  const amount = rows.length ? `about ${feeText(planned)} AUSD for this follow's planned size` : `up to ${feeText(feeFor(capCNS))} AUSD per copy at your max notional`;
+  return (
+    <Note icon="info" testID="follow.review.fee">
+      <T size={13} lh={19}>
+        {`Mirror fee: ${FEE_PCT} of opening size (builder ${BUILDER_ID}), ${amount}; never on closes; your contract caps it at ${FEE_PCT}.`}
+      </T>
+    </Note>
   );
 }
 

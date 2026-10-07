@@ -42,6 +42,8 @@ import {
   spark,
   txHash,
 } from "./data.mjs";
+import { SW, adversarialFor, backtest, copyQuality, engineEvent, enrich, setSwitches } from "./engine.mjs";
+import { rpcGetLogs, EQUITY_SELECTOR } from "./rpcLogs.mjs";
 
 const PORT = Number(process.env.MOCK_PORT ?? 8787);
 let defaultScenario = process.env.MOCK_SCENARIO ?? "funded";
@@ -100,14 +102,18 @@ function pos(sym, side, lotsF, entryF, levHdths, leaderAccountId) {
   return { perpId: bySymbol[sym].perpId, side, lots: lns(sym, lotsF), entry: pns(sym, entryF), lev: levHdths, leaderAccountId };
 }
 
-function policyFor(leaderId, { lev = 500, slip = 50, dl = 1000, dd = 1500, days = 90, ratio = 10, mk = ["BTC", "ETH", "SOL"], cap = 12_000_000n } = {}) {
+function policyFor(leaderId, { lev = 500, slip = 50, dl = 1000, dd = 2000, days = 90, ratio = 10, mk = ["BTC", "ETH", "SOL"], cap = 12_000_000n, entry = 100, budget = cap } = {}) {
   return {
     maxLeverageHdths: lev,
     maxSlippageBps: slip,
     dailyLossBps: dl,
     drawdownBps: dd,
     expiry: Math.floor((now() + days * DAY) / 1000),
-    leaders: [{ accountId: leaderId, ratioBps: ratio }],
+    maxEntryDeviationBps: entry,
+    stopSlippageBps: 300,
+    flattenOnStop: true,
+    maxBuilderFeePer100K: 20,
+    leaders: [{ accountId: leaderId, ratioBps: ratio, budgetCNS: budget.toString(), lossStopBps: 1500 }],
     markets: mk.map((s) => ({ perpId: bySymbol[s].perpId, maxNotionalCNS: cap.toString() })),
   };
 }
@@ -124,6 +130,7 @@ function ev(a, kind, fields, ageMs = 0, commitState = "finalized") {
     teamRun: a.teamRun || undefined,
     ...fields,
   };
+  enrich(e);
   a.feed.unshift(e);
   return e;
 }
@@ -205,8 +212,21 @@ function seedOwner(owner, scenario) {
   blk(a1, 52 * 60e3, "PUMP", "long", 41000, 0.004812, 300, "MarketNotAllowed", 0, 90, "PUMP is not in your allowed markets");
   mir(a3, 38 * 60e3, "HYPE", "long", "open", 0.1, 45.42, 500);
   blk(a3, 60e3, "BTC", "long", 1.5, 118390.0, 1200, "LeverageTooHigh", 500, 1200, "Max leverage 5x");
+  {
+    const sol = bySymbol.SOL;
+    const entry = pns("SOL", 198.1);
+    const bound = (entry * 10_100n) / 10_000n;
+    const e = blk(a1, 2 * 60e3 + 30e3, "SOL", "long", 0.05, 203.45, 300, "EntryTooFar", bound, pns("SOL", 203.45), "Price moved 2.7% past the leader's entry. Your limit is 1%");
+    e.data = { ...e.data, leaderEntryPNS: entry.toString(), leaderFillPNS: pns("SOL", 203.4).toString() };
+    e.leaderLotLNS = lns("SOL", 2.0).toString();
+    void sol;
+  }
+  a3.feed.unshift(engineEvent(a3, "EngineShrunk", { perpId: bySymbol.HYPE.perpId, orderType: 0, requested: 5, final: 4, depth: 9, limitPNS: pns("HYPE", 46.95), ageMs: 20 * 60e3, block: block - 3000, leaderAccountId: C.accountId, leaderAddress: cs(C.address) }));
+  a1.feed.unshift(engineEvent(a1, "EngineSkipped", { perpId: bySymbol.SOL.perpId, orderType: 0, requested: 5, final: 0, depth: 3, limitPNS: pns("SOL", 212.6), ageMs: 15 * 60e3, block: block - 2250, leaderAccountId: A.accountId, leaderAddress: cs(A.address) }));
   mir(a2, 9e3, "BTC", "long", "close", 0.00005, 118402.0, 0, { realisedPnlCNS: "60000" });
   mir(a1, 4e3, "MON", "short", "close", 220, 0.0418, 0, { realisedPnlCNS: "110000" });
+  a1.feed.sort((x, y) => y.timestamp - x.timestamp);
+  a3.feed.sort((x, y) => y.timestamp - x.timestamp);
   a1.feed[0].commitState = "proposed";
   a2.feed[0].commitState = "voted";
   return o;
@@ -451,7 +471,7 @@ function demoState() {
   return {
     leader: { accountId: DEMO_LEADER.accountId, address: cs(DEMO_LEADER.address), teamRun: true },
     follower: serializeAccount(demoFollower),
-    cycles: demo.cycles.slice(-6).reverse(),
+    cycles: SW.demoQuiet ? [] : demo.cycles.slice(-6).reverse(),
     busy: demo.busy,
     limits: { perIpPerHour: demo.perIpPerHour, dailyCap: demo.dailyCap, dailyRemaining: demo.dailyCap - demo.dailyUsed },
   };
@@ -800,8 +820,11 @@ function rpc(req) {
       return ok(toHex(block));
     case "net_version":
       return ok(String(CHAIN_ID));
+    case "eth_getLogs":
+      return ok(rpcGetLogs(accounts, req.params[0]));
     case "eth_call": {
       const { to, data } = req.params[0];
+      if (data?.startsWith(EQUITY_SELECTOR) && accounts.get(lc(to))) return ok(encodeAbiParameters([{ type: "uint256" }], [equity(accounts.get(lc(to)))]));
       const enc = (v) => encodeAbiParameters([{ type: "uint256" }], [v]);
       try {
         const d = decodeFunctionData({ abi: RPC_ABI, data });
@@ -841,6 +864,7 @@ function leaderSummary(l, window = "30d") {
     followers: l.fol,
     nansen: { labels: l.labels },
     teamRun: false,
+    adversarial: adversarialFor(l.accountId),
     spark: spark(l),
   };
 }
@@ -907,8 +931,11 @@ const server = http.createServer(async (req, res) => {
   res.on("finish", () => {
     if (!p.startsWith("/v1/stream")) console.log(`${req.method} ${p}${url.search} -> ${res.statusCode} ${Date.now() - t0}ms`);
   });
-  if (req.method === "OPTIONS") return send(res, 204, {}, { "Access-Control-Allow-Methods": "GET,POST,PUT", "Access-Control-Allow-Headers": "Content-Type" });
+  if (req.method === "OPTIONS") return send(res, 204, {}, { "Access-Control-Allow-Methods": "GET,POST,PUT", "Access-Control-Allow-Headers": "Content-Type, Last-Event-ID, Cache-Control" });
   try {
+    if (p.startsWith("/v1/") && SW.backend === "down") return req.socket.destroy();
+    if (p.startsWith("/v1/") && SW.backend === "slow") await sleep(60_000);
+    if (p === "/rpc" && SW.rpc === "down") return req.socket.destroy();
     if (NET_DELAY && !p.startsWith("/v1/stream") && p !== "/rpc") await sleep(NET_DELAY);
     let m;
     // ---- SSE
@@ -931,12 +958,12 @@ const server = http.createServer(async (req, res) => {
         rpc: `${base}/rpc`,
         explorerTx: MAINNET.explorerTx,
         explorerAddress: MAINNET.explorerAddress,
-        contracts: { factory: FACTORY, implementation: IMPLEMENTATION, keeperRegistry: KEEPER, perplExchange: MAINNET.perplExchange, collateral: AUSD },
+        contracts: { factory: FACTORY, implementation: IMPLEMENTATION, keeperRegistry: KEEPER, perplExchange: MAINNET.perplExchange, collateral: AUSD, deployBlock: 75_000_000 },
         collateralDecimals: 6,
         depositCapCNS: CAP.toString(),
-        minAccountOpenCNS: MIN_OPEN.toString(),
+        perplMinAccountOpenCNS: MIN_OPEN.toString(),
         markets: markets.map((m) => ({ perpId: m.perpId, symbol: m.symbol, lotDecimals: m.lotDecimals, priceDecimals: m.priceDecimals, markPNS: m.markPNS.toString(), minOrderLotLNS: "1", maxLeverage: m.maxLeverage })),
-        teamRun: { demoLeaderAddress: cs(DEMO_LEADER.address), demoLeaderAccountId: DEMO_LEADER.accountId, demoFollowerAccount: cs(DEMO_FOLLOWER) },
+        teamRun: { addresses: [cs(DEMO_LEADER.address), cs(DEMO_FOLLOWER)], demoLeaderAccountId: DEMO_LEADER.accountId, demoFollowerAccount: cs(DEMO_FOLLOWER) },
       });
     }
     if (req.method === "GET" && p === "/v1/markets")
@@ -949,6 +976,12 @@ const server = http.createServer(async (req, res) => {
       if (market) list = list.filter((l) => l.markets.includes(market));
       list.sort((a, b) => (sort === "pnl" ? b.pnlPct - a.pnlPct : sort === "drawdown" ? a.maxDrawdownPct - b.maxDrawdownPct : b.score - a.score));
       return send(res, 200, list);
+    }
+    if (req.method === "GET" && p === "/v1/stats/copy-quality") return send(res, 200, copyQuality(accounts.values(), url.searchParams.get("period") ?? "30d"));
+    if (req.method === "GET" && (m = p.match(/^\/v1\/leaders\/(\d+)\/copy-quality$/))) return send(res, 200, copyQuality(accounts.values(), url.searchParams.get("period") ?? "30d", Number(m[1])));
+    if (req.method === "POST" && (m = p.match(/^\/v1\/leaders\/(\d+)\/backtest$/))) {
+      const r = backtest(Number(m[1]), await readBody(req));
+      return send(res, r.status, r.body);
     }
     if (req.method === "GET" && (m = p.match(/^\/v1\/leaders\/(\d+)$/))) {
       const l = leaderById[Number(m[1])];
@@ -969,7 +1002,8 @@ const server = http.createServer(async (req, res) => {
       const a = accounts.get(lc(m[1]));
       if (!a) return send(res, 404, { error: "not_found", message: "Unknown account" });
       const cursor = Number(url.searchParams.get("cursor") ?? 0);
-      const page = a.feed.slice(cursor, cursor + 30);
+      const src = a.teamRun && SW.demoQuiet ? a.feed.map((e) => ({ ...e, timestamp: e.timestamp - 2.2 * 3600e3 })) : a.feed;
+      const page = src.slice(cursor, cursor + 30);
       return send(res, 200, { events: page, cursor: cursor + 30 < a.feed.length ? String(cursor + 30) : null });
     }
     if (req.method === "GET" && p === "/v1/stats") {
@@ -1032,6 +1066,7 @@ const server = http.createServer(async (req, res) => {
       if (b.all) for (const k of [...owners.keys()]) seedOwner(k, b.scenario ?? defaultScenario);
       return send(res, 200, { ok: true, defaultScenario });
     }
+    if (req.method === "POST" && p === "/__mock/switch") return send(res, 200, setSwitches(await readBody(req)));
     if (req.method === "POST" && p === "/__mock/push") {
       const b = await readBody(req);
       const a = [...accounts.values()].find((x) => lc(x.owner) === lc(b.owner) && x.feed.some((e) => e.kind === (b.kind ?? "Blocked")));

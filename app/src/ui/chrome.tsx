@@ -4,7 +4,8 @@ import React from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ausd } from "../lib/format";
-import { useTotals } from "../state/data";
+import { useConfig, useTotals, useWallet } from "../state/data";
+import { ausdUnit } from "../lib/config";
 import { useSession } from "../state/session";
 import { Icon, type IconName } from "./icons";
 import { BrandMark, Coin, IconButton, Identicon, Press, T, back } from "./kit";
@@ -13,7 +14,10 @@ import { useColors } from "./theme";
 export function BalanceChip({ value, onPress }: { value?: bigint | null; onPress?: () => void }) {
   const c = useColors();
   const { totals } = useTotals();
-  const v = value !== undefined ? value : (totals?.balance ?? null);
+  const cfg = useConfig().data;
+  const wallet = useWallet();
+  // Before Mirror answers (or while it is down) the wallet balance read from Monad is still shown.
+  const v = value !== undefined ? value : (totals?.balance ?? (wallet.source === "rpc" ? wallet.cns : null));
   return (
     <Press
       testID="nav.balance"
@@ -26,7 +30,7 @@ export function BalanceChip({ value, onPress }: { value?: bigint | null; onPress
         {v === null ? "—" : ausd(v)}
       </T>
       <T size={11} w={500} color="mu">
-        AUSD
+        {ausdUnit(cfg?.chainId)}
       </T>
     </Press>
   );

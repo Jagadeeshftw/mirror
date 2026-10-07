@@ -6,7 +6,7 @@ import { Share, View } from "react-native";
 import { deposit, type StepState } from "../lib/actions";
 import { ApiError } from "../lib/api";
 import { ausd, groupedAddress, parseUnits, shortAddr, toBig } from "../lib/format";
-import { BETA_CAP_CNS } from "../lib/policy";
+import { followLimits } from "../lib/policy";
 import type { RelayResult } from "../lib/types";
 import { describeError } from "../lib/wallet";
 import { useConfig, useTotals } from "../state/data";
@@ -24,6 +24,7 @@ export default function AddFunds() {
   const params = useLocalSearchParams<{ account?: string; step?: string }>();
   const { account: me } = useSession();
   const cfg = useConfig().data;
+  const BETA_CAP_CNS = followLimits(cfg).capCNS;
   const { totals } = useTotals();
   const [step, setStep] = useState<0 | 1>(params.step === "1" ? 1 : 0);
   const [copied, setCopied] = useState(false);

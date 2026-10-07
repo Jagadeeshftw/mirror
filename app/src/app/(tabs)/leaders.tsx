@@ -11,6 +11,9 @@ import { Spark } from "../../ui/charts";
 import { Icon } from "../../ui/icons";
 import { Card, Chip, ChipS, ErrorBanner, Identicon, LoadingBlock, NansenLabel, Press, Row, Screen, Scroll, Seg, Sheet, T } from "../../ui/kit";
 import { useColors } from "../../ui/theme";
+import { LaptopLeaders } from "../../ui/laptop/LaptopLeaders";
+import { useLayout } from "../../ui/layout";
+import { AdversarialFlag } from "../../ui/adversarial";
 
 function LeaderRow({ l, rank, index }: { l: LeaderSummary; rank: number; index: number }) {
   const c = useColors();
@@ -22,9 +25,12 @@ function LeaderRow({ l, rank, index }: { l: LeaderSummary; rank: number; index: 
         </T>
         <Identicon seed={l.address} size={40} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <T size={14} w={500} mono>
-            {shortAddr(l.address)}
-          </T>
+          <Row gap={6}>
+            <T size={14} w={500} mono>
+              {shortAddr(l.address)}
+            </T>
+            <AdversarialFlag a={l.adversarial} compact testID={`leaders.adversarial.${l.accountId}`} />
+          </Row>
           <View style={{ flexDirection: "row", gap: 4, marginTop: 3 }}>
             {l.nansen.labels.length ? <NansenLabel label={l.nansen.labels[0]} /> : <T size={12} color="mu">No label</T>}
           </View>
@@ -83,6 +89,10 @@ const SORTS: { key: LeaderSort; label: string }[] = [
 ];
 
 export default function Leaders() {
+  return useLayout() === "laptop" ? <LaptopLeaders /> : <PhoneLeaders />;
+}
+
+function PhoneLeaders() {
   const c = useColors();
   const [window, setWindow] = useState<LeaderWindow>("30d");
   const [sort, setSort] = useState<LeaderSort>("score");

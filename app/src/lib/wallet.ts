@@ -8,19 +8,20 @@
 //   Nothing that can sign is ever persisted; only the address, the credential id and the
 //   decrypt-only notification key are stored.
 import { createPasskeyWithPrfOutput, getPasskeyPrfOutput, isMeraError } from "@category-labs/mera";
-import { reactNativeWebAuthnClient } from "@category-labs/mera/react-native-webauthn-client";
 import { toViemAccount } from "@category-labs/mera/viem";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { utf8ToBytes } from "@noble/hashes/utils.js";
 import { base64 } from "@scure/base";
 import Constants from "expo-constants";
-import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
+import * as SecureStore from "./secureStore";
 import type { LocalAccount } from "viem";
 import { addressFromPrf, mnemonicFromPrf, sessionFromPrf } from "./derive";
 import { deriveNotifyKey, decodeKeyPair, encodeKeyPair, type NotifyKeyPair } from "./notifyKey";
 import { NS_ACCOUNT, NS_NOTIFY, withSecondSalt } from "./prfNamespaces";
 import type { Address } from "./types";
 import { getApiBase } from "./api";
+import { webAuthnClient } from "./webauthnClient";
 
 export const RP_ID: string = Constants.expoConfig?.extra?.rpId ?? "mirror.0xo.in";
 export const BRAND: string = Constants.expoConfig?.extra?.brand ?? "Mirror";
@@ -35,13 +36,15 @@ const DEV_TOOLS = __DEV__ || process.env.EXPO_PUBLIC_MIRROR_DEV_TOOLS === "1";
  */
 export function devPasskeyActive(): boolean {
   if (!DEV_TOOLS) return false;
+  // Web: only when asked for explicitly, so browser runs (including a virtual authenticator on
+  // localhost) use real WebAuthn with the configured rpId.
+  if (Platform.OS === "web") return process.env.EXPO_PUBLIC_DEV_PASSKEY === "1";
   return process.env.EXPO_PUBLIC_DEV_PASSKEY === "1" || /^http:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:|\/|$)/.test(getApiBase());
 }
 
 const ACCOUNT_KEY = "mirror.account.v1";
 const NOTIFY_KEY = "mirror.notify.v1";
 const DEV_SECRET_KEY = "mirror.devpasskey.v1";
-const UNGATED: SecureStore.SecureStoreOptions = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
 
 export interface StoredAccount {
   address: Address;
@@ -54,14 +57,14 @@ export interface StoredAccount {
 // ---------- dev passkey simulator ----------
 async function devPrf(create: boolean, salt: Uint8Array = NS_ACCOUNT): Promise<{ credentialId: string; prfOutput: Uint8Array }> {
   if (!DEV_TOOLS) throw new Error("unavailable");
-  let secret = await SecureStore.getItemAsync(DEV_SECRET_KEY);
+  let secret = await SecureStore.getItem(DEV_SECRET_KEY);
   if (!secret) {
     if (!create) throw Object.assign(new Error("No passkey for mirror.0xo.in on this device"), { code: "NO_CREDENTIAL" });
     const b = new Uint8Array(32);
     globalThis.crypto.getRandomValues(b);
     const seedEnv = process.env.EXPO_PUBLIC_DEV_PASSKEY_SEED;
     secret = seedEnv ? base64.encode(sha256(utf8ToBytes(seedEnv))) : base64.encode(b);
-    await SecureStore.setItemAsync(DEV_SECRET_KEY, secret, UNGATED);
+    await SecureStore.setItem(DEV_SECRET_KEY, secret);
   }
   const s = base64.decode(secret);
   const prfOutput = sha256(new Uint8Array([...s, ...salt]));
@@ -70,7 +73,7 @@ async function devPrf(create: boolean, salt: Uint8Array = NS_ACCOUNT): Promise<{
 
 // ---------- storage ----------
 export async function loadAccount(): Promise<StoredAccount | null> {
-  const raw = await SecureStore.getItemAsync(ACCOUNT_KEY);
+  const raw = await SecureStore.getItem(ACCOUNT_KEY);
   if (!raw) return null;
   try {
     const v = JSON.parse(raw) as StoredAccount;
@@ -82,10 +85,10 @@ export async function loadAccount(): Promise<StoredAccount | null> {
 }
 
 async function saveAccount(a: StoredAccount, notifyPrf: Uint8Array) {
-  await SecureStore.setItemAsync(ACCOUNT_KEY, JSON.stringify(a), UNGATED);
+  await SecureStore.setItem(ACCOUNT_KEY, JSON.stringify(a));
   // Decrypt-only key from the notification namespace, needed in the background to open push
   // payloads without a prompt.
-  await SecureStore.setItemAsync(NOTIFY_KEY, encodeKeyPair(deriveNotifyKey(notifyPrf)), UNGATED);
+  await SecureStore.setItem(NOTIFY_KEY, encodeKeyPair(deriveNotifyKey(notifyPrf)));
 }
 
 /** Notification namespace on its own (one more prompt), for providers that ignore `eval.second`. */
@@ -94,19 +97,19 @@ async function notifyPrfAlone(credentialId: string): Promise<Uint8Array> {
     rpId: RP_ID,
     prfSalt: NS_NOTIFY,
     credential: { credentialId },
-    webAuthnClient: reactNativeWebAuthnClient,
+    webAuthnClient,
   });
   return got.prfOutput;
 }
 
 export async function loadNotifyKey(): Promise<NotifyKeyPair | null> {
-  const raw = await SecureStore.getItemAsync(NOTIFY_KEY);
+  const raw = await SecureStore.getItem(NOTIFY_KEY);
   return raw ? decodeKeyPair(raw) : null;
 }
 
 export async function signOutDevice(): Promise<void> {
-  await SecureStore.deleteItemAsync(ACCOUNT_KEY);
-  await SecureStore.deleteItemAsync(NOTIFY_KEY);
+  await SecureStore.deleteItem(ACCOUNT_KEY);
+  await SecureStore.deleteItem(NOTIFY_KEY);
 }
 
 // ---------- ceremonies ----------
@@ -122,7 +125,7 @@ export async function createAccount(deviceName?: string): Promise<StoredAccount>
       createPasskeyWithPrfOutput({
         rp: { id: RP_ID, name: BRAND },
         user: { name: `${BRAND} account`, displayName: `${BRAND} account` },
-        webAuthnClient: reactNativeWebAuthnClient,
+        webAuthnClient,
       }),
     );
     credentialId = created.credentialId;
@@ -149,7 +152,7 @@ export async function restoreAccount(deviceName?: string): Promise<StoredAccount
     notifyPrf = (await devPrf(false, NS_NOTIFY)).prfOutput;
   } else {
     const { result: got, second } = await withSecondSalt(NS_NOTIFY, () =>
-      getPasskeyPrfOutput({ rpId: RP_ID, webAuthnClient: reactNativeWebAuthnClient }),
+      getPasskeyPrfOutput({ rpId: RP_ID, webAuthnClient }),
     );
     credentialId = got.credentialId;
     prfOutput = got.prfOutput;
@@ -176,7 +179,7 @@ async function assertPrf(stored: StoredAccount): Promise<Uint8Array> {
   const got = await getPasskeyPrfOutput({
     rpId: RP_ID,
     credential: { credentialId: stored.credentialId },
-    webAuthnClient: reactNativeWebAuthnClient,
+    webAuthnClient,
   });
   return got.prfOutput;
 }
@@ -220,7 +223,7 @@ export function describeError(e: unknown): { title: string; detail: string; canc
     const msg = `${cause.error ?? ""} ${cause.message ?? ""}`.toLowerCase();
     const cancelled = /cancel|abort|user/.test(msg);
     if (e.code === "PRF_UNAVAILABLE") {
-      return { title: "This passkey provider can't derive keys", detail: "Use Google Password Manager on Android 14 or newer.", cancelled: false };
+      return { title: "This passkey provider can't derive keys", detail: "Use Google Password Manager on Android 14 or newer, or a browser with passkey PRF support (Chrome, Edge, Safari 18).", cancelled: false };
     }
     if (cancelled) return { title: "Passkey cancelled", detail: "Nothing was signed or created.", cancelled: true };
     if (/no credential|nocredential|no passkey|not found/.test(msg)) {

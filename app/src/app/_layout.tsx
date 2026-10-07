@@ -1,6 +1,13 @@
 import "../lib/push"; // registers the encrypted-push background task at module load
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
+import { useFonts } from "expo-font";
+import { Platform } from "react-native";
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
+import { GeistMono_400Regular, GeistMono_500Medium, GeistMono_600SemiBold } from "@expo-google-fonts/geist-mono";
+import { installPwa } from "../lib/pwa";
+import { LaptopFrame } from "../ui/laptop/Frame";
+import { useLayout } from "../ui/layout";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
@@ -12,12 +19,22 @@ import { ThemeProvider, useColors } from "../ui/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+// Android embeds the fonts at build time (expo-font plugin); the web build loads the same files here.
+const WEB_FONTS = Platform.OS === "web" ? { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, GeistMono_400Regular, GeistMono_500Medium, GeistMono_600SemiBold } : {};
+
 function Shell() {
   const c = useColors();
   const { ready, account } = useSession();
+  const [fontsLoaded, fontError] = useFonts(WEB_FONTS);
+  const fontsReady = Platform.OS !== "web" || fontsLoaded || !!fontError;
+  const layout = useLayout();
+  const path = usePathname();
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync().catch(() => {});
-  }, [ready]);
+    if (ready && fontsReady) SplashScreen.hideAsync().catch(() => {});
+  }, [ready, fontsReady]);
+  useEffect(() => {
+    installPwa();
+  }, []);
   useEffect(() => {
     setupNotifications().catch(() => {});
     const sub = listenForEncryptedPush();
@@ -26,13 +43,17 @@ function Shell() {
   useEffect(() => {
     if (account) registerForPush(account.address).catch(() => {});
   }, [account?.address]);
-  if (!ready) return null;
+  if (!ready || !fontsReady) return null;
+  const stack = (
+    <Stack screenOptions={{ headerShown: false, animation: "none", animationDuration: 0, contentStyle: { backgroundColor: c.bg } }}>
+      <Stack.Screen name="follow/[id]" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
+    </Stack>
+  );
+  const framed = layout === "laptop" && !!account && !/^\/(welcome|restore)?$/.test(path);
   return (
     <>
       <StatusBar style={c.dark ? "light" : "dark"} />
-      <Stack screenOptions={{ headerShown: false, animation: "none", contentStyle: { backgroundColor: c.bg } }}>
-        <Stack.Screen name="follow/[id]" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
-      </Stack>
+      {framed ? <LaptopFrame>{stack}</LaptopFrame> : stack}
     </>
   );
 }

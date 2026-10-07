@@ -37,12 +37,13 @@ export interface TProps {
   testID?: string;
   selectable?: boolean;
   lh?: number;
+  onPress?: () => void;
 }
 export function fontFor(mono: boolean | undefined, w: Weight = 400) {
   if (mono) return w >= 600 ? fonts.monoSemi : w >= 500 ? fonts.monoMedium : fonts.mono;
   return w >= 700 ? fonts.uiBold : w >= 600 ? fonts.uiSemi : w >= 500 ? fonts.uiMedium : fonts.ui;
 }
-export function T({ children, size = 14, w = 400, mono, color = "tx", style, center, lines, upper, testID, selectable, lh }: TProps) {
+export function T({ children, size = 14, w = 400, mono, color = "tx", style, center, lines, upper, testID, selectable, lh, onPress }: TProps) {
   const c = useColors();
   const col = (c as any)[color] ?? color;
   return (
@@ -50,6 +51,7 @@ export function T({ children, size = 14, w = 400, mono, color = "tx", style, cen
       testID={testID}
       numberOfLines={lines}
       selectable={selectable}
+      onPress={onPress}
       style={[
         {
           fontFamily: fontFor(mono, w),
@@ -289,7 +291,7 @@ export function Seg<K extends string>({ options, value, onChange, small, testIDP
             onPress={() => onChange(o.key)}
             accessibilityRole="button"
             accessibilityState={{ selected: on }}
-            style={{ flex: small ? 0 : 1, paddingVertical: small ? 4 : 7, paddingHorizontal: 10, borderRadius: 999, backgroundColor: on ? c.acs : "transparent", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
+            style={{ flex: small ? undefined : 1, paddingVertical: small ? 4 : 7, paddingHorizontal: 10, borderRadius: 999, backgroundColor: on ? c.acs : "transparent", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
           >
             {o.icon ? <Icon name={o.icon} size={16} color={on ? c.ac : c.mu} /> : null}
             <T size={small ? 12 : 13} w={on ? 600 : 500} color={on ? c.ac : c.mu}>
@@ -349,13 +351,13 @@ export function TeamRunBadge() {
   );
 }
 
-export function LatencyPill({ ms, label = "Copied in", testID }: { ms?: number; label?: string; testID?: string }) {
+export function LatencyPill({ ms, label = "Copied in", testID, blocks }: { ms?: number; label?: string; testID?: string; blocks?: number | null }) {
   const c = useColors();
   return (
     <View testID={testID} style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: c.sf2, paddingLeft: 7, paddingRight: 9, paddingVertical: 3, borderRadius: 999, alignSelf: "flex-start" }}>
       <Icon name="feed" size={14} color={c.ac} />
       <T size={12} w={500} mono>
-        {label} {ms !== undefined ? (ms / 1000).toFixed(2) + " s" : ""}
+        {[label, ms !== undefined ? (ms / 1000).toFixed(2) + " s" : "", blocks ? `· ${blocks} block${blocks === 1 ? "" : "s"}` : ""].filter(Boolean).join(" ")}
       </T>
     </View>
   );
@@ -386,8 +388,9 @@ export function CommitTrack({ state }: { state: string }) {
   );
 }
 
-export function TxLink({ hash, onPress, testID }: { hash: string; onPress?: () => void; testID?: string }) {
+export function TxLink({ hash, onPress, testID }: { hash: string | null | undefined; onPress?: () => void; testID?: string }) {
   const c = useColors();
+  if (!hash) return null;
   return (
     <Press testID={testID} onPress={onPress} hitSlop={8}>
       <Row gap={3}>

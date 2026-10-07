@@ -87,17 +87,22 @@ export function listenForEncryptedPush() {
   });
 }
 
-export async function registerForPush(owner: Address): Promise<{ token: string; registered: boolean; permission: string }> {
+/**
+ * Registers the passkey-derived notification key (so in-app SSE payloads can be decrypted) and, when
+ * the OS allows notifications, the push token. The OS permission is requested only with `ask: true`,
+ * which the app passes only when the user turns alerts on (Settings, or after the first follow).
+ */
+export async function registerForPush(owner: Address, opts: { ask?: boolean } = {}): Promise<{ token: string; registered: boolean; permission: string }> {
   const keys = await loadNotifyKey();
   if (!keys) return { token: "", registered: false, permission: "unknown" };
   let permission = "undetermined";
   try {
     const cur = await Notifications.getPermissionsAsync();
     permission = cur.status;
-    if (cur.status !== "granted") permission = (await Notifications.requestPermissionsAsync()).status;
+    if (cur.status !== "granted" && opts.ask) permission = (await Notifications.requestPermissionsAsync()).status;
   } catch {}
-  let token = "unavailable";
-  if (Device.isDevice || Platform.OS === "android") {
+  let token = permission === "granted" ? "unavailable" : "unavailable:not-permitted";
+  if (permission === "granted" && Platform.OS !== "web" && (Device.isDevice || Platform.OS === "android")) {
     try {
       token = (await Notifications.getExpoPushTokenAsync()).data;
     } catch {

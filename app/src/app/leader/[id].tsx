@@ -12,6 +12,9 @@ import { Columns, LineChart } from "../../ui/charts";
 import { Icon } from "../../ui/icons";
 import { Button, Card, ChipS, ErrorBanner, IconButton, Identicon, Lbl, LoadingBlock, MarketBadge, NansenLabel, Row, Screen, Scroll, Seg, Side, T } from "../../ui/kit";
 import { useColors } from "../../ui/theme";
+import { AdversarialFlag } from "../../ui/adversarial";
+import { useLayout } from "../../ui/layout";
+import { Redirect } from "expo-router";
 
 function Stat({ k, v, sub, color }: { k: string; v: string; sub?: string; color?: string }) {
   return (
@@ -31,7 +34,14 @@ function Stat({ k, v, sub, color }: { k: string; v: string; sub?: string; color?
   );
 }
 
-export default function LeaderProfile() {
+export default function LeaderRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  // Laptop: the profile is the side panel next to the leaderboard table.
+  if (useLayout() === "laptop") return <Redirect href={{ pathname: "/leaders", params: { leader: String(id) } }} />;
+  return <LeaderProfile />;
+}
+
+function LeaderProfile() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -128,6 +138,7 @@ export default function LeaderProfile() {
           </View>
         </Row>
 
+        <AdversarialFlag a={l.adversarial} />
         <Card style={{ padding: 16, gap: 10 }}>
           <Row justify="space-between" align="flex-start">
             <View>

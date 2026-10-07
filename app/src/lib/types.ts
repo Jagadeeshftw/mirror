@@ -3,7 +3,7 @@
 
 export type Address = `0x${string}`;
 export type Hex = `0x${string}`;
-export type CommitState = "proposed" | "voted" | "finalized";
+export type CommitState = "proposed" | "voted" | "finalized" | "offchain";
 export type Side = "long" | "short";
 
 export interface MarketConfig {
@@ -28,12 +28,14 @@ export interface AppConfig {
     keeperRegistry: Address | null;
     perplExchange: Address;
     collateral: Address;
+    deployBlock?: number | null;
   };
   collateralDecimals: number;
   depositCapCNS: string;
   minAccountOpenCNS: string;
   markets: MarketConfig[];
   teamRun: {
+    addresses?: Address[];
     demoLeaderAddress: Address | null;
     demoLeaderAccountId: number | null;
     demoFollowerAccount: Address | null;
@@ -74,6 +76,17 @@ export interface LeaderSummary {
   teamRun: boolean;
   /** Normalised equity points for the row sparkline (optional). */
   spark?: number[];
+  /** Engine's adversarial-leader record (docs/engine.md). */
+  adversarial?: Adversarial | null;
+}
+
+export interface Adversarial {
+  exitsIntoFollowers: number;
+  bookMoving: number;
+  lastSeen: number;
+  score: number;
+  flagged: boolean;
+  copiedFills: number;
 }
 
 export interface LeaderPosition {
@@ -147,6 +160,8 @@ export interface Policy {
   stopSlippageBps: number;
   /** Anyone may close positions once a loss stop is hit. */
   flattenOnStop: boolean;
+  /** Highest Perpl builder fee (per 100,000 of opening size) the owner accepts; Mirror charges 20 (0.02%). */
+  maxBuilderFeePer100K: number;
   leaders: LeaderRule[];
   markets: MarketRule[];
 }
@@ -246,13 +261,44 @@ export type FeedKind =
   | "PolicyUpdated"
   | "Paused"
   | "ClosedAll"
-  | "Followed";
+  | "Followed"
+  | "LevelSet"
+  | "StopTriggered"
+  | "LeaderStopped"
+  | "MarketClosed"
+  | "EngineShrunk"
+  | "EngineSkipped";
+
+/** CopyProof from the Mirrored event (all PNS; deviation positive = follower paid worse than the leader's entry). */
+export interface CopyProof {
+  leaderFillPNS: string;
+  leaderEntryPNS: string;
+  markPNS: string;
+  fillPNS: string;
+  entryDeviationBps: number;
+}
 
 export interface FeedEvent {
   id: string;
   kind: FeedKind;
   account: Address;
-  txHash: Hex;
+  /** null for engine-side items (EngineShrunk / EngineSkipped), which have no transaction. */
+  txHash: Hex | null;
+  txUrl?: string | null;
+  /** false for engine-side items. */
+  onchain?: boolean;
+  /** Engine label, e.g. "Shrunk: thin book". */
+  label?: string;
+  /** Engine-side reason ("ThinBook" | "BookUnavailable") with its numbers (required lots / depth). */
+  reason?: string;
+  limit?: string | null;
+  actual?: string | null;
+  data?: Record<string, unknown>;
+  proof?: CopyProof;
+  /** Leader's fill reference (bytes32, the leader's transaction). */
+  leaderRef?: Hex;
+  leaderBlock?: number;
+  latencyBlocks?: number;
   block: number;
   timestamp: number;
   commitState: CommitState;

@@ -19,6 +19,8 @@ import type {
   PushEnvelope,
   RelayResult,
 } from "./types";
+import { normalizeConfig } from "./config";
+import type { BacktestRequest, BacktestResult, CopyQuality, QualityPeriod } from "./engineTypes";
 
 export const DEFAULT_API_BASE: string =
   process.env.EXPO_PUBLIC_API_BASE || Constants.expoConfig?.extra?.apiBase || "https://api.mirror.0xo.in";
@@ -80,7 +82,8 @@ async function request<T>(method: "GET" | "POST" | "PUT", path: string, body?: u
       signal: ctrl.signal,
     });
   } catch (e) {
-    throw new ApiError(0, "network", "Can't reach the Mirror service", { body: String(e) });
+    const timedOut = ctrl.signal.aborted;
+    throw new ApiError(0, timedOut ? "timeout" : "network", timedOut ? "Mirror didn't answer in time" : "Can't reach Mirror", { body: String(e) });
   } finally {
     clearTimeout(t);
   }
@@ -112,8 +115,8 @@ export type LeaderWindow = "7d" | "30d" | "90d";
 export type LeaderSort = "score" | "pnl" | "drawdown";
 
 export const api = {
-  health: () => request<HealthState>("GET", "/v1/health"),
-  config: () => request<AppConfig>("GET", "/v1/config"),
+  health: (timeoutMs = 8000) => request<HealthState>("GET", "/v1/health", undefined, timeoutMs),
+  config: () => request<unknown>("GET", "/v1/config").then(normalizeConfig),
   markets: () => request<MarketState[]>("GET", "/v1/markets"),
   leaders: (window: LeaderWindow = "30d", sort: LeaderSort = "score", market?: string) =>
     request<LeaderSummary[] | { leaders: LeaderSummary[] }>("GET", `/v1/leaders${q({ window, sort, market })}`).then((r) =>
@@ -126,10 +129,14 @@ export const api = {
       Array.isArray(r) ? ({ owner, accounts: r } as OwnerAccounts) : r,
     ),
   account: (account: Address) => request<MirrorAccount>("GET", `/v1/accounts/${account}`),
-  feed: (account: Address, cursor?: string | null) =>
-    request<FeedPage>("GET", `/v1/accounts/${account}/feed${q({ cursor: cursor ?? undefined })}`),
+  feed: (account: Address, cursor?: string | null, timeoutMs?: number) =>
+    request<FeedPage>("GET", `/v1/accounts/${account}/feed${q({ cursor: cursor ?? undefined })}`, undefined, timeoutMs),
   stats: () => request<Record<string, unknown>>("GET", "/v1/stats"),
-  demo: () => request<DemoState>("GET", "/v1/demo"),
+  demo: (timeoutMs?: number) => request<DemoState>("GET", "/v1/demo", undefined, timeoutMs),
+  copyQuality: (period: QualityPeriod = "30d") => request<CopyQuality>("GET", `/v1/stats/copy-quality${q({ period })}`),
+  leaderCopyQuality: (accountId: number, period: QualityPeriod = "30d") =>
+    request<CopyQuality>("GET", `/v1/leaders/${accountId}/copy-quality${q({ period })}`),
+  backtest: (accountId: number, body: BacktestRequest) => request<BacktestResult>("POST", `/v1/leaders/${accountId}/backtest`, body, 30000),
 
   quoteFollow: (body: { owner: Address; leaderAccountId: number; policy: Policy; account?: Address }) =>
     request<FollowQuote>("POST", "/v1/quote/follow", body),

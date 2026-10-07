@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { loadApiBaseOverride } from "../lib/api";
 import { loadAccount, signOutDevice, type StoredAccount } from "../lib/wallet";
+import { loadConfigCache } from "./configCache";
 
 interface SessionCtx {
   ready: boolean;
@@ -15,7 +16,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [account, setAccount] = useState<StoredAccount | null>(null);
   useEffect(() => {
     (async () => {
-      await loadApiBaseOverride();
+      await Promise.all([loadApiBaseOverride(), loadConfigCache()]);
       try {
         setAccount(await loadAccount());
       } catch {

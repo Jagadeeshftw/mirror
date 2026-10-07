@@ -1,0 +1,578 @@
+[
+ {
+  "file": "welcome-mobile-light.png",
+  "state": "welcome",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "welcome-mobile-dark.png",
+  "state": "welcome",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "welcome-desktop-light.png",
+  "state": "welcome",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "welcome-desktop-dark.png",
+  "state": "welcome",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "welcome-example-mobile-light.png",
+  "state": "welcome-example",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "welcome-example-mobile-dark.png",
+  "state": "welcome-example",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "welcome-example-desktop-light.png",
+  "state": "welcome-example",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "welcome-example-desktop-dark.png",
+  "state": "welcome-example",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "watch-home-mobile-light.png",
+  "state": "watch-home",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "watch-home-mobile-dark.png",
+  "state": "watch-home",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "watch-home-desktop-light.png",
+  "state": "watch-home",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "watch-home-desktop-dark.png",
+  "state": "watch-home",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "watch-running-mobile-light.png",
+  "state": "watch-running",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "watch-running-mobile-dark.png",
+  "state": "watch-running",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "watch-running-desktop-light.png",
+  "state": "watch-running",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "watch-running-desktop-dark.png",
+  "state": "watch-running",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "skeleton-mobile-light.png",
+  "state": "skeleton",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "skeleton-mobile-dark.png",
+  "state": "skeleton",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "skeleton-desktop-light.png",
+  "state": "skeleton",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "skeleton-desktop-dark.png",
+  "state": "skeleton",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "slow-mobile-light.png",
+  "state": "slow",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "slow-mobile-dark.png",
+  "state": "slow",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "slow-desktop-light.png",
+  "state": "slow",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "slow-desktop-dark.png",
+  "state": "slow",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "mirror-down-mobile-light.png",
+  "state": "mirror-down",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "mirror-down-mobile-dark.png",
+  "state": "mirror-down",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "mirror-down-desktop-light.png",
+  "state": "mirror-down",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "mirror-down-desktop-dark.png",
+  "state": "mirror-down",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "home-funded-mobile-light.png",
+  "state": "home-funded",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "home-funded-mobile-dark.png",
+  "state": "home-funded",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "home-funded-desktop-light.png",
+  "state": "home-funded",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "home-funded-desktop-dark.png",
+  "state": "home-funded",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "funded-mirror-down-mobile-light.png",
+  "state": "funded-mirror-down",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "funded-mirror-down-mobile-dark.png",
+  "state": "funded-mirror-down",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "funded-mirror-down-desktop-light.png",
+  "state": "funded-mirror-down",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "funded-mirror-down-desktop-dark.png",
+  "state": "funded-mirror-down",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "feed-mobile-light.png",
+  "state": "feed",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "feed-mobile-dark.png",
+  "state": "feed",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "feed-desktop-light.png",
+  "state": "feed",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "feed-desktop-dark.png",
+  "state": "feed",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "copy-detail-mobile-light.png",
+  "state": "copy-detail",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "copy-detail-mobile-dark.png",
+  "state": "copy-detail",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "copy-detail-desktop-light.png",
+  "state": "copy-detail",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "copy-detail-desktop-dark.png",
+  "state": "copy-detail",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "blocked-detail-mobile-light.png",
+  "state": "blocked-detail",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "blocked-detail-mobile-dark.png",
+  "state": "blocked-detail",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "blocked-detail-desktop-light.png",
+  "state": "blocked-detail",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "blocked-detail-desktop-dark.png",
+  "state": "blocked-detail",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "engine-item-mobile-light.png",
+  "state": "engine-item",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "engine-item-mobile-dark.png",
+  "state": "engine-item",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "engine-item-desktop-light.png",
+  "state": "engine-item",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "engine-item-desktop-dark.png",
+  "state": "engine-item",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "leader-adversarial-mobile-light.png",
+  "state": "leader-adversarial",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "leader-adversarial-mobile-dark.png",
+  "state": "leader-adversarial",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "leader-adversarial-desktop-light.png",
+  "state": "leader-adversarial",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "leader-adversarial-desktop-dark.png",
+  "state": "leader-adversarial",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "follow-whatif-mobile-light.png",
+  "state": "follow-whatif",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "follow-whatif-mobile-dark.png",
+  "state": "follow-whatif",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "follow-whatif-desktop-light.png",
+  "state": "follow-whatif",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "follow-whatif-desktop-dark.png",
+  "state": "follow-whatif",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "follow-whatif-503-mobile-light.png",
+  "state": "follow-whatif-503",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "follow-whatif-503-mobile-dark.png",
+  "state": "follow-whatif-503",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "follow-whatif-503-desktop-light.png",
+  "state": "follow-whatif-503",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "follow-whatif-503-desktop-dark.png",
+  "state": "follow-whatif-503",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "positions-mobile-light.png",
+  "state": "positions",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "positions-mobile-dark.png",
+  "state": "positions",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "positions-desktop-light.png",
+  "state": "positions",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "positions-desktop-dark.png",
+  "state": "positions",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "settings-network-mobile-light.png",
+  "state": "settings-network",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "settings-network-mobile-dark.png",
+  "state": "settings-network",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "settings-network-desktop-light.png",
+  "state": "settings-network",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "settings-network-desktop-dark.png",
+  "state": "settings-network",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "monad-down-mobile-light.png",
+  "state": "monad-down",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "monad-down-mobile-dark.png",
+  "state": "monad-down",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "monad-down-desktop-light.png",
+  "state": "monad-down",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "monad-down-desktop-dark.png",
+  "state": "monad-down",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "watch-quiet-mobile-light.png",
+  "state": "watch-quiet",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "watch-quiet-mobile-dark.png",
+  "state": "watch-quiet",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "watch-quiet-desktop-light.png",
+  "state": "watch-quiet",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "watch-quiet-desktop-dark.png",
+  "state": "watch-quiet",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "follow-review-fee-mobile-light.png",
+  "state": "follow-review-fee",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "follow-review-fee-mobile-dark.png",
+  "state": "follow-review-fee",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "follow-review-fee-desktop-light.png",
+  "state": "follow-review-fee",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "follow-review-fee-desktop-dark.png",
+  "state": "follow-review-fee",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "follow-done-alerts-mobile-light.png",
+  "state": "follow-done-alerts",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "follow-done-alerts-mobile-dark.png",
+  "state": "follow-done-alerts",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "follow-done-alerts-desktop-light.png",
+  "state": "follow-done-alerts",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "follow-done-alerts-desktop-dark.png",
+  "state": "follow-done-alerts",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "settings-fees-mobile-light.png",
+  "state": "settings-fees",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "settings-fees-mobile-dark.png",
+  "state": "settings-fees",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "settings-fees-desktop-light.png",
+  "state": "settings-fees",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "settings-fees-desktop-dark.png",
+  "state": "settings-fees",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "leaders-mobile-light.png",
+  "state": "leaders",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "leaders-mobile-dark.png",
+  "state": "leaders",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "leaders-desktop-light.png",
+  "state": "leaders",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "leaders-desktop-dark.png",
+  "state": "leaders",
+  "size": "desktop",
+  "scheme": "dark"
+ }
+]

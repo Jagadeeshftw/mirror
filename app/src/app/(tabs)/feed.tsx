@@ -9,10 +9,17 @@ import { AppBar } from "../../ui/chrome";
 import { BlockedSheet, FeedItem } from "../../ui/feed";
 import { Button, Card, Chip, ErrorBanner, LoadingBlock, Row, Screen, Scroll, T } from "../../ui/kit";
 import { useColors } from "../../ui/theme";
-
-type Filter = "all" | "copied" | "blocked" | "closes";
+import { useRpcHealth } from "../../state/conn";
+import { CopyDetailSheet } from "../../ui/copyDetail";
+import { LaptopFeed } from "../../ui/laptop/LaptopFeed";
+import { useLayout } from "../../ui/layout";
+import { matchesFilter, type Filter } from "../../lib/feedFilter";
 
 export default function Feed() {
+  return useLayout() === "laptop" ? <LaptopFeed /> : <PhoneFeed />;
+}
+
+function PhoneFeed() {
   const c = useColors();
   const params = useLocalSearchParams<{ filter?: Filter }>();
   const cfg = useConfig().data;
@@ -21,10 +28,10 @@ export default function Feed() {
   const live = useLive();
   const [filter, setFilter] = useState<Filter>(params.filter ?? "all");
   const [blocked, setBlocked] = useState<FeedEvent | null>(null);
+  const [copy, setCopy] = useState<FeedEvent | null>(null);
+  const rpc = useRpcHealth();
   const counts = useMemo(() => ({ blocked: feed.events.filter((e) => e.kind === "Blocked").length }), [feed.events]);
-  const list = feed.events.filter((e) =>
-    filter === "all" ? true : filter === "copied" ? e.kind === "Mirrored" && (e.orderType ?? 0) <= 1 : filter === "blocked" ? e.kind === "Blocked" : e.kind === "Mirrored" && (e.orderType ?? 0) >= 2,
-  );
+  const list = feed.events.filter((e) => matchesFilter(e, filter));
   const stale = feed.isError && feed.events.length > 0;
   const weekAgo = Date.now() - 7 * 86400e3;
   const weekBlocked = feed.events.filter((e) => e.kind === "Blocked" && e.timestamp > weekAgo).length;
@@ -41,7 +48,7 @@ export default function Feed() {
             <Chip label={`Blocked ${counts.blocked}`} on={filter === "blocked"} icon={filter === "blocked" ? "check" : undefined} onPress={() => setFilter("blocked")} testID="feed.filter.blocked" />
             <Chip label="Closes" on={filter === "closes"} onPress={() => setFilter("closes")} testID="feed.filter.closes" />
           </ScrollView>
-          <Row gap={6} testID={live.connected ? "feed-live" : "feed-offline-indicator"}>
+          <Row gap={6} testID={live.connected ? "feed.live" : "feed.offline.indicator"}>
             <View style={{ width: 14, height: 14, borderRadius: 999, backgroundColor: live.connected ? c.posS : c.sf2, alignItems: "center", justifyContent: "center" }}>
               <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: live.connected ? c.pos : c.mu }} />
             </View>
@@ -53,9 +60,17 @@ export default function Feed() {
         {feed.isError ? (
           <ErrorBanner
             testID="feed.offline"
-            title="Can't reach Monad"
-            body={`Showing data from ${feed.updatedAt ? timeHM(feed.updatedAt) : "earlier"}. Your follows keep running onchain and your limits still apply.`}
+            title="Can't reach Mirror"
+            body={`Our server isn't answering. Showing copies from ${feed.updatedAt ? timeHM(feed.updatedAt) : "earlier"}. Your follows keep running onchain and your limits still apply.`}
             onRetry={feed.refetch}
+          />
+        ) : null}
+        {rpc.isError && !feed.isError ? (
+          <ErrorBanner
+            testID="feed.monadDown"
+            title="Can't reach Monad"
+            body={`The Monad RPC isn't answering from this device. Balances are from ${rpc.dataUpdatedAt ? timeHM(rpc.dataUpdatedAt) : "earlier"}. Mirror's server is fine and copying continues.`}
+            onRetry={() => rpc.refetch()}
           />
         ) : null}
         {feed.isLoading && !feed.events.length ? <LoadingBlock label="Loading copies" /> : null}
@@ -71,9 +86,9 @@ export default function Feed() {
             <Button title="Watch the demo" kind="txt" onPress={() => router.push("/demo")} />
           </Card>
         ) : null}
-        <View style={{ gap: 10, paddingHorizontal: 16, opacity: stale ? 0.55 : 1 }}>
+        <View style={{ gap: 10, paddingHorizontal: 16, opacity: stale || rpc.isError ? 0.55 : 1 }}>
           {list.map((e, i) => (
-            <FeedItem key={e.id} e={e} cfg={cfg} onBlockedPress={setBlocked} highlight={filter === "blocked" && i === 0} testID={`activity.item.${i}`} />
+            <FeedItem key={e.id} e={e} cfg={cfg} onBlockedPress={setBlocked} onCopyPress={setCopy} highlight={filter === "blocked" && i === 0} testID={`activity.item.${i}`} />
           ))}
         </View>
         {filter === "blocked" && weekTotal > 0 ? (
@@ -93,6 +108,7 @@ export default function Feed() {
         ) : null}
       </Scroll>
       <BlockedSheet e={blocked} cfg={cfg} account={totals?.accounts.find((a) => a.account === blocked?.account)} onClose={() => setBlocked(null)} />
+      <CopyDetailSheet e={copy} cfg={cfg} policy={totals?.accounts.find((a) => a.account === copy?.account)?.policy} onClose={() => setCopy(null)} />
     </Screen>
   );
 }

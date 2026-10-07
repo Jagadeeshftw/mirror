@@ -46,6 +46,7 @@ describe("policy builder", () => {
       maxEntryDeviationBps: 0,
       stopSlippageBps: 300,
       flattenOnStop: true,
+      maxBuilderFeePer100K: 20,
       leaders: [{ accountId: 1043, ratioBps: 25, budgetCNS: "12000000", lossStopBps: 0 }],
       markets: [
         { perpId: 1, maxNotionalCNS: "12000000" },

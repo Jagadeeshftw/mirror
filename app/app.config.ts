@@ -11,14 +11,14 @@ const config: ExpoConfig = {
   name: BRAND,
   slug: "mirror",
   scheme: "mirror",
-  version: "0.9.2",
+  version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
   backgroundColor: "#F6F6F3",
   android: {
     package: applicationId,
-    versionCode: 92,
+    versionCode: 100,
     adaptiveIcon: {
       backgroundColor: "#4B3BFF",
       foregroundImage: "./assets/adaptive-foreground.png",
@@ -83,7 +83,19 @@ const config: ExpoConfig = {
     // Cleartext to the local mock only exists in dev-tools builds.
     ...(devTools ? ["./plugins/withLocalCleartext.js"] : []),
   ],
-  experiments: { typedRoutes: false },
+  web: {
+    bundler: "metro",
+    output: "single",
+    name: BRAND,
+    shortName: BRAND,
+    lang: "en",
+    themeColor: "#4B3BFF",
+    backgroundColor: "#F6F6F3",
+    favicon: "./assets/favicon.png",
+  },
+  // Web is served under /app on mirror.0xo.in (web/scripts/build-app.sh sets EXPO_BASE_URL=/app);
+  // empty for native and for local web dev at /.
+  experiments: { typedRoutes: false, baseUrl: process.env.EXPO_BASE_URL ?? "" },
   extra: {
     rpId,
     brand: BRAND,

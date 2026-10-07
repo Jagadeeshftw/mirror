@@ -61,6 +61,7 @@ export const BLOCK_REASONS = [
   "LeaderLossStop",
   "MarketHalted",
   "CloseBelowTarget",
+  "BuilderFeeTooHigh",
 ] as const;
 export type BlockReason = (typeof BLOCK_REASONS)[number];
 
@@ -87,6 +88,7 @@ export const POLICY_PARAM = {
     { name: "maxEntryDeviationBps", type: "uint16" },
     { name: "stopSlippageBps", type: "uint16" },
     { name: "flattenOnStop", type: "bool" },
+    { name: "maxBuilderFeePer100K", type: "uint16" },
     { name: "leaders", type: "tuple[]", components: LEADER_RULE_COMPONENTS },
     { name: "markets", type: "tuple[]", components: MARKET_RULE_COMPONENTS },
   ],
@@ -125,6 +127,7 @@ function policyValue(p: Policy) {
     maxEntryDeviationBps: p.maxEntryDeviationBps,
     stopSlippageBps: p.stopSlippageBps,
     flattenOnStop: p.flattenOnStop,
+    maxBuilderFeePer100K: p.maxBuilderFeePer100K,
     leaders: p.leaders.map((l) => ({ accountId: l.accountId, ratioBps: l.ratioBps, budgetCNS: BigInt(l.budgetCNS), lossStopBps: l.lossStopBps })),
     markets: p.markets.map((m) => ({ perpId: m.perpId, maxNotionalCNS: BigInt(m.maxNotionalCNS) })),
   };
@@ -189,6 +192,7 @@ export function validatePolicy(p: Policy, nowSec = Math.floor(Date.now() / 1000)
   if (p.expiry <= nowSec) return "expiry";
   if (p.maxEntryDeviationBps > 5_000) return "maxEntryDeviationBps";
   if (p.stopSlippageBps === 0 || p.stopSlippageBps > 2_000) return "stopSlippageBps";
+  if (p.maxBuilderFeePer100K > 1_000) return "maxBuilderFeePer100K";
   if (p.leaders.length === 0 || p.leaders.length > LIMITS.MAX_LEADERS) return "leaders";
   if (p.markets.length === 0 || p.markets.length > LIMITS.MAX_MARKETS) return "markets";
   const seen = new Set<number>();

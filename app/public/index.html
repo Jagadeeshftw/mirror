@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <meta name="description" content="Copy top Perpl traders. Your limits, enforced onchain." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Mirror" />
+    <title>%WEB_TITLE%</title>
+    <!-- The manifest, apple-touch-icon and service worker are linked at runtime (src/lib/pwa.web.ts) so they
+         follow the base path (/app on mirror.0xo.in, / in local dev). -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+        background: #f6f6f3;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #0a0b0e;
+        }
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+      /* No motion anywhere in the app. */
+      *,
+      *::before,
+      *::after {
+        transition: none !important;
+        animation: none !important;
+        scroll-behavior: auto !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>You need to enable JavaScript to run Mirror.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

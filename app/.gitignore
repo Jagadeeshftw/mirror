@@ -7,3 +7,4 @@ dist/
 *.aab
 *.log
 dev-mock/state.json
+dist-web/

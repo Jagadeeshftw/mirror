@@ -14,6 +14,7 @@ import { BlockedSheet, FeedItem, openTx } from "../ui/feed";
 import { Icon } from "../ui/icons";
 import { Button, Card, ChipS, CommitTrack, ErrorBanner, Identicon, Lbl, LatencyPill, LoadingBlock, MarketBadge, Note, Row, Screen, Scroll, Side, T, TeamRunBadge, TxLink } from "../ui/kit";
 import { useColors } from "../ui/theme";
+import { CopyDetailSheet } from "../ui/copyDetail";
 
 function CycleCard({ cy, cfg }: { cy: DemoCycle; cfg: ReturnType<typeof useConfig>["data"] }) {
   const c = useColors();
@@ -80,6 +81,7 @@ export default function Demo() {
   const [err, setErr] = useState<{ title: string; body: string; until?: number } | null>(null);
   const [busy, setBusy] = useState<"trade" | "blocked" | null>(null);
   const [blocked, setBlocked] = useState<FeedEvent | null>(null);
+  const [copy, setCopy] = useState<FeedEvent | null>(null);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -150,7 +152,7 @@ export default function Demo() {
             <View style={{ paddingHorizontal: 20, gap: 8 }}>
               <TeamRunBadge />
               <T size={13} color="mu" lh={19}>
-                Run by the Mirror team so you can see a real copy land on Perpl mainnet without funding anything. It never counts toward user numbers.
+                Run by the Mirror team so you can see a real copy land on Perpl without funding anything. It never counts toward user numbers.
               </T>
             </View>
             <Card style={{ marginHorizontal: 20, padding: 16, gap: 12 }} testID="demo.account">
@@ -222,7 +224,7 @@ export default function Demo() {
               <Button title={busy === "trade" ? "Starting" : "Run demo trade"} icon="feed" onPress={() => run("trade")} disabled={!!busy || !!running || wait > 0} testID="demo.runTrade" />
               <Button title={busy === "blocked" ? "Starting" : "Run blocked trade"} icon="ban" kind="out" onPress={() => run("blocked")} disabled={!!busy || !!running || wait > 0} testID="demo.runBlocked" />
               <T size={12} color="mu" center>
-                The leader opens 1 lot of BTC on Perpl mainnet; the copy follows within a second. A blocked trade uses 12x, above this account's 5x rule. {d.limits.perIpPerHour} runs per hour per network · {d.limits.dailyRemaining} left today.
+                The leader opens 1 lot of BTC on Perpl; the copy follows within a second. A blocked trade uses 12x, above this account's 5x rule. {d.limits.perIpPerHour} runs per hour per network · {d.limits.dailyRemaining} left today.
               </T>
             </View>
             {err ? (
@@ -251,13 +253,14 @@ export default function Demo() {
                 Live copy feed
               </T>
               {events.slice(0, 8).map((e, i) => (
-                <FeedItem key={e.id} e={e} cfg={cfg} onBlockedPress={setBlocked} testID={`demo.feed.${i}`} />
+                <FeedItem key={e.id} e={e} cfg={cfg} onBlockedPress={setBlocked} onCopyPress={setCopy} testID={`demo.feed.${i}`} />
               ))}
             </View>
           </>
         )}
       </Scroll>
       <BlockedSheet e={blocked} cfg={cfg} account={follower} demo onClose={() => setBlocked(null)} />
+      <CopyDetailSheet e={copy} cfg={cfg} policy={follower?.policy} onClose={() => setCopy(null)} />
     </Screen>
   );
 }

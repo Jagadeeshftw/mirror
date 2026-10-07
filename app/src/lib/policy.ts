@@ -33,7 +33,8 @@ export function defaultForm(): FollowForm {
     maxNotionalAusd: "12.00",
     markets: ["BTC", "ETH", "SOL"],
     dailyLossPct: 10,
-    drawdownPct: 15,
+    // Account-wide loss stop: on by default at 20% below the peak (owner decision).
+    drawdownPct: 20,
     expiryDays: 90,
     entryFilterPct: 0,
     flattenOnStop: true,
@@ -44,6 +45,14 @@ export function defaultForm(): FollowForm {
 
 /** Slippage bound for closes sent by a triggered stop. */
 export const STOP_SLIPPAGE_BPS = 300;
+/** Mirror's Perpl builder fee: builder 26, 20 per 100,000 (0.02%) of opening size, never on closes. */
+export const BUILDER_ID = 26;
+export const BUILDER_FEE_PER_100K = 20;
+
+/** Builder fee for an opening notional (6-decimal AUSD units), rounded up as Perpl rounds it. */
+export function builderFeeCNS(openingNotionalCNS: bigint, feePer100K = BUILDER_FEE_PER_100K): bigint {
+  return (openingNotionalCNS * BigInt(feePer100K) + 99_999n) / 100_000n;
+}
 
 export function buildPolicy(form: FollowForm, leaderAccountId: number, markets: MarketConfig[], nowSec = Math.floor(Date.now() / 1000)): Policy {
   const cap = parseUnits(form.maxNotionalAusd, 6) ?? 0n;
@@ -59,6 +68,7 @@ export function buildPolicy(form: FollowForm, leaderAccountId: number, markets: 
     maxEntryDeviationBps: Math.round(form.entryFilterPct * 100),
     stopSlippageBps: STOP_SLIPPAGE_BPS,
     flattenOnStop: form.flattenOnStop,
+    maxBuilderFeePer100K: BUILDER_FEE_PER_100K,
     leaders: [{ accountId: leaderAccountId, ratioBps: Math.round(form.ratioBps), budgetCNS: budget.toString(), lossStopBps: 0 }],
     markets: form.markets
       .map((s) => bySymbol.get(s))
@@ -84,13 +94,27 @@ export function ratioPresets(): number[] {
 export const SLIPPAGE_PRESETS = [10, 25, 50, 100, 200];
 export const EXPIRY_PRESETS = [7, 30, 90];
 
-export function formErrors(form: FollowForm, walletCNS: bigint): { field: string; message: string }[] {
+/** Network limits for a follow: Perpl's account opening minimum and Mirror's per-account deposit cap (from /v1/config). */
+export interface FollowLimits {
+  minCNS: bigint;
+  capCNS: bigint;
+}
+export const DEFAULT_LIMITS: FollowLimits = { minCNS: MIN_FOLLOW_CNS, capCNS: BETA_CAP_CNS };
+export function followLimits(cfg?: { minAccountOpenCNS?: string; depositCapCNS?: string } | null): FollowLimits {
+  return {
+    minCNS: cfg?.minAccountOpenCNS ? BigInt(cfg.minAccountOpenCNS) : MIN_FOLLOW_CNS,
+    capCNS: cfg?.depositCapCNS ? BigInt(cfg.depositCapCNS) : BETA_CAP_CNS,
+  };
+}
+const whole = (cns: bigint) => (Number(cns) / 1e6).toFixed(0);
+
+export function formErrors(form: FollowForm, walletCNS: bigint, limits: FollowLimits = DEFAULT_LIMITS): { field: string; message: string }[] {
   const out: { field: string; message: string }[] = [];
   const alloc = parseUnits(form.allocationAusd, 6);
   if (alloc === null) out.push({ field: "allocation", message: "Enter an amount" });
   else {
-    if (alloc < MIN_FOLLOW_CNS) out.push({ field: "allocation", message: "Perpl needs at least 10 AUSD to open your trading account" });
-    if (alloc > BETA_CAP_CNS) out.push({ field: "allocation", message: "Beta limit is 25 AUSD per follow" });
+    if (alloc < limits.minCNS) out.push({ field: "allocation", message: `Perpl needs at least ${whole(limits.minCNS)} AUSD to open your trading account` });
+    if (alloc > limits.capCNS) out.push({ field: "allocation", message: `Beta limit is ${whole(limits.capCNS)} AUSD per follow` });
     if (alloc > walletCNS) out.push({ field: "allocation", message: "More than your wallet balance" });
   }
   const cap = parseUnits(form.maxNotionalAusd, 6);

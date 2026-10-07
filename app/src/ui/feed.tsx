@@ -5,14 +5,26 @@ import React from "react";
 import { View } from "react-native";
 import { txUrl } from "../lib/chain";
 import { BLOCK_REASONS } from "../lib/contracts";
+import { notionalCNS } from "../lib/format";
 import { ago, ausd, ausdSigned, bps, dateLong, leverage, lots as fmtLots, orderAction, orderSide, price as fmtPrice, shortAddr, toBig } from "../lib/format";
 import type { AppConfig, FeedEvent, MarketConfig, MirrorAccount } from "../lib/types";
 import { Icon } from "./icons";
 import { Button, Card, ChipS, CommitTrack, Identicon, KV, LatencyPill, Lbl, MarketBadge, Press, Row, Sheet, Side, T, TxLink } from "./kit";
+import { SmallChip, TeamBadge } from "./kit2";
+import { EngineItem } from "./feedEngine";
+import { bpsText, fillDeviationBps } from "../lib/proof";
+import { copyFeeCNS, feeText } from "../lib/fees";
+import { isEngineKind, RULE_NAMES as RULES } from "../lib/blockReasons";
 import { useColors } from "./theme";
 
-export function openTx(cfg: AppConfig | undefined, hash: string) {
-  void Linking.openURL(txUrl(cfg, hash));
+export function openTx(cfg: AppConfig | undefined, hash: string | null | undefined) {
+  if (hash) void Linking.openURL(txUrl(cfg, hash));
+}
+
+/** "0x7a3f…c91e", or "Perpl #9001" for the team-run demo leader. */
+export function leaderName(e: FeedEvent): string {
+  if (e.teamRun && e.leaderAccountId) return `Perpl #${e.leaderAccountId}`;
+  return e.leaderAddress ? shortAddr(e.leaderAddress) : e.leaderAccountId ? `Perpl #${e.leaderAccountId}` : "";
 }
 
 function mkt(cfg: AppConfig | undefined, perpId?: number): MarketConfig | undefined {
@@ -31,22 +43,7 @@ export function priceText(cfg: AppConfig | undefined, perpId: number | undefined
 }
 
 // ---------------------------------------------------------------- block explanations
-const RULE_NAMES: Record<string, string> = {
-  LeverageTooHigh: "max leverage",
-  LeverageTooLow: "leverage safety",
-  MarketNotAllowed: "allowed markets",
-  ExceedsMaxNotional: "max notional",
-  SlippageTooHigh: "max slippage",
-  DailyLossStop: "daily loss stop",
-  DrawdownStop: "drawdown stop",
-  Paused: "pause",
-  Expired: "expiry",
-  LeaderNotAllowed: "leader",
-  LeaderSideMismatch: "leader position",
-  FlipNotAllowed: "no-flip",
-  StaleMark: "fresh price",
-  ExceedsLeaderTarget: "copy ratio",
-};
+const RULE_NAMES: Record<string, string> = Object.fromEntries(Object.entries(RULES).map(([k, v]) => [k, v.toLowerCase().replace(/^max /, "max ")]));
 
 /** Order of checks in MirrorAccount._checkOpen, grouped into the chips shown to the user. */
 const CHECK_GROUPS: { label: string; reasons: string[] }[] = [
@@ -55,7 +52,10 @@ const CHECK_GROUPS: { label: string; reasons: string[] }[] = [
   { label: "Leverage", reasons: ["LeverageTooLow", "LeverageTooHigh", "FlipNotAllowed", "StaleMark"] },
   { label: "Slippage", reasons: ["SlippageTooHigh", "LeaderSideMismatch", "ExceedsLeaderTarget"] },
   { label: "Notional", reasons: ["ExceedsMaxNotional"] },
-  { label: "Stops", reasons: ["DailyLossStop", "DrawdownStop"] },
+  { label: "Entry", reasons: ["EntryTooFar"] },
+  { label: "Market owner", reasons: ["MarketHeldByOtherLeader", "MarketHalted"] },
+  { label: "Budget", reasons: ["LeaderBudgetExceeded"] },
+  { label: "Loss stops", reasons: ["DailyLossStop", "DrawdownStop", "LeaderLossStop"] },
 ];
 
 export function explainBlock(cfg: AppConfig | undefined, e: FeedEvent, acct?: MirrorAccount) {
@@ -110,12 +110,34 @@ export function explainBlock(cfg: AppConfig | undefined, e: FeedEvent, acct?: Mi
     case "FlipNotAllowed":
       sentence = "The copy would have flipped your position to the other side. Not copied.";
       break;
+    case "EntryTooFar": {
+      const entry = toBig((e.data?.leaderEntryPNS as string | undefined) ?? "0");
+      const pct = entry > 0n ? (Math.abs(Number(actual - entry)) / Number(entry)) * 100 : 0;
+      const lim = entry > 0n ? (Math.abs(Number(limit - entry)) / Number(entry)) * 100 : 0;
+      sentence = entry > 0n ? `Price moved ${pct.toFixed(1)}% past the leader's entry; your limit is ${lim.toFixed(lim < 1 ? 2 : 1).replace(/\.?0+$/, "")}%. Not copied.` : "The price was too far from the leader's entry for your entry filter. Not copied.";
+      if (entry > 0n && m) compare = { leader: fmtPrice(actual, m.priceDecimals), limit: fmtPrice(limit, m.priceDecimals), frac: lim / Math.max(pct, 0.0001) };
+      break;
+    }
+    case "LeaderBudgetExceeded":
+      sentence = `This copy needed ${ausd(actual)} AUSD of margin for this leader. Its budget is ${ausd(limit)} AUSD. Not copied.`;
+      compare = { leader: ausd(actual), limit: ausd(limit), frac: Number(limit) / Math.max(1, Number(actual)) };
+      break;
+    case "LeaderLossStop":
+      sentence = "This leader's loss stop has fired, so its new trades are no longer copied. Your other leaders keep running.";
+      break;
+    case "MarketHeldByOtherLeader":
+      sentence = `You already hold ${sym} from another leader. A market belongs to the leader whose copy opened it, so this trade waits until that position closes.`;
+      break;
+    case "MarketHalted":
+      sentence = `A stop-loss or take-profit closed your ${sym} position and paused new copies in ${sym} until you set your limits again.`;
+      break;
     default:
       sentence = b.rule ?? "A rule in your account blocked this copy.";
   }
   const failIdx = CHECK_GROUPS.findIndex((g) => g.reasons.includes(b.reason));
   const chips = CHECK_GROUPS.map((g, i) => ({ label: g.label, state: i < failIdx ? "ok" : i === failIdx ? "fail" : "skip" })) as { label: string; state: "ok" | "fail" | "skip" }[];
-  return { title: `Blocked by your ${RULE_NAMES[b.reason] ?? "account"} rule`, sentence, compare, chips, short: b.rule ?? sentence };
+  const name = RULE_NAMES[b.reason] ?? "account";
+  return { title: `Blocked by your ${name}${/filter|stop|budget/.test(name) ? "" : " rule"}`, sentence, compare, chips, short: b.rule ?? sentence, reasonName: RULES[b.reason] ?? b.reason };
 }
 
 export function shortRule(cfg: AppConfig | undefined, e: FeedEvent): string {
@@ -127,26 +149,30 @@ export function shortRule(cfg: AppConfig | undefined, e: FeedEvent): string {
 }
 
 // ---------------------------------------------------------------- feed item
-export function FeedItem({ e, cfg, onBlockedPress, highlight, testID }: { e: FeedEvent; cfg: AppConfig | undefined; onBlockedPress?: (e: FeedEvent) => void; highlight?: boolean; testID?: string }) {
+export function FeedItem({ e, cfg, onBlockedPress, onCopyPress, highlight, testID }: { e: FeedEvent; cfg: AppConfig | undefined; onBlockedPress?: (e: FeedEvent) => void; onCopyPress?: (e: FeedEvent) => void; highlight?: boolean; testID?: string }) {
   const c = useColors();
   const m = mkt(cfg, e.perpId);
-  const leaderAddr = e.leaderAddress ?? "";
+  const leaderAddr = e.leaderAddress ?? (e.leaderAccountId ? String(e.leaderAccountId) : "");
+  if (isEngineKind(e.kind)) return <EngineItem e={e} cfg={cfg} testID={testID} name={leaderName(e)} />;
   const typeLabel = e.kind === "Blocked" ? "Blocked" : e.kind === "Mirrored" ? ((e.orderType ?? 0) <= 1 ? "Copy" : "Close") : e.kind;
   const header = (
     <Row gap={8}>
       {leaderAddr ? <Identicon seed={leaderAddr} size={28} /> : null}
       {leaderAddr ? (
-        <T size={13} w={500} mono>
-          {shortAddr(leaderAddr)}
+        <T size={13} w={500} mono lines={1} style={{ flexShrink: 1 }}>
+          {leaderName(e)}
         </T>
       ) : null}
-      <T size={12} mono color="mu">
-        {ago(e.timestamp)} ago
+      {e.teamRun ? <TeamBadge /> : null}
+      <T size={12} mono color="mu" lines={1}>
+        {ago(e.timestamp)}
       </T>
       <View style={{ flex: 1 }} />
-      <T size={11} w={600} color={e.kind === "Blocked" ? "neg" : "mu"} upper testID={testID ? `${testID}.type` : undefined}>
-        {typeLabel}
-      </T>
+      {e.teamRun ? null : (
+        <T size={11} w={600} color={e.kind === "Blocked" ? "neg" : "mu"} upper testID={testID ? `${testID}.type` : undefined}>
+          {typeLabel}
+        </T>
+      )}
       <TxLink hash={e.txHash} onPress={() => openTx(cfg, e.txHash)} testID={testID ? `${testID}.tx` : undefined} />
     </Row>
   );
@@ -197,7 +223,7 @@ export function FeedItem({ e, cfg, onBlockedPress, highlight, testID }: { e: Fee
     const open = (e.orderType ?? 0) <= 1;
     const pnl = e.realisedPnlCNS !== undefined ? toBig(e.realisedPnlCNS) : null;
     return (
-      <Card testID={testID ?? `activity.copy.${e.id}`} style={{ paddingVertical: 12, paddingHorizontal: 14, gap: 10 }}>
+      <Card testID={testID ?? `activity.copy.${e.id}`} onPress={onCopyPress ? () => onCopyPress(e) : undefined} style={{ paddingVertical: 12, paddingHorizontal: 14, gap: 10 }}>
         {header}
         <Row gap={10}>
           <MarketBadge symbol={m?.symbol ?? "?"} />
@@ -214,8 +240,13 @@ export function FeedItem({ e, cfg, onBlockedPress, highlight, testID }: { e: Fee
               </T>
             </Row>
             <T size={13} mono lines={1}>
-              {sizeText(cfg, e.perpId, e.lotLNS)} · {ausd(e.notionalCNS ?? "0")} AUSD @ {priceText(cfg, e.perpId, e.pricePNS)}
+              {sizeText(cfg, e.perpId, e.lotLNS)} · {ausd(e.notionalCNS ?? (m && e.lotLNS && e.pricePNS ? notionalCNS(toBig(e.lotLNS), toBig(e.pricePNS), m.lotDecimals, m.priceDecimals) : 0n))} AUSD @ {priceText(cfg, e.perpId, e.pricePNS)}
             </T>
+            {copyFeeCNS(e) !== null ? (
+              <T size={11} mono color="mu" testID={testID ? `${testID}.fee` : undefined}>
+                {open ? `fee ${feeText(copyFeeCNS(e)!)} AUSD` : "fee 0 on closes"}
+              </T>
+            ) : null}
           </View>
           {pnl !== null ? (
             <View style={{ alignItems: "flex-end" }}>
@@ -229,7 +260,14 @@ export function FeedItem({ e, cfg, onBlockedPress, highlight, testID }: { e: Fee
           ) : null}
         </Row>
         <Row justify="space-between" style={{ paddingTop: 10, borderTopWidth: 1, borderTopColor: c.bd }}>
-          <LatencyPill ms={e.latencyMs} label={e.matchNow ? "Matched in" : "Copied in"} />
+          <Row gap={6} style={{ flexShrink: 1 }}>
+            {e.latencyMs !== undefined ? (
+              <LatencyPill ms={e.latencyMs} label={e.latencyBlocks ? "" : e.matchNow ? "Matched in" : "Copied in"} blocks={e.latencyBlocks} testID={testID ? `${testID}.latency` : undefined} />
+            ) : (
+              <T size={12} mono color="mu">{`block ${e.block.toLocaleString("en-US")}`}</T>
+            )}
+            {e.proof ? <SmallChip label={`${bpsText(fillDeviationBps(e.proof, e.orderType ?? 0))} bps`} testID={testID ? `${testID}.deviation` : undefined} /> : null}
+          </Row>
           <CommitTrack state={e.commitState} />
         </Row>
       </Card>
@@ -294,14 +332,14 @@ export function RecentRow({ e, cfg, onPress }: { e: FeedEvent; cfg: AppConfig | 
         </T>
       </View>
       {e.kind === "Blocked" ? (
-        <ChipS label="Blocked" tone="neg" icon="ban" />
+        <ChipS label={e.blocked ? (RULES[e.blocked.reason] ?? "Blocked") : "Blocked"} tone="neg" icon="ban" />
       ) : (
         <View style={{ alignItems: "flex-end" }}>
           <T size={12} mono>
-            {((e.latencyMs ?? 0) / 1000).toFixed(2)} s
+            {((e.latencyMs ?? 0) / 1000).toFixed(2)} s{e.latencyBlocks ? ` · ${e.latencyBlocks} blocks` : ""}
           </T>
-          <T size={12} color="mu">
-            {e.commitState[0].toUpperCase() + e.commitState.slice(1)}
+          <T size={12} color="mu" mono={!!e.proof}>
+            {e.proof ? `${bpsText(fillDeviationBps(e.proof, e.orderType ?? 0))} bps` : e.commitState[0].toUpperCase() + e.commitState.slice(1)}
           </T>
         </View>
       )}
@@ -311,19 +349,29 @@ export function RecentRow({ e, cfg, onPress }: { e: FeedEvent; cfg: AppConfig | 
 
 // ---------------------------------------------------------------- blocked sheet
 export function BlockedSheet({ e, cfg, account, onClose, demo }: { e: FeedEvent | null; cfg: AppConfig | undefined; account?: MirrorAccount; onClose: () => void; demo?: boolean }) {
-  const c = useColors();
   if (!e || !e.blocked) return <Sheet visible={false} onClose={onClose}>{null}</Sheet>;
-  const x = explainBlock(cfg, e, account);
-  const m = mkt(cfg, e.perpId);
   return (
     <Sheet visible onClose={onClose} testID="blocked.sheet">
-      <View style={{ gap: 14 }}>
+      <BlockedBody e={e} cfg={cfg} account={account} onClose={onClose} demo={demo} />
+    </Sheet>
+  );
+}
+
+/** Blocked detail: the rule, the numbers, the leader reference and the onchain record. */
+export function BlockedBody({ e, cfg, account, onClose, demo }: { e: FeedEvent; cfg: AppConfig | undefined; account?: MirrorAccount; onClose: () => void; demo?: boolean }) {
+  const c = useColors();
+  if (!e.blocked) return null;
+  const x = explainBlock(cfg, e, account);
+  return (
+      <View style={{ gap: 14 }} testID="blocked.detail">
         <Row gap={12} align="flex-start">
           <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: c.negS, alignItems: "center", justifyContent: "center" }}>
             <Icon name="ban" size={22} color={c.neg} />
           </View>
           <View style={{ flex: 1 }}>
-            <Lbl color="neg">Not copied</Lbl>
+            <T size={12} w={500} color="neg" upper testID="blocked.detail.reason">
+              {`Not copied · ${x.reasonName} · ${ago(e.timestamp)} ago`}
+            </T>
             <T size={19} w={600} lh={24} testID="blocked.title">
               {x.title}
             </T>
@@ -334,14 +382,15 @@ export function BlockedSheet({ e, cfg, account, onClose, demo }: { e: FeedEvent 
         </T>
         {x.compare ? (
           <Card style={{ padding: 14, gap: 10 }}>
-            <CompareRow label={e.blocked.reason === "ExceedsMaxNotional" ? "Your copy" : "Leader's order"} value={x.compare.leader} frac={1} over capAt={x.compare.frac} />
-            <CompareRow label="Your limit" value={x.compare.limit} frac={x.compare.frac} />
+            <CompareRow label={e.blocked.reason === "ExceedsMaxNotional" || e.blocked.reason === "LeaderBudgetExceeded" ? "Your copy" : e.blocked.reason === "EntryTooFar" ? "Price for copy" : "Leader's order"} value={x.compare.leader} frac={1} over capAt={x.compare.frac} testID="blocked.detail.actual" />
+            <CompareRow label="Your limit" value={x.compare.limit} frac={x.compare.frac} testID="blocked.detail.limit" />
           </Card>
         ) : null}
         <View>
-          <KV k="Leader" v={shortAddr(e.leaderAddress)} />
-          <KV k="Order" v={`${sizeText(cfg, e.perpId, e.leaderLotLNS ?? e.lotLNS)} ${orderSide(e.orderType ?? 0).toLowerCase()} @ ${priceText(cfg, e.perpId, e.pricePNS)}`} />
-          <KV k="Rejected by" v={`${demo ? "Demo account" : "Your MirrorAccount"} · block ${e.block.toLocaleString("en-US")}`} last />
+          <KV k="Leader" v={leaderName(e)} />
+          <KV k="Leader trade" v={`${sizeText(cfg, e.perpId, e.leaderLotLNS ?? e.lotLNS)} ${orderSide(e.orderType ?? 0).toLowerCase()} @ ${priceText(cfg, e.perpId, (e.data?.leaderFillPNS as string | undefined) ?? e.pricePNS)}`} />
+          {e.leaderRef ? <KV k="Leader ref" v={`${e.leaderRef.slice(0, 6)}…${e.leaderRef.slice(-4)}${e.leaderBlock ? ` · block ${e.leaderBlock.toLocaleString("en-US")}` : ""}`} testID="blocked.detail.leaderRef" /> : null}
+          <KV k="Recorded" v={`${demo || e.teamRun ? "Demo account" : "Blocked by your rule"} · block ${e.block.toLocaleString("en-US")}`} last />
         </View>
         <Row gap={6} style={{ flexWrap: "wrap" }}>
           {x.chips.map((ch) => (
@@ -369,24 +418,22 @@ export function BlockedSheet({ e, cfg, account, onClose, demo }: { e: FeedEvent 
             />
           ) : null}
         </Row>
-        {m ? null : null}
       </View>
-    </Sheet>
   );
 }
 
-function CompareRow({ label, value, frac, over, capAt }: { label: string; value: string; frac: number; over?: boolean; capAt?: number }) {
+function CompareRow({ label, value, frac, over, capAt, testID }: { label: string; value: string; frac: number; over?: boolean; capAt?: number; testID?: string }) {
   const c = useColors();
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-      <T size={13} style={{ width: 96 }}>
+    <View testID={testID} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <T size={13} style={{ width: 104 }}>
         {label}
       </T>
       <View style={{ flex: 1, height: 10, borderRadius: 5, backgroundColor: c.sf2 }}>
         <View style={{ width: `${Math.min(1, frac) * 100}%`, height: 10, borderRadius: 5, backgroundColor: over ? c.neg : c.ac }} />
         {capAt !== undefined ? <View style={{ position: "absolute", left: `${Math.min(1, capAt) * 100}%`, top: -4, bottom: -4, width: 3, marginLeft: -1.5, borderRadius: 2, backgroundColor: c.tx, borderWidth: 0 }} /> : null}
       </View>
-      <T size={14} w={600} mono style={{ width: 52, textAlign: "right" }}>
+      <T size={14} w={600} mono style={{ minWidth: 52, textAlign: "right" }}>
         {value}
       </T>
     </View>
