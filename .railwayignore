@@ -1,0 +1,13 @@
+# Uploaded by `railway up` from the repo root (engine). .gitignore already keeps .env and keys/ out.
+devices/
+marketing/
+design/
+brand/
+docs/
+app/
+web/
+contracts/lib/
+contracts/out/
+contracts/cache/
+localnet/
+**/node_modules/

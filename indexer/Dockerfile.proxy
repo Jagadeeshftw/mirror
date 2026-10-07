@@ -1,0 +1,9 @@
+# Rate-limited HyperSync proxy (scripts/hypersync-proxy.mjs) as its own Railway service, shared by the
+# mainnet and testnet indexers over the private network so the one free token stays under 15 req/min.
+FROM node:24-slim
+WORKDIR /app
+COPY scripts/hypersync-proxy.mjs ./
+ENV HYPERSYNC_PROXY_HOST=:: \
+    HYPERSYNC_ROUTES=8930=https://143.hypersync.xyz,8931=https://10143.hypersync.xyz
+EXPOSE 8930 8931
+CMD ["node", "hypersync-proxy.mjs"]

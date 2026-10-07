@@ -6,11 +6,22 @@
 //
 //   ENVIO_API_TOKEN=... node scripts/hypersync-proxy.mjs     (or ENVIO_TOKEN; never logged)
 //
-// Env: HYPERSYNC_UPSTREAM (default https://143.hypersync.xyz), HYPERSYNC_PROXY_PORT (8930), HYPERSYNC_RPM (14).
+// Env: HYPERSYNC_UPSTREAM (default https://143.hypersync.xyz), HYPERSYNC_PROXY_PORT (8930), HYPERSYNC_RPM (14),
+// HYPERSYNC_PROXY_HOST (127.0.0.1; "::" on Railway's private network).
+// Several chains on the one token: HYPERSYNC_ROUTES="8930=https://143.hypersync.xyz,8931=https://10143.hypersync.xyz"
+// listens on each port with its own upstream, and every port shares the single queue, so the token's limit
+// holds across all of them.
 import { createServer } from "node:http";
 
 const UPSTREAM = (process.env.HYPERSYNC_UPSTREAM ?? "https://143.hypersync.xyz").replace(/\/$/, "");
 const PORT = Number(process.env.HYPERSYNC_PROXY_PORT ?? 8930);
+const HOST = process.env.HYPERSYNC_PROXY_HOST ?? "127.0.0.1";
+const ROUTES = process.env.HYPERSYNC_ROUTES
+  ? process.env.HYPERSYNC_ROUTES.split(",").map((r) => {
+      const [port, url] = r.trim().split("=");
+      return { port: Number(port), upstream: url.replace(/\/$/, "") };
+    })
+  : [{ port: PORT, upstream: UPSTREAM }];
 const RPM = Math.max(1, Math.min(15, Number(process.env.HYPERSYNC_RPM ?? 14)));
 const TOKEN = process.env.ENVIO_API_TOKEN || process.env.ENVIO_TOKEN || "";
 const GAP_MS = Math.ceil(60_000 / RPM);
@@ -49,23 +60,23 @@ async function pump() {
   pumping = false;
 }
 
-async function forward({ method, path, headers, body }) {
+async function forward({ upstream, method, path, headers, body }) {
   const h = { ...headers };
   delete h.host;
   delete h["content-length"];
   if (TOKEN) h.authorization = `Bearer ${TOKEN}`;
-  const res = await fetch(UPSTREAM + path, { method, headers: h, body: method === "GET" || method === "HEAD" ? undefined : body });
+  const res = await fetch(upstream + path, { method, headers: h, body: method === "GET" || method === "HEAD" ? undefined : body });
   return { status: res.status, headers: Object.fromEntries(res.headers), body: Buffer.from(await res.arrayBuffer()) };
 }
 
-createServer(async (req, res) => {
+for (const { port, upstream } of ROUTES) createServer(async (req, res) => {
   if (req.url === "/__proxy/stats") {
     res.writeHead(200, { "content-type": "application/json" });
-    return res.end(JSON.stringify({ upstream: UPSTREAM, rpm: RPM, queued: queue.length, sent, throttled, token: Boolean(TOKEN) }));
+    return res.end(JSON.stringify({ upstream, routes: ROUTES, rpm: RPM, queued: queue.length, sent, throttled, token: Boolean(TOKEN) }));
   }
   const chunks = [];
   for await (const c of req) chunks.push(c);
-  const job = { method: req.method, path: req.url, headers: req.headers, body: Buffer.concat(chunks) };
+  const job = { upstream, method: req.method, path: req.url, headers: req.headers, body: Buffer.concat(chunks) };
   try {
     const out = await new Promise((resolve, reject) => {
       queue.push({ ...job, resolve, reject });
@@ -81,6 +92,6 @@ createServer(async (req, res) => {
     res.writeHead(502, { "content-type": "text/plain" });
     res.end(`hypersync proxy: ${String(err?.message ?? err).slice(0, 200)}`);
   }
-}).listen(PORT, "127.0.0.1", () => {
-  console.log(`hypersync proxy on http://127.0.0.1:${PORT} -> ${UPSTREAM}, ${RPM} req/min, token ${TOKEN ? "set" : "missing"}`);
+}).listen(port, HOST, () => {
+  console.log(`hypersync proxy on ${HOST}:${port} -> ${upstream}, ${RPM} req/min shared, token ${TOKEN ? "set" : "missing"}`);
 });

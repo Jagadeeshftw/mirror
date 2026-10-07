@@ -1,7 +1,9 @@
 import type { Enum } from "envio";
 
-export const CHAIN_ID = 143;
-export const PERPL_EXCHANGE = "0x34B6552d57a35a1D042CcAe1951BD1C370112a6F";
+/** Monad mainnet (143) unless ENVIO_CHAIN_ID says otherwise (10143 with config.testnet.yaml). */
+export const CHAIN_ID = Number(process.env.ENVIO_CHAIN_ID ?? 143);
+export const TESTNET = CHAIN_ID === 10143;
+export const PERPL_EXCHANGE = TESTNET ? "0x1964C32f0bE608E7D29302AFF5E61268E72080cc" : "0x34B6552d57a35a1D042CcAe1951BD1C370112a6F";
 export const COLLATERAL_DECIMALS = 6;
 
 /** keccak256("MIRROR_MATCH_NOW"): MirrorAccount.MATCH_NOW_REF, marks owner match-now orders. */
@@ -22,7 +24,7 @@ export type MarketInfo = { symbol: string; lotDecimals: number; priceDecimals: n
  * Perpl markets on Monad mainnet (mirrors shared/config.json). ContractAdded/ContractAddedV2 events
  * override or extend this table at runtime, so new markets are picked up without a redeploy.
  */
-export const MARKETS: Record<number, MarketInfo> = {
+const MAINNET_MARKETS: Record<number, MarketInfo> = {
   1: { symbol: "BTC", lotDecimals: 5, priceDecimals: 1 },
   10: { symbol: "MON", lotDecimals: 0, priceDecimals: 6 },
   20: { symbol: "ETH", lotDecimals: 3, priceDecimals: 2 },
@@ -35,6 +37,16 @@ export const MARKETS: Record<number, MarketInfo> = {
   100: { symbol: "NEAR", lotDecimals: 2, priceDecimals: 4 },
   110: { symbol: "UNI", lotDecimals: 2, priceDecimals: 4 },
 };
+
+/** Perpl testnet markets (getPerpetualInfoV2 on 0x1964…80cc, 8 Oct 2026). */
+const TESTNET_MARKETS: Record<number, MarketInfo> = {
+  16: { symbol: "BTC", lotDecimals: 5, priceDecimals: 1 },
+  32: { symbol: "ETH", lotDecimals: 3, priceDecimals: 2 },
+  48: { symbol: "SOL", lotDecimals: 3, priceDecimals: 2 },
+  64: { symbol: "MON", lotDecimals: 0, priceDecimals: 5 },
+};
+
+export const MARKETS: Record<number, MarketInfo> = TESTNET ? TESTNET_MARKETS : MAINNET_MARKETS;
 
 /** MirrorAccount.BlockReason in Solidity declaration order. */
 export const BLOCK_REASONS: readonly Enum<"BlockReason">[] = [
