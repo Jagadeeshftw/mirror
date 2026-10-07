@@ -110,7 +110,7 @@ export async function exitFlows(ctx) {
     return { ok: r.address?.toLowerCase() === state.address.toLowerCase(), ...r, expected: state.address };
   }, { needs: ["address"] });
 
-  R.note("stops executed by a stranger", { coverage: "not in Group 1 UI (no stop-loss / take-profit levels screen); covered onchain by e2e-api" });
+  R.note("stops executed by a stranger", { coverage: "flows-stops.mjs: take-profit set in the app, triggerLevel by a fresh stranger key, shown in the feed and position detail" });
   R.note("several leaders in one account", { coverage: "not in Group 1 UI (one leader per follow account; 'Follow another leader' opens a separate account); covered onchain by e2e-api" });
   await sleep(100);
 }

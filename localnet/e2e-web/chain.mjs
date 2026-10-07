@@ -22,6 +22,8 @@ const chain = defineChain({ id: env.chainId, name: "localnet", nativeCurrency: {
 export const pub = createPublicClient({ chain, transport: http(env.rpcUrl), pollingInterval: 100 });
 export const acct = (k) => privateKeyToAccount(k);
 const wallet = (a) => createWalletClient({ chain, account: a, transport: http(env.rpcUrl) });
+/** A wallet client for any key (e.g. a stranger calling triggerLevel). Gas comes from the node's estimate. */
+export const walletOf = (a) => wallet(a);
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const J = (v) => JSON.stringify(v, (_, x) => (typeof x === "bigint" ? x.toString() : x));
 

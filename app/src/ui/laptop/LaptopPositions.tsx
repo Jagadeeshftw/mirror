@@ -1,14 +1,18 @@
 // Laptop Positions: KPIs, open positions as a table traced to their leader, PnL by leader, recent
 // closes, and the selected position in the panel on the right.
-import { router } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { View } from "react-native";
-import { ago, ausd, ausdSigned, leverage, lots, pctSigned, price, shortAddr, toBig } from "../../lib/format";
+import { ScrollView, View } from "react-native";
+import { ago, ausd, ausdSigned, leverage, price, shortAddr, toBig } from "../../lib/format";
 import type { MirrorAccount, Position } from "../../lib/types";
 import { useConfig, useFeedAll, useMarkets, useTotals } from "../../state/data";
 import { useOwnerAction } from "../../state/ownerAction";
 import { CloseAllDialog } from "../closeAll";
-import { Button, ErrorBanner, Identicon, KV, MarketBadge, Meter, Row, Seg, Side, T } from "../kit";
+import { Button, ErrorBanner, Identicon, MarketBadge, Meter, Row, Seg, Side, T } from "../kit";
+import { haltedPerps, levelFor } from "../../lib/levels";
+import { isLevelStop, stopName } from "../../lib/stopEvents";
+import { HaltNotice } from "../levelEdit";
+import { PositionBody } from "../positionPanel";
 import { useColors } from "../theme";
 import { LCard, LaptopPage } from "./Top";
 import { Table, type Col } from "./Table";
@@ -23,24 +27,29 @@ export function LaptopPositions() {
   const feed = useFeedAll();
   const act = useOwnerAction();
   const [group, setGroup] = useState<"market" | "leader">("market");
+  const params = useLocalSearchParams<{ account?: string; perp?: string }>();
   const [sel, setSel] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const rows: Row_[] = useMemo(() => {
     const all = (totals?.accounts ?? []).flatMap((a) => a.positions.map((p, i) => ({ p, a, key: `${a.account}-${p.perpId}-${i}` })));
     return group === "market" ? all.sort((x, y) => (byPerp.get(x.p.perpId)?.symbol ?? "").localeCompare(byPerp.get(y.p.perpId)?.symbol ?? "")) : all;
   }, [totals, group, byPerp]);
-  const closes = feed.events.filter((e) => e.kind === "Mirrored" && (e.orderType ?? 0) >= 2 && e.realisedPnlCNS !== undefined && e.timestamp > Date.now() - 7 * 86400e3).slice(0, 6);
-  const current = rows.find((r) => r.key === sel) ?? rows[0];
+  const closes = feed.events.filter((e) => ((e.kind === "Mirrored" && (e.orderType ?? 0) >= 2 && e.realisedPnlCNS !== undefined) || (e.kind === "StopTriggered" && isLevelStop(e)) || e.kind === "MarketClosed") && e.timestamp > Date.now() - 7 * 86400e3).slice(0, 6);
+  const fromLink = params.account ? rows.find((r) => r.a.account.toLowerCase() === params.account!.toLowerCase() && String(r.p.perpId) === params.perp) : undefined;
+  const current = rows.find((r) => r.key === sel) ?? fromLink ?? rows[0];
+  const lvl = (r: Row_, k: "stopLossPNS" | "takeProfitPNS") => {
+    const v = levelFor(r.a.levels, r.p)?.[k];
+    return v && v !== "0" ? P(r.p.perpId, v) : "—";
+  };
   const m = (perpId: number) => byPerp.get(perpId);
   const P = (perpId: number, v: string) => (m(perpId) ? price(v, m(perpId)!.priceDecimals) : v);
   const cols: Col<Row_>[] = [
-    { key: "mkt", label: "Market", flex: 1.7, render: ({ p }) => <Row gap={6}><MarketBadge symbol={m(p.perpId)?.symbol ?? "?"} size={26} /><T size={13} w={600}>{m(p.perpId)?.symbol}</T><Side side={p.side} /><T size={12} mono color="mu">{leverage(p.leverageHdths)}</T></Row> },
+    { key: "mkt", label: "Market", flex: 2, render: ({ p }) => <Row gap={6}><MarketBadge symbol={m(p.perpId)?.symbol ?? "?"} size={26} /><T size={13} w={600}>{m(p.perpId)?.symbol}</T><Side side={p.side} /><T size={12} mono color="mu">{leverage(p.leverageHdths)}</T></Row> },
     { key: "leader", label: "Leader", flex: 0.7, render: ({ a }) => <Identicon seed={a.leader?.address ?? a.account} size={24} /> },
-    { key: "size", label: "Size", align: "right", render: ({ p }) => <T size={13} mono>{m(p.perpId) ? lots(p.lotLNS, m(p.perpId)!.lotDecimals) : p.lotLNS}</T> },
-    { key: "entry", label: "Entry", align: "right", render: ({ p }) => <T size={13} mono>{P(p.perpId, p.entryPNS)}</T> },
+        { key: "entry", label: "Entry", align: "right", render: ({ p }) => <T size={13} mono>{P(p.perpId, p.entryPNS)}</T> },
     { key: "mark", label: "Mark", align: "right", render: ({ p }) => <T size={13} mono>{P(p.perpId, p.markPNS)}</T> },
-    { key: "liq", label: "Liq.", align: "right", render: ({ p }) => <T size={13} mono>{P(p.perpId, p.liqPNS)}</T> },
-    { key: "margin", label: "Margin", align: "right", render: ({ p }) => <T size={13} mono>{ausd(p.marginCNS)}</T> },
+    { key: "sl", label: "Stop-loss", align: "right", flex: 1.1, render: (r) => <T size={13} mono color={lvl(r, "stopLossPNS") === "—" ? "mu" : "tx"} testID={`positions.sl.${r.p.perpId}`}>{lvl(r, "stopLossPNS")}</T> },
+    { key: "tp", label: "Take-profit", align: "right", flex: 1.2, render: (r) => <T size={13} mono color={lvl(r, "takeProfitPNS") === "—" ? "mu" : "tx"} testID={`positions.tp.${r.p.perpId}`}>{lvl(r, "takeProfitPNS")}</T> },
     { key: "pnl", label: "PnL", align: "right", render: ({ p }) => <T size={13} mono color={toBig(p.upnlCNS) >= 0n ? "posI" : "neg"}>{ausdSigned(p.upnlCNS)}</T> },
   ];
   if (!totals) {
@@ -54,7 +63,6 @@ export function LaptopPositions() {
   const byLeader = totals.accounts.map((a) => ({ a, t: a.pnl.byLeader.reduce((s, x) => s + toBig(x.unrealisedCNS) + toBig(x.realisedCNS), 0n) }));
   const maxAbs = byLeader.reduce((mx, x) => (x.t < 0n ? -x.t : x.t) > mx ? (x.t < 0n ? -x.t : x.t) : mx, 1n);
   const cp = current?.p;
-  const roe = cp && toBig(cp.marginCNS) > 0n ? (Number(cp.upnlCNS) / Number(cp.marginCNS)) * 100 : 0;
   return (
     <LaptopPage testID="portfolio.screen" title="Positions" sub="Every position traces back to the leader whose copy opened it">
       <View style={{ flexDirection: "row", gap: 16, flex: 1 }}>
@@ -76,7 +84,11 @@ export function LaptopPositions() {
           <LCard testID="positions.table.card">
             <Row><T size={15} w={600} style={{ flex: 1 }}>Open positions <T size={15} w={600} mono color="mu" testID="portfolio.positions.count">{rows.length}</T></T><Seg small testIDPrefix="positions.group" value={group} onChange={setGroup} options={[{ key: "market", label: "Market" }, { key: "leader", label: "Leader" }]} /></Row>
             {rows.length ? <Table testIDPrefix="positions.table" cols={cols} rows={rows} rowKey={(r) => r.key} selected={current?.key ?? null} onRow={(r) => setSel(r.key)} /> : <T size={13} color="mu" testID="positions.empty">No open positions. Your leaders are flat right now.</T>}
+            {rows.length ? <Row justify="flex-end"><Button title="Close all positions" icon="close" kind="dngO" size="sm" onPress={() => setConfirm(true)} testID="portfolio.closeAll" /></Row> : null}
           </LCard>
+          {totals.accounts.filter((a) => haltedPerps(a).length).map((a) => (
+            <HaltNotice key={a.account} symbols={haltedPerps(a).map((id) => m(id)?.symbol ?? `#${id}`)} busy={act.busy === "resume"} onResume={() => act.resumeMarkets(a)} />
+          ))}
           <Row gap={16} align="stretch">
             <LCard style={{ flex: 1 }} testID="positions.attribution">
               <Row><T size={15} w={600} style={{ flex: 1 }}>PnL by leader</T><T size={12} color="mu">since follow</T></Row>
@@ -92,12 +104,14 @@ export function LaptopPositions() {
             <LCard style={{ flex: 1 }} testID="positions.closed">
               <Row><T size={15} w={600} style={{ flex: 1 }}>Closed</T><T size={12} color="mu">last 7 days</T></Row>
               {closes.length ? closes.map((e) => (
-                <Row key={e.id} gap={8}>
+                <Row key={e.id} gap={8} testID={`positions.closed.${e.kind}`}>
                   <MarketBadge symbol={m(e.perpId ?? 0)?.symbol ?? "?"} size={24} />
                   <T size={13} w={600}>{m(e.perpId ?? 0)?.symbol}</T>
-                  <Side side={e.orderType === 2 ? "long" : "short"} />
-                  <T size={12} color="mu" style={{ flex: 1 }}>Leader closed · {ago(e.timestamp)} ago</T>
-                  <T size={13} mono color={toBig(e.realisedPnlCNS) >= 0n ? "posI" : "neg"}>{ausdSigned(e.realisedPnlCNS)}</T>
+                  {e.kind === "Mirrored" ? <Side side={e.orderType === 2 ? "long" : "short"} /> : null}
+                  <T size={12} color="mu" style={{ flex: 1 }} lines={1}>
+                    {e.kind === "StopTriggered" ? `${stopName(e)} hit · executed by ${shortAddr(e.keeper)}` : e.kind === "MarketClosed" ? "Closed by you" : "Leader closed"} · {ago(e.timestamp)} ago
+                  </T>
+                  {e.realisedPnlCNS !== undefined ? <T size={13} mono color={toBig(e.realisedPnlCNS) >= 0n ? "posI" : "neg"}>{ausdSigned(e.realisedPnlCNS)}</T> : null}
                 </Row>
               )) : <T size={13} color="mu">No closes in the last 7 days.</T>}
             </LCard>
@@ -105,32 +119,9 @@ export function LaptopPositions() {
         </View>
         <LCard style={{ width: 440 }} testID="positions.panel">
           {cp && current ? (
-            <>
-              <Row gap={12}>
-                <MarketBadge symbol={m(cp.perpId)?.symbol ?? "?"} size={40} />
-                <View style={{ flex: 1 }}>
-                  <Row gap={6}><T size={15} w={600}>{m(cp.perpId)?.symbol}</T><Side side={cp.side} /><T size={12} mono color="mu">{leverage(cp.leverageHdths)}</T></Row>
-                  <T size={12} mono color="mu">from {shortAddr(current.a.leader?.address ?? current.a.account)}</T>
-                </View>
-                <View style={{ alignItems: "flex-end" }}>
-                  <T size={15} w={600} mono color={toBig(cp.upnlCNS) >= 0n ? "posI" : "neg"}>{ausdSigned(cp.upnlCNS)}</T>
-                  <T size={12} mono color="mu">{pctSigned(roe)} ROE</T>
-                </View>
-              </Row>
-              <View>
-                <KV k="Size" v={`${m(cp.perpId) ? lots(cp.lotLNS, m(cp.perpId)!.lotDecimals) : cp.lotLNS} ${m(cp.perpId)?.symbol ?? ""} · ${ausd(cp.notionalCNS)} AUSD`} />
-                <KV k="Entry" v={P(cp.perpId, cp.entryPNS)} />
-                <KV k="Mark" v={P(cp.perpId, cp.markPNS)} />
-                <KV k="Liquidation" v={P(cp.perpId, cp.liqPNS)} />
-                <KV k="Margin" v={`${ausd(cp.marginCNS)} AUSD`} />
-                <KV k="Follow account" v={shortAddr(current.a.account)} last />
-              </View>
-              <View style={{ flex: 1 }} />
-              <Row gap={10}>
-                <Button title="Leader profile" icon="users" kind="out" size="md" flex onPress={() => current.a.leader && router.push({ pathname: "/leaders", params: { leader: String(current.a.leader.accountId) } })} testID="positions.panel.leader" />
-                <Button title="Close all positions" icon="close" kind="dngO" size="md" flex onPress={() => setConfirm(true)} testID="portfolio.closeAll" />
-              </Row>
-            </>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 4 }} showsVerticalScrollIndicator={false}>
+              <PositionBody key={current.key} account={current.a} p={cp} cfg={cfg} laptop />
+            </ScrollView>
           ) : (
             <T size={13} color="mu">Select a position to see it here.</T>
           )}

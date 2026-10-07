@@ -14,6 +14,7 @@ import type { Bus } from './bus.js';
 import type { FollowerInfo, Registry } from './registry.js';
 import type { LeaderChange } from './watcher.js';
 import type { ThinBookGuard } from './guard.js';
+import { copyTargets } from './detach.js';
 
 export interface CopierOptions {
   safetyBps: number;
@@ -50,7 +51,9 @@ export class Copier {
   }
 
   async onLeaderChange(c: LeaderChange): Promise<void> {
-    const followers = this.registry.followersOf(c.leaderId, c.perpId);
+    // Detached accounts ("stop following, keep my positions") get no copies, opens or closes. Paused accounts
+    // still get the leader's closes (the contract refuses only their opens).
+    const followers = copyTargets(this.registry.followersOf(c.leaderId, c.perpId));
     if (!followers.length) return;
 
     // Targets are per leader, so only the changed leader's position matters for this event.

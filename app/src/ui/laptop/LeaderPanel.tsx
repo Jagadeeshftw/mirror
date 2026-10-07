@@ -13,6 +13,8 @@ import { Button, IconButton, Identicon, NansenLabel, Row, T } from "../kit";
 import { useColors } from "../theme";
 import { WhatIfMini } from "../whatif";
 import { ShareSheet } from "../shareSheet";
+import { StopFollowSheet } from "../stopFollow";
+import { useOwnerAction } from "../../state/ownerAction";
 
 export function LeaderPanel({ id, onClose }: { id: number; onClose: () => void }) {
   const c = useColors();
@@ -21,6 +23,8 @@ export function LeaderPanel({ id, onClose }: { id: number; onClose: () => void }
   const { totals } = useTotals();
   const [alerts, setAlerts] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [stopping, setStopping] = useState(false);
+  const act = useOwnerAction();
   const l = q.data;
   const following = totals?.accounts.find((a) => a.leader?.accountId === id);
   const policy = useMemo(() => (cfg && l ? buildPolicy({ ...defaultForm(), markets: l.markets.filter((m) => cfg.markets.some((x) => x.symbol === m)) }, id, cfg.markets) : null), [cfg, l, id]);
@@ -81,11 +85,19 @@ export function LeaderPanel({ id, onClose }: { id: number; onClose: () => void }
       <Row gap={10}>
         <Button icon="bell" kind={alerts ? "ton" : "out"} onPress={() => setAlerts(!alerts)} testID="leader.alerts" style={{ width: 52, paddingHorizontal: 0 }} />
         {following ? (
-          <Button title="Edit limits" icon="edit" flex testID="leader.rules" onPress={() => router.push({ pathname: "/follow/[id]", params: { id: String(id), account: following.account } })} />
+          <>
+            <Button title="Stop following…" kind="out" flex testID="leader.stopFollow" onPress={() => setStopping(true)} />
+            {following.detached ? (
+              <Button title={act.busy === "followAgain" ? "Waiting" : "Follow again"} icon="fp" flex testID="leader.followAgain" disabled={!!act.busy} onPress={() => act.followAgain(following)} />
+            ) : (
+              <Button title="Edit limits" icon="edit" flex testID="leader.rules" onPress={() => router.push({ pathname: "/follow/[id]", params: { id: String(id), account: following.account } })} />
+            )}
+          </>
         ) : (
           <Button title={`Follow ${shortAddr(l.address)}`} flex testID="leader.follow" onPress={() => router.push({ pathname: "/follow/[id]", params: { id: String(id) } })} />
         )}
       </Row>
+      <StopFollowSheet visible={stopping} onClose={() => setStopping(false)} account={following} leaderId={id} leaderAddress={l.address} cfg={cfg} act={act} />
     </View>
   );
 }

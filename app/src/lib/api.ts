@@ -185,6 +185,9 @@ export const api = {
   ) => request<RelayResult>("POST", "/v1/relay/deposit", body, 60000),
   relayExecute: (body: { account: Address; action: { kind: number; data: Hex; nonce: string; deadline: string }; signature: Hex }) =>
     request<RelayResult>("POST", "/v1/relay/execute", body, 60000),
+  /** "Stop following, keep my positions" (engine-side, owner-signed Detach; docs/api.md). */
+  detach: (account: Address, body: { detached: boolean; deadline: string; signature: Hex }) =>
+    request<{ account: Address; detached: boolean; block: number }>("POST", `/v1/accounts/${account}/detach`, body, 30000),
   relayTransfer: (body: {
     from: Address;
     to: Address;

@@ -5,6 +5,7 @@ import { getAddress } from "viem";
 import { ruleWithLimit } from "./blockReasons";
 import { BLOCK_REASONS } from "./contracts";
 import { notionalCNS } from "./format";
+import { normalizeLevels } from "./levels";
 import type { Address, FeedEvent, FeedPage, LeaderAttribution, MirrorAccount, OwnerAccounts, Position } from "./types";
 
 // ---------------------------------------------------------------- context learned from other responses
@@ -126,6 +127,8 @@ export function normalizeAccount(raw: any): MirrorAccount {
       ? raw.equityHistory.map((p: any) => ({ t: ms(p.t), v: p.v !== undefined ? Number(p.v) : Number(big(p.equityCNS)) }))
       : undefined,
     stops: raw?.stops ?? { dailyLossHit: !!raw?.dailyLossHit, drawdownHit: !!raw?.drawdownHit },
+    // Engine: `levels[]` from the LevelSet events (side "long" | "short"); `policy.markets[].halted` passes through.
+    levels: normalizeLevels(raw?.levels),
     createdAt: ms(raw?.createdAt ?? raw?.createdTs ?? 0),
     teamRun: !!raw?.teamRun,
   };
@@ -217,6 +220,8 @@ export function normalizeFeedEvent(raw: any): FeedEvent {
     amountCNS: raw?.amountCNS ?? raw?.amount ?? undefined,
     paused: kind === "Paused" ? Boolean(raw?.paused ?? data?.paused) : raw?.paused,
     positionsClosed: raw?.positionsClosed ?? numOr(data?.positionsClosed, undefined),
+    // StopTriggered: `keeper` is the event's caller (data.caller as a fallback).
+    keeper: raw?.keeper ?? (typeof data?.caller === "string" ? data.caller : undefined),
     // Feed items don't carry the flag; the team-run accounts are named in /v1/config.
     teamRun: raw?.teamRun ?? (isTeamRunAddress(raw?.account) || undefined),
   } as FeedEvent;

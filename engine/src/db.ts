@@ -267,6 +267,10 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, decl: string]> = 
   ['feed', 'leader_lots', 'TEXT'],
   ['feed', 'leader_leverage', 'INTEGER'],
   ['feed', 'realised_pnl_cns', 'TEXT'],
+  // Owner-signed "stop following, keep my positions" (keeper behaviour, see services/detach.ts).
+  ['accounts', 'detached', 'INTEGER NOT NULL DEFAULT 0'],
+  ['accounts', 'detached_block', 'INTEGER'],
+  ['accounts', 'detach_deadline', 'INTEGER'],
 ];
 
 export type Row = Record<string, SQLInputValue>;

@@ -146,6 +146,8 @@ export interface LeaderRule {
 export interface MarketRule {
   perpId: number;
   maxNotionalCNS: string;
+  /** Engine read-out: a level fired here; opening copies are refused until the next policy. Not signed. */
+  halted?: boolean;
 }
 /** Mirrors MirrorAccount.Policy. */
 export interface Policy {
@@ -170,6 +172,15 @@ export interface Policy {
 export interface Level {
   perpId: number;
   side: 0 | 1;
+  stopLossPNS: string;
+  takeProfitPNS: string;
+  slippageBps: number;
+}
+
+/** A saved level as the app shows it (engine account `levels[]`: side "long" | "short", PNS strings). */
+export interface PositionLevel {
+  perpId: number;
+  side: Side;
   stopLossPNS: string;
   takeProfitPNS: string;
   slippageBps: number;
@@ -222,6 +233,8 @@ export interface MirrorAccount {
   depositCapCNS: string;
   actionNonce: string;
   paused: boolean;
+  /** Engine-side "stop following, keep my positions": the keeper sends this account no copies (not contract-enforced). */
+  detached?: boolean;
   expiry: number;
   policy: Policy | null;
   positions: Position[];
@@ -234,6 +247,8 @@ export interface MirrorAccount {
   equityHistory?: { t: number; v: number }[];
   leader?: { accountId: number; address: Address; labels: string[] } | null;
   stops?: { dailyLossHit: boolean; drawdownHit: boolean };
+  /** Owner-signed stop-loss / take-profit levels stored in the contract, one per market. */
+  levels?: PositionLevel[];
   createdAt: number;
   teamRun: boolean;
 }
@@ -267,7 +282,8 @@ export type FeedKind =
   | "LeaderStopped"
   | "MarketClosed"
   | "EngineShrunk"
-  | "EngineSkipped";
+  | "EngineSkipped"
+  | "Detached";
 
 /** CopyProof from the Mirrored event (all PNS; deviation positive = follower paid worse than the leader's entry). */
 export interface CopyProof {
@@ -319,6 +335,8 @@ export interface FeedEvent {
   amountCNS?: string;
   paused?: boolean;
   positionsClosed?: number;
+  /** StopTriggered: the address that executed the stop (anyone may). */
+  keeper?: Address | null;
   teamRun?: boolean;
 }
 

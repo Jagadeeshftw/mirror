@@ -1,0 +1,1029 @@
+{
+  "run": "stops-run2",
+  "network": "localnet",
+  "web": "http://localhost:8818/app",
+  "engine": "http://127.0.0.1:8807",
+  "perpl": "PerplFoundation/dex-sdk@01b9910 (MIT), deployed as in perpl_sdk::testing::TestExchange",
+  "rpId": "localhost",
+  "authenticator": "CDP virtual authenticator ctap2/internal/resident/UV/PRF",
+  "startedAt": "2026-10-07T16:09:48.464Z",
+  "checks": [
+    {
+      "name": "engine up on the localnet (NETWORK=localnet, PUBLIC_RPC_URL, CORS *)",
+      "ok": true,
+      "optional": false,
+      "ms": 40,
+      "screenshot": null,
+      "chainId": 1337,
+      "rpc": "http://127.0.0.1:8546"
+    },
+    {
+      "name": "team-run demo follower set up through the relay API (as e2e-api)",
+      "ok": true,
+      "optional": false,
+      "ms": 18,
+      "screenshot": null,
+      "demoAccount": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6",
+      "reused": true
+    },
+    {
+      "name": "create account: one passkey ceremony returns two PRF outputs (real WebAuthn, rpId localhost)",
+      "ok": true,
+      "optional": false,
+      "ms": 943,
+      "screenshot": "002-create-account-one-passkey-ceremony-returns-two-PRF-outputs-real-WebAu.png",
+      "ceremonies": [
+        {
+          "op": "create",
+          "t": 1791389401323,
+          "askedFirst": true,
+          "askedSecond": true,
+          "rpId": "localhost",
+          "gotFirst": true,
+          "gotSecond": true,
+          "ok": true
+        }
+      ],
+      "credentials": [
+        {
+          "rpId": "localhost",
+          "resident": true
+        }
+      ]
+    },
+    {
+      "name": "watch mode on Home with the team-run label",
+      "ok": true,
+      "optional": false,
+      "ms": 219,
+      "screenshot": "003-watch-mode-on-Home-with-the-team-run-label.png",
+      "badge": "Team-run",
+      "address": "0xeFabf204257E0ce3bE6dDc9958136B1aEc5201aC"
+    },
+    {
+      "name": "Run demo trade: the copy lands in watch mode",
+      "ok": true,
+      "optional": false,
+      "ms": 1312,
+      "screenshot": "004-Run-demo-trade-the-copy-lands-in-watch-mode.png",
+      "card": "watch.feed.0",
+      "tx": "0xc807983bf23fbdb12371567885bf08f046f95e497927d43ffcac4f987c2dede9",
+      "row": "Perpl #3 Team-run 1s 0xc807…ede9 BTC BTC Long Open · 2x 0.00002 BTC · 1.71 AUSD @ 85,628.0 fee 0.0003 AUSD 0.40 s · 1 block +7.5 bps Voted"
+    },
+    {
+      "name": "demo copy detail: leader fill, your fill, deviation, latency, both txs, builder 26 fee > 0",
+      "ok": true,
+      "optional": false,
+      "ms": 568,
+      "screenshot": "005-demo-copy-detail-leader-fill-your-fill-deviation-latency-both-txs-buil.png",
+      "shown": {
+        "leaderFill": "85,564.1",
+        "yourFill": "85,628.0",
+        "deviation": "+7.5 bps",
+        "latencyMs": "0.40 s · 1 block",
+        "leaderTx": "0xebf9…6d9f",
+        "yourTx": "0xc807…ede9",
+        "fee": "Mirror fee (builder 26)\n0.0003 AUSD · 0.02% of opening size, 0 on closes"
+      },
+      "onchain": {
+        "builderId": 26,
+        "builderFeeCNS": "343"
+      },
+      "proofBuilderFeeCNS": "343"
+    },
+    {
+      "name": "demo close copy: builder fee row shows 0 (no builder on the close)",
+      "ok": true,
+      "optional": false,
+      "ms": 5599,
+      "screenshot": "006-demo-close-copy-builder-fee-row-shows-0-no-builder-on-the-close-.png",
+      "shown": {
+        "leaderFill": "85,595.3",
+        "yourFill": "—",
+        "deviation": "— bps",
+        "latencyMs": "0.40 s · 1 block",
+        "leaderTx": "0x82c1…b793",
+        "yourTx": "0x786b…7a69",
+        "fee": "Mirror fee (builder 26)\n0.0000 AUSD · 0.02% of opening size, 0 on closes"
+      },
+      "onchain": {
+        "builderId": 0,
+        "builderFeeCNS": "0"
+      }
+    },
+    {
+      "name": "Run blocked trade: Blocked card with the rule and numbers, and its detail",
+      "ok": true,
+      "optional": false,
+      "ms": 1534,
+      "screenshot": "008-Run-blocked-trade-Blocked-card-with-the-rule-and-numbers-and-its-detai.png",
+      "banner": "Not copied. Your rule: Max leverage 5x",
+      "detail": {
+        "reason": "NOT COPIED · MAX LEVERAGE · 1S AGO",
+        "title": "Blocked by your max leverage rule",
+        "sentence": "Leader opened 10x BTC long. Your max leverage is 5x. Not copied.",
+        "actual": "Leader's order\n10x",
+        "limit": "Your limit\n5x",
+        "tx": "0xbc3b…1c1b"
+      },
+      "reason": "LeverageTooHigh",
+      "limit": "500",
+      "actual": "1000"
+    },
+    {
+      "name": "share card: Blocked detail → share sheet; the card image URL returns a PNG from the site (next dev) on the localnet engine",
+      "ok": true,
+      "optional": false,
+      "ms": 2000,
+      "screenshot": "010-share-card-Blocked-detail-share-sheet-the-card-image-URL-returns-a-PNG.png",
+      "title": "Blocked · team-run demo",
+      "src": "http://localhost:8819/c/blocked/0xbc3b1683c0d524e0d09dbd7674a0493eb9e45ab5a150313df515a118d6b31c1b/image?a=0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6&t=light",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 65829,
+      "png": true,
+      "ogTitle": "Team-run demo · Blocked by its rule",
+      "ogImage": "https://mirror.0xo.in/c/blocked/0xbc3b1683c0d524e0d09dbd7674a0493eb9e45ab5a150313df515a118d6b31c1b/image?a=0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6&amp;t=light",
+      "previewFailed": 0
+    },
+    {
+      "name": "faucet funds the wallet (POST :8547/fund); the AUSD balance chip updates",
+      "ok": true,
+      "optional": false,
+      "ms": 4686,
+      "screenshot": "011-faucet-funds-the-wallet-POST-8547-fund-the-AUSD-balance-chip-updates.png",
+      "before": "0.00",
+      "after": "100.00"
+    },
+    {
+      "name": "Can't reach Mirror: engine stopped; watch mode reads Monad; Run buttons disabled",
+      "ok": true,
+      "optional": false,
+      "ms": 6679,
+      "screenshot": "012-Can-t-reach-Mirror-engine-stopped-watch-mode-reads-Monad-Run-buttons-d.png",
+      "walletFromMonad": "100.00",
+      "cards": [
+        "watch.feed.0: Perpl #3 Team-run 13s 0xbc3b…1c1b BTC BTC Long Leader open 0.00001 BTC @ 85,601.",
+        "watch.feed.0.tx: 0xbc3b…1c1b",
+        "watch.feed.1: Perpl #3 Team-run 15s 0x786b…7a69 BTC BTC Long Close 0.00004 BTC · 0.00 AUSD @ 0",
+        "watch.feed.1.tx: 0x786b…7a69",
+        "watch.feed.1.fee: fee 0 on closes",
+        "watch.feed.1.deviation: — bps"
+      ],
+      "runDemoDisabled": "true",
+      "runBlockedDisabled": "true",
+      "copiesFromMonad": true,
+      "balance": "100.00"
+    },
+    {
+      "name": "engine restarted: the app recovers (offline banner gone, Run buttons enabled)",
+      "ok": true,
+      "optional": false,
+      "ms": 9605,
+      "screenshot": "013-engine-restarted-the-app-recovers-offline-banner-gone-Run-buttons-enab.png"
+    },
+    {
+      "name": "laptop: watch mode Home with sidebar and team-run label",
+      "ok": true,
+      "optional": false,
+      "ms": 133,
+      "screenshot": "014-laptop-watch-mode-Home-with-sidebar-and-team-run-label.png"
+    },
+    {
+      "name": "laptop: demo copy detail with the builder fee row",
+      "ok": true,
+      "optional": false,
+      "ms": 1569,
+      "screenshot": "015-laptop-demo-copy-detail-with-the-builder-fee-row.png",
+      "shown": {
+        "leaderFill": "85,564.1",
+        "yourFill": "85,628.0",
+        "deviation": "+7.5 bps",
+        "latencyMs": "0.40 s · 1 block",
+        "leaderTx": "0xebf9…6d9f",
+        "yourTx": "0xc807…ede9",
+        "fee": "Mirror fee (builder 26)\n0.0003 AUSD · 0.02% of opening size, 0 on closes"
+      }
+    },
+    {
+      "name": "Leaders: the leaderboard renders; the team-run demo leader's profile opens (/leader/<id>)",
+      "ok": true,
+      "optional": false,
+      "ms": 300,
+      "screenshot": "017-Leaders-the-leaderboard-renders-the-team-run-demo-leader-s-profile-ope.png",
+      "leader": 3,
+      "rows": 3,
+      "teamRunLeaderListed": false
+    },
+    {
+      "name": "Follow sheet: limits set (entry filter 1%, 20 AUSD, sizing 10%)",
+      "ok": true,
+      "optional": false,
+      "ms": 647,
+      "screenshot": "018-Follow-sheet-limits-set-entry-filter-1-20-AUSD-sizing-10-.png",
+      "entry": "1%",
+      "ratio": "10%",
+      "leverage": "5x"
+    },
+    {
+      "name": "What if: the backtest renders, labelled a simulation",
+      "ok": true,
+      "optional": false,
+      "ms": 584,
+      "screenshot": "019-What-if-the-backtest-renders-labelled-a-simulation.png",
+      "result": "pnl",
+      "label": "Simulation, not a promise",
+      "pnl": "+0.00"
+    },
+    {
+      "name": "Review shows the Mirror fee line (builder 26) before the passkey prompt",
+      "ok": true,
+      "optional": false,
+      "ms": 99,
+      "screenshot": "020-Review-shows-the-Mirror-fee-line-builder-26-before-the-passkey-prompt.png",
+      "fee": "Mirror fee: 0.02% of opening size (builder 26), up to 0.0024 AUSD per copy at your max notional; never on closes; your contract caps it at 0.02%.",
+      "entry": "Entry filter\nwithin 1% of the leader's entry"
+    },
+    {
+      "name": "Approve with one passkey prompt: account created, permit deposit, FOLLOW -> Following",
+      "ok": true,
+      "optional": false,
+      "ms": 5737,
+      "screenshot": "021-Approve-with-one-passkey-prompt-account-created-permit-deposit-FOLLOW-.png",
+      "status": "Following",
+      "prompts": 1,
+      "steps": {
+        "sign": "done",
+        "create": "done",
+        "deposit": "done",
+        "follow": "done"
+      },
+      "account": "0x1ec23f26b00320392990bb1288D3b52b0741cAc7",
+      "maxEntryDeviationBps": 100,
+      "netDepositsCNS": "20000000"
+    },
+    {
+      "name": "after the first follow: Turn on alerts (permission asked only now) -> Web Push subscription registered",
+      "ok": true,
+      "optional": false,
+      "ms": 80,
+      "screenshot": "022-after-the-first-follow-Turn-on-alerts-permission-asked-only-now---Web-.png",
+      "permissionBefore": "default",
+      "permissionAfter": "granted",
+      "swScope": "http://localhost:8818/app/",
+      "note": "Alerts are on. You'll hear when a copy lands, a copy is blocked by your rule, or a loss stop fires.",
+      "prompts": 1
+    },
+    {
+      "name": "leader trade (anvil key) copied into the user: feed row with fee, latency, deviation",
+      "ok": true,
+      "optional": false,
+      "ms": 4347,
+      "screenshot": "023-leader-trade-anvil-key-copied-into-the-user-feed-row-with-fee-latency-.png",
+      "row": {
+        "fee": "fee 0.0003 AUSD",
+        "latency": "0.40 s · 1 block",
+        "deviation": "+0.8 bps",
+        "tx": "0xcecd…c708"
+      },
+      "leaderTx": "0xdd16663835c09ead3e5b287812441bc926c8226f5f907dacaa24c08e5fb9ebd7",
+      "copyTx": "0xcecdbdfdcacd0a1bf443ad781357276240a3b446d12347d7ef20d7905f2bc708"
+    },
+    {
+      "name": "copy proof view for the user's copy (builder 26 charged onchain)",
+      "ok": true,
+      "optional": false,
+      "ms": 88,
+      "screenshot": "024-copy-proof-view-for-the-user-s-copy-builder-26-charged-onchain-.png",
+      "shown": {
+        "leaderFill": "85,603.1",
+        "yourFill": "85,610.3",
+        "deviation": "+0.8 bps",
+        "latencyMs": "0.40 s · 1 block",
+        "leaderTx": "0xdd16…ebd7",
+        "yourTx": "0xcecd…c708",
+        "fee": "Mirror fee (builder 26)\n0.0003 AUSD · 0.02% of opening size, 0 on closes"
+      },
+      "onchain": {
+        "builderId": 26,
+        "builderFeeCNS": "343"
+      }
+    },
+    {
+      "name": "entry filter: BTC mark moved ~3%, the leader adds -> Blocked 'price moved … past the leader's entry; your limit is 1%'",
+      "ok": true,
+      "optional": false,
+      "ms": 7801,
+      "screenshot": "026-entry-filter-BTC-mark-moved-3-the-leader-adds---Blocked-price-moved-pa.png",
+      "banner": "Not copied. Your rule: Entry filter 1%",
+      "detail": {
+        "reason": "NOT COPIED · ENTRY FILTER · 2S AGO",
+        "title": "Blocked by your entry filter",
+        "sentence": "Price moved 3.0% past the leader's entry; your limit is 1%. Not copied.",
+        "actual": "Price for copy\n88,201.1",
+        "limit": "Your limit\n86,461.5",
+        "tx": "0x96fb…f0f7"
+      },
+      "tx": "0x96fb3f07e81e7f5deb7da955cc1ef657d7fa5bbbe8db0d070c0fda047acef0f7",
+      "limit": "864615",
+      "actual": "882011"
+    },
+    {
+      "name": "Settings: alerts on, Web Push channel, namespace and 'server only relays ciphertext' shown",
+      "ok": true,
+      "optional": false,
+      "ms": 1140,
+      "screenshot": "027-Settings-alerts-on-Web-Push-channel-namespace-and-server-only-relays-c.png",
+      "channel": "Registered · Web Push. The browser shows \"Mirror: new activity\" because its service worker can't read the key; the details are decrypted when you open Mirror.",
+      "privacy": "Alerts are end-to-end encrypted to your notification key (passkey PRF namespace \"mirror.prf.ns.notify.v1\"). Mirror's server only holds its public half and relays ciphertext; the push service sees only \"Mirror: new activity\".\nRegistered · Web Push. The browser shows \"Mirror: new activity\" because its service worker can't read the key; the details are decrypted when you open Mirror."
+    },
+    {
+      "name": "demo trade with the app closed -> engine sends Web Push to the subscription: VAPID, aes128gcm, Mirror envelope still sealed",
+      "ok": true,
+      "optional": false,
+      "ms": 7075,
+      "screenshot": null,
+      "cycleId": "0128af70-3abc-434a-affc-6c04c71f2119",
+      "pushes": 2,
+      "sizes": [
+        641,
+        621
+      ],
+      "encoding": "aes128gcm",
+      "vapid": "vapid t=eyJ0…",
+      "urgency": "high",
+      "envelope": {
+        "v": 1,
+        "epkBytes": 32,
+        "ctChars": 432
+      }
+    },
+    {
+      "name": "service worker shows the generic 'Mirror / New activity'; the Alerts screen shows the alert decrypted on device",
+      "ok": true,
+      "optional": false,
+      "ms": 1006,
+      "screenshot": "029-service-worker-shows-the-generic-Mirror-New-activity-the-Alerts-screen.png",
+      "before": 2,
+      "after": 4,
+      "top": {
+        "title": "Closed BTC long",
+        "body": "0.00004 BTC at 85,618.6 · realised 0.00 AUSD · leader #3"
+      },
+      "systemNotifications": [
+        {
+          "title": "Mirror",
+          "body": "New activity"
+        }
+      ],
+      "latestFeedKind": "Mirrored"
+    },
+    {
+      "name": "leader re-opens (anvil key) so the user holds a copy again for the exit flows",
+      "ok": true,
+      "optional": false,
+      "ms": 2139,
+      "screenshot": null,
+      "leaderTx": "0x05034774c13b4b24aa73e3de469b12fd48ac38c48b822f86617de06437b132c7",
+      "copyTx": "0xc7b67e4248be54c6b773f938947d4172e9f656f4b71c09493bde9699e0d61584",
+      "alertedAgain": true
+    },
+    {
+      "name": "position detail: Edit levels -> take-profit +2% saved onchain with one passkey prompt (ACTION_SET_LEVELS)",
+      "ok": true,
+      "optional": false,
+      "ms": 2627,
+      "screenshot": "033-position-detail-Edit-levels---take-profit-2-saved-onchain-with-one-pas.png",
+      "before": "—",
+      "derived": "= 87,371.3 · about +0.03 AUSD",
+      "shown": "87,371.3",
+      "onchain": {
+        "takeProfitPNS": "873713",
+        "stopLossPNS": "0",
+        "slippageBps": 300,
+        "side": 0
+      }
+    },
+    {
+      "name": "mark moved past the take-profit (faucet /mark); a STRANGER wallet calls triggerLevel -> closed, stranger paid nothing",
+      "ok": false,
+      "optional": false,
+      "ms": 3897,
+      "screenshot": null,
+      "tx": "0xa78878382f9f8f2f46f64dcd6ede774394bceee056dd07058b6bf829b0daa867",
+      "stranger": "0x31FD20FC621c1AD9690168F23a8C868805e80450",
+      "markPNS": "883909",
+      "takeProfitPNS": "873713",
+      "lotsBefore": "2",
+      "lotsAfter": "2",
+      "strangerAusd": "0",
+      "marketHalted": true
+    },
+    {
+      "name": "app: feed card 'Take-profit executed by <stranger>' with the tx; copy detail and position show how it closed; halt notice",
+      "ok": false,
+      "optional": false,
+      "ms": 24837,
+      "screenshot": "035-app-feed-card-Take-profit-executed-by-stranger-with-the-tx-copy-detail.png",
+      "error": "locator.waitFor: Timeout 20000ms exceeded. | Call log: |   - waiting for locator('[data-testid=\"position.closed\"]').first() to be visible"
+    },
+    {
+      "name": "'Save limits again' lifts the halt (one passkey prompt, SET_POLICY with the same limits)",
+      "ok": true,
+      "optional": false,
+      "ms": 5912,
+      "screenshot": "036--Save-limits-again-lifts-the-halt-one-passkey-prompt-SET-POLICY-with-t.png",
+      "halted": "no",
+      "entryFilterKept": 100
+    },
+    {
+      "name": "leader adds (anvil key) -> copied into the user again",
+      "ok": true,
+      "optional": false,
+      "ms": 1954,
+      "screenshot": null,
+      "leaderTx": "0xa0e155a7d0f734563a574a4fcab01eb12b06b4de10aa197094c34574f302e5fc",
+      "copyTx": "0x06ff5be73a09e82eecf3f5b699b9466907c3780754f8e1c958f9970b71b2d94e",
+      "userLots": "4"
+    },
+    {
+      "name": "'Stop following, keep my positions' (one passkey prompt): only leader -> follow paused; position stays open",
+      "ok": true,
+      "optional": false,
+      "ms": 2335,
+      "screenshot": "038--Stop-following-keep-my-positions-one-passkey-prompt-only-leader---fol.png",
+      "keep": "BTC long stays open with its stop-loss and take-profit. They are no longer mirrored: close them yourself when you want.",
+      "explain": "This is the only leader in this follow, and your limits need at least one leader, so Mirror pauses the follow instead of removing the leader. While it is paused nothing is copied, not new trades and not this leader's closes. Resume any time from the leader's profile.",
+      "status": "Paused",
+      "userLots": "4"
+    },
+    {
+      "name": "after 'keep my positions', the leader's close is not copied: the user's position is still open",
+      "ok": true,
+      "optional": false,
+      "ms": 12141,
+      "screenshot": null,
+      "leaderCloseTx": "0xc2e810c47b55384c9bebf0586448355795bdd764662ebff708292dfdd93a392f",
+      "leaderLotsClosed": "40",
+      "userLotsBefore": "4",
+      "userLotsAfter": "4",
+      "copiedClose": null
+    },
+    {
+      "name": "'Stop and close' (one passkey prompt): every position closed onchain, ClosedAll in the feed",
+      "ok": false,
+      "optional": false,
+      "ms": 5667,
+      "screenshot": "041--Stop-and-close-one-passkey-prompt-every-position-closed-onchain-Close.png",
+      "body": "Closes 1 position at market now (within 3% of the mark), about +0.00 AUSD before fees, and pauses this follow. Your AUSD stays in the account until you withdraw.",
+      "closeTx": "0x746017f317d24f9fb5f3ebd791a89cd2f76df4d3472efc5ae03732e1536f26c7"
+    },
+    {
+      "name": "resume (leader.pause, one prompt) and a new leader trade is copied, so the exit flows have a position",
+      "ok": false,
+      "optional": false,
+      "ms": 62915,
+      "screenshot": "042-resume-leader.pause-one-prompt-and-a-new-leader-trade-is-copied-so-the.png",
+      "error": "timed out: user copy"
+    },
+    {
+      "name": "laptop: feed table -> copy detail panel with the fee row",
+      "ok": true,
+      "optional": false,
+      "ms": 1244,
+      "screenshot": "043-laptop-feed-table---copy-detail-panel-with-the-fee-row.png",
+      "shown": {
+        "leaderFill": "85,630.5",
+        "yourFill": "85,602.9",
+        "deviation": "−3.2 bps",
+        "latencyMs": "0.40 s · 1 block",
+        "leaderTx": "0xa0e1…e5fc",
+        "yourTx": "0x06ff…d94e",
+        "fee": "Mirror fee (builder 26)\n0.0003 AUSD · 0.02% of opening size, 0 on closes"
+      }
+    },
+    {
+      "name": "laptop: blocked row -> entry-filter blocked detail",
+      "ok": true,
+      "optional": false,
+      "ms": 83,
+      "screenshot": "044-laptop-blocked-row---entry-filter-blocked-detail.png",
+      "detail": {
+        "reason": "NOT COPIED · ENTRY FILTER · 2M AGO",
+        "title": "Blocked by your entry filter",
+        "sentence": "Price moved 3.0% past the leader's entry; your limit is 1%. Not copied.",
+        "actual": "Price for copy\n88,201.1",
+        "limit": "Your limit\n86,461.5",
+        "tx": "0x96fb…f0f7"
+      }
+    },
+    {
+      "name": "laptop: positions table",
+      "ok": true,
+      "optional": true,
+      "ms": 163,
+      "screenshot": "045-laptop-positions-table.png"
+    },
+    {
+      "name": "laptop: leaders table with the followed leader's panel showing Edit limits",
+      "ok": true,
+      "optional": false,
+      "ms": 205,
+      "screenshot": "046-laptop-leaders-table-with-the-followed-leader-s-panel-showing-Edit-lim.png"
+    },
+    {
+      "name": "Positions -> Close all (one passkey prompt): position closed onchain",
+      "ok": false,
+      "optional": false,
+      "ms": 30277,
+      "screenshot": "047-Positions---Close-all-one-passkey-prompt-position-closed-onchain.png",
+      "error": "timed out: open positions"
+    },
+    {
+      "name": "Withdraw (one passkey prompt): balance back in the wallet",
+      "ok": true,
+      "optional": false,
+      "ms": 723,
+      "screenshot": "049-Withdraw-one-passkey-prompt-balance-back-in-the-wallet.png",
+      "status": "Confirmed",
+      "amount": "19.990144",
+      "returnedCNS": "19990144",
+      "walletAfterCNS": "99990144",
+      "accountEquityAfterCNS": "0",
+      "chip": "99.99"
+    },
+    {
+      "name": "restore in a second browser context with the same credential (CDP addCredential)",
+      "ok": false,
+      "optional": true,
+      "ms": 418,
+      "screenshot": null,
+      "end": "error",
+      "error": "This passkey provider can't derive keys\nUse Google Password Manager on Android 14 or newer, or a browser with passkey PRF support (Chrome, Edge, Safari 18).",
+      "ceremonies": [
+        {
+          "op": "get",
+          "t": 1791389622645,
+          "askedFirst": true,
+          "askedSecond": true,
+          "rpId": "localhost",
+          "gotFirst": false,
+          "gotSecond": false,
+          "ok": true
+        }
+      ],
+      "why": "CDP WebAuthn.addCredential cannot carry the PRF (hmac-secret) key, so the copied credential returns no PRF output"
+    },
+    {
+      "name": "restore: same authenticator, app storage wiped (fresh install) -> same address",
+      "ok": true,
+      "optional": false,
+      "ms": 1025,
+      "screenshot": "053-restore-same-authenticator-app-storage-wiped-fresh-install---same-addr.png",
+      "end": "home",
+      "address": "0xeFabf204257E0ce3bE6dDc9958136B1aEc5201aC",
+      "expected": "0xeFabf204257E0ce3bE6dDc9958136B1aEc5201aC"
+    },
+    {
+      "name": "stops executed by a stranger",
+      "ok": true,
+      "note": true,
+      "coverage": "flows-stops.mjs: take-profit set in the app, triggerLevel by a fresh stranger key, shown in the feed and position detail"
+    },
+    {
+      "name": "several leaders in one account",
+      "ok": true,
+      "note": true,
+      "coverage": "not in Group 1 UI (one leader per follow account; 'Follow another leader' opens a separate account); covered onchain by e2e-api"
+    }
+  ],
+  "shots": [
+    {
+      "file": "001-welcome.png",
+      "label": "welcome",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "002-create-account-one-passkey-ceremony-returns-two-PRF-outputs-real-WebAu.png",
+      "label": "create account: one passkey ceremony returns two PRF outputs (real WebAuthn, rpId localhost)",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "003-watch-mode-on-Home-with-the-team-run-label.png",
+      "label": "watch mode on Home with the team-run label",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "004-Run-demo-trade-the-copy-lands-in-watch-mode.png",
+      "label": "Run demo trade: the copy lands in watch mode",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "005-demo-copy-detail-leader-fill-your-fill-deviation-latency-both-txs-buil.png",
+      "label": "demo copy detail: leader fill, your fill, deviation, latency, both txs, builder 26 fee > 0",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "006-demo-close-copy-builder-fee-row-shows-0-no-builder-on-the-close-.png",
+      "label": "demo close copy: builder fee row shows 0 (no builder on the close)",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "007-blocked-card.png",
+      "label": "blocked-card",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "008-Run-blocked-trade-Blocked-card-with-the-rule-and-numbers-and-its-detai.png",
+      "label": "Run blocked trade: Blocked card with the rule and numbers, and its detail",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "009-share-sheet-blocked.png",
+      "label": "share-sheet-blocked",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "010-share-card-Blocked-detail-share-sheet-the-card-image-URL-returns-a-PNG.png",
+      "label": "share card: Blocked detail → share sheet; the card image URL returns a PNG from the site (next dev) on the localnet engine",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "011-faucet-funds-the-wallet-POST-8547-fund-the-AUSD-balance-chip-updates.png",
+      "label": "faucet funds the wallet (POST :8547/fund); the AUSD balance chip updates",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "012-Can-t-reach-Mirror-engine-stopped-watch-mode-reads-Monad-Run-buttons-d.png",
+      "label": "Can't reach Mirror: engine stopped; watch mode reads Monad; Run buttons disabled",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "013-engine-restarted-the-app-recovers-offline-banner-gone-Run-buttons-enab.png",
+      "label": "engine restarted: the app recovers (offline banner gone, Run buttons enabled)",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "014-laptop-watch-mode-Home-with-sidebar-and-team-run-label.png",
+      "label": "laptop: watch mode Home with sidebar and team-run label",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "015-laptop-demo-copy-detail-with-the-builder-fee-row.png",
+      "label": "laptop: demo copy detail with the builder fee row",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "016-leaders-list.png",
+      "label": "leaders-list",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "017-Leaders-the-leaderboard-renders-the-team-run-demo-leader-s-profile-ope.png",
+      "label": "Leaders: the leaderboard renders; the team-run demo leader's profile opens (/leader/<id>)",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "018-Follow-sheet-limits-set-entry-filter-1-20-AUSD-sizing-10-.png",
+      "label": "Follow sheet: limits set (entry filter 1%, 20 AUSD, sizing 10%)",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "019-What-if-the-backtest-renders-labelled-a-simulation.png",
+      "label": "What if: the backtest renders, labelled a simulation",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "020-Review-shows-the-Mirror-fee-line-builder-26-before-the-passkey-prompt.png",
+      "label": "Review shows the Mirror fee line (builder 26) before the passkey prompt",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "021-Approve-with-one-passkey-prompt-account-created-permit-deposit-FOLLOW-.png",
+      "label": "Approve with one passkey prompt: account created, permit deposit, FOLLOW -> Following",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "022-after-the-first-follow-Turn-on-alerts-permission-asked-only-now---Web-.png",
+      "label": "after the first follow: Turn on alerts (permission asked only now) -> Web Push subscription registered",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "023-leader-trade-anvil-key-copied-into-the-user-feed-row-with-fee-latency-.png",
+      "label": "leader trade (anvil key) copied into the user: feed row with fee, latency, deviation",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "024-copy-proof-view-for-the-user-s-copy-builder-26-charged-onchain-.png",
+      "label": "copy proof view for the user's copy (builder 26 charged onchain)",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "025-entry-filter-blocked-card.png",
+      "label": "entry-filter-blocked-card",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "026-entry-filter-BTC-mark-moved-3-the-leader-adds---Blocked-price-moved-pa.png",
+      "label": "entry filter: BTC mark moved ~3%, the leader adds -> Blocked 'price moved … past the leader's entry; your limit is 1%'",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "027-Settings-alerts-on-Web-Push-channel-namespace-and-server-only-relays-c.png",
+      "label": "Settings: alerts on, Web Push channel, namespace and 'server only relays ciphertext' shown",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "028-alerts-decrypted.png",
+      "label": "alerts-decrypted",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "029-service-worker-shows-the-generic-Mirror-New-activity-the-Alerts-screen.png",
+      "label": "service worker shows the generic 'Mirror / New activity'; the Alerts screen shows the alert decrypted on device",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "030-stops-position-detail.png",
+      "label": "stops-position-detail",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "031-stops-edit-levels.png",
+      "label": "stops-edit-levels",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "032-stops-levels-saved.png",
+      "label": "stops-levels-saved",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "033-position-detail-Edit-levels---take-profit-2-saved-onchain-with-one-pas.png",
+      "label": "position detail: Edit levels -> take-profit +2% saved onchain with one passkey prompt (ACTION_SET_LEVELS)",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "034-stops-feed-take-profit.png",
+      "label": "stops-feed-take-profit",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "035-app-feed-card-Take-profit-executed-by-stranger-with-the-tx-copy-detail.png",
+      "label": "app: feed card 'Take-profit executed by <stranger>' with the tx; copy detail and position show how it closed; halt notice",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "036--Save-limits-again-lifts-the-halt-one-passkey-prompt-SET-POLICY-with-t.png",
+      "label": "'Save limits again' lifts the halt (one passkey prompt, SET_POLICY with the same limits)",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "037-stops-stop-following-sheet.png",
+      "label": "stops-stop-following-sheet",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "038--Stop-following-keep-my-positions-one-passkey-prompt-only-leader---fol.png",
+      "label": "'Stop following, keep my positions' (one passkey prompt): only leader -> follow paused; position stays open",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "039-stops-stop-and-close-sheet.png",
+      "label": "stops-stop-and-close-sheet",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "040-stops-after-stop-and-close.png",
+      "label": "stops-after-stop-and-close",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "041--Stop-and-close-one-passkey-prompt-every-position-closed-onchain-Close.png",
+      "label": "'Stop and close' (one passkey prompt): every position closed onchain, ClosedAll in the feed",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "042-resume-leader.pause-one-prompt-and-a-new-leader-trade-is-copied-so-the.png",
+      "label": "resume (leader.pause, one prompt) and a new leader trade is copied, so the exit flows have a position",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "043-laptop-feed-table---copy-detail-panel-with-the-fee-row.png",
+      "label": "laptop: feed table -> copy detail panel with the fee row",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "044-laptop-blocked-row---entry-filter-blocked-detail.png",
+      "label": "laptop: blocked row -> entry-filter blocked detail",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "045-laptop-positions-table.png",
+      "label": "laptop: positions table",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "046-laptop-leaders-table-with-the-followed-leader-s-panel-showing-Edit-lim.png",
+      "label": "laptop: leaders table with the followed leader's panel showing Edit limits",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "047-Positions---Close-all-one-passkey-prompt-position-closed-onchain.png",
+      "label": "Positions -> Close all (one passkey prompt): position closed onchain",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "048-withdraw-confirm-sheet.png",
+      "label": "withdraw-confirm-sheet",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "049-Withdraw-one-passkey-prompt-balance-back-in-the-wallet.png",
+      "label": "Withdraw (one passkey prompt): balance back in the wallet",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "050-restore-second-context.png",
+      "label": "restore-second-context",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "051-welcome-after-wipe.png",
+      "label": "welcome-after-wipe",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "052-restore-welcome-back.png",
+      "label": "restore-welcome-back",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "053-restore-same-authenticator-app-storage-wiped-fresh-install---same-addr.png",
+      "label": "restore: same authenticator, app storage wiped (fresh install) -> same address",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  ],
+  "finishedAt": "2026-10-07T16:13:44.040Z",
+  "passed": 37,
+  "failed": 5
+}

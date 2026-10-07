@@ -29,6 +29,7 @@ type AccountRow = {
   flatten_on_stop: number;
   max_builder_fee_per_100k: number | null;
   paused: number;
+  detached?: number | null;
   net_deposits: string;
   funded_block: number | null;
   last_activity_ts: number | null;
@@ -152,6 +153,8 @@ export class Views {
       /** Builder fees Perpl charged on this account's copies and match-now orders (sum of proof.builderFeeCNS). */
       builderFeesCNS: sumBuilderFees(feeRows).toString(),
       paused: r.paused === 1,
+      /** Owner-signed "stop following, keep my positions": the keeper sends this account no copies (not contract-enforced). */
+      detached: r.detached === 1,
       expiry: r.expiry,
       policy: r.max_leverage_hdths
         ? {

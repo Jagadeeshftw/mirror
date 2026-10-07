@@ -12,6 +12,7 @@ import { Icon, type IconName } from "../ui/icons";
 import { Button, Card, IconButton, Identicon, LoadingBlock, Note, Press, Row, Screen, Scroll, Switch, T } from "../ui/kit";
 import { useColors } from "../ui/theme";
 import { followerChoices, ShareSheet } from "../ui/shareSheet";
+import { StopFollowSheet } from "../ui/stopFollow";
 
 function SetRow({ icon, title, sub, onPress, testID }: { icon: IconName; title: string; sub?: string; onPress?: () => void; testID?: string }) {
   const c = useColors();
@@ -40,6 +41,7 @@ export default function AccountControls() {
   const [confirm, setConfirm] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState<number | null>(null);
+  const [stopping, setStopping] = useState<number | null>(null);
   if (!me) return null;
   const accts = totals?.accounts ?? [];
   const allPaused = accts.length > 0 && accts.every((a) => a.paused);
@@ -118,14 +120,16 @@ export default function AccountControls() {
                   {shortAddr(a.leader?.address ?? a.account)}
                 </T>
                 <T size={12} color="mu" testID={`account.follow.${i}.status`}>
-                  {a.paused ? "Paused" : "Copying"}
+                  {a.detached ? "Stopped, positions kept" : a.paused ? "Paused" : "Copying"}
                 </T>
                 <IconButton name="share" small onPress={() => setSharing(i)} testID={`account.follow.${i}.share`} />
+                <IconButton name="close" small onPress={() => setStopping(i)} testID={`account.follow.${i}.stop`} />
                 <Switch on={!a.paused} onChange={(v) => act.setPaused([a], !v)} disabled={!!act.busy} testID={`account.follow.${i}.toggle`} />
               </Row>
             ))}
           </Card>
         ) : null}
+        <StopFollowSheet visible={stopping !== null} onClose={() => setStopping(null)} account={stopping !== null ? accts[stopping] : null} leaderId={stopping !== null ? (accts[stopping]?.leader?.accountId ?? 0) : 0} leaderAddress={stopping !== null ? accts[stopping]?.leader?.address : undefined} cfg={cfg} act={act} />
         <ShareSheet visible={sharing !== null} onClose={() => setSharing(null)} targets={sharing !== null && accts[sharing] ? followerChoices([accts[sharing]]) : []} />
 
         <Card style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
@@ -141,7 +145,7 @@ export default function AccountControls() {
             <Button title="Close all" kind="dngO" size="sm" onPress={() => setConfirm(true)} disabled={open === 0} testID="account.closeAll" />
           </Row>
         </Card>
-        {act.error && !confirm ? <Note tone="neg" icon="warn" testID="account.error">{act.error}</Note> : null}
+        {act.error && !confirm && stopping === null ? <Note tone="neg" icon="warn" testID="account.error">{act.error}</Note> : null}
         {act.busy ? <Note tone="ac" icon="fp">Confirm with your passkey. One prompt signs every account.</Note> : null}
 
         <Card list>

@@ -8,6 +8,7 @@ import { getLogsChunked, normalizeLog, type ChainLog, type ChainStreams } from '
 import type { SendResult } from '../chain/sender.js';
 import { STOP_KINDS, type Level, type Side } from '../domain/types.js';
 import type { Bus } from './bus.js';
+import { clearDetachOnPolicy } from './detach.js';
 import { feedJson, insertFeed, reasonName, type FeedInsert, type FeedRow } from './feed.js';
 import { applyCopyFacts, isCloseOrder, storePerplEvent } from './copyfacts.js';
 import { POSITION_TOPICS, decodePositionEvent } from './watcher.js';
@@ -39,6 +40,8 @@ export interface FollowerInfo {
   owner: Address;
   perplAccountId: number;
   paused: boolean;
+  /** Owner-signed "stop following, keep my positions": no keeper copies (services/detach.ts). */
+  detached?: boolean;
   expiry: number;
   maxLeverageHdths: number;
   maxSlippageBps: number;
@@ -61,6 +64,7 @@ type AccountRow = {
   owner: string;
   perpl_account_id: number | null;
   paused: number;
+  detached?: number | null;
   expiry: number | null;
   max_leverage_hdths: number | null;
   max_slippage_bps: number | null;
@@ -220,6 +224,9 @@ export class Registry {
           }
           for (const m of a.markets) this.db.run('INSERT OR REPLACE INTO account_markets (account, perp_id, max_notional_cns, halted) VALUES (?, ?, ?, 0)', addr, Number(m.perpId), m.maxNotionalCNS.toString());
         });
+        // Re-following clears "stop following, keep my positions".
+        const cleared = clearDetachOnPolicy(this.db, this.explorerTx, addr, Number(l.blockNumber), l.transactionHash);
+        if (cleared) this.bus.publish(addr, { type: 'feed', item: cleared });
         feed = {
           ...base,
           leverage: a.maxLeverageHdths,
@@ -418,6 +425,7 @@ export class Registry {
       owner: getAddress(r.owner),
       perplAccountId: r.perpl_account_id ?? 0,
       paused: r.paused === 1,
+      detached: r.detached === 1,
       expiry: r.expiry ?? 0,
       maxLeverageHdths: r.max_leverage_hdths ?? 0,
       maxSlippageBps: r.max_slippage_bps ?? 0,

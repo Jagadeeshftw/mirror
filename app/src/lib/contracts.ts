@@ -248,6 +248,20 @@ export function actionDigest(account: Address, chainId: number, a: ActionMessage
   return hashTypedData(actionTypedData(account, chainId, a));
 }
 
+/**
+ * "Stop following, keep my positions": an engine-side state, signed by the owner in the account's own domain.
+ * Not a contract action (the engine verifies it against the account's onchain owner; docs/api.md /detach).
+ */
+export const DETACH_TYPES = {
+  Detach: [
+    { name: "detached", type: "bool" },
+    { name: "deadline", type: "uint256" },
+  ],
+} as const;
+export function detachTypedData(account: Address, chainId: number, detached: boolean, deadline: bigint) {
+  return { domain: mirrorDomain(account, chainId), types: DETACH_TYPES, primaryType: "Detach" as const, message: { detached, deadline } };
+}
+
 export const AUSD_DOMAIN_NAME = "Agora Dollar";
 export const AUSD_DOMAIN_VERSION = "1";
 export function ausdDomain(token: Address, chainId: number): TypedDataDomain {

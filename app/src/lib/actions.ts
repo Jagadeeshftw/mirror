@@ -6,6 +6,7 @@ import { actionNonce, permitNonce, predictAccountOnchain } from "./chain";
 import {
   ACTION,
   actionTypedData,
+  detachTypedData,
   encodeFollow,
   encodeWithdraw,
   followSalt,
@@ -166,11 +167,21 @@ export interface OwnerAction {
   data: Hex;
 }
 
-/** Signs N owner actions (one per account) in one passkey session, then relays them in order. */
+/**
+ * Signs N owner actions in one passkey session, then relays them in order. Several actions for the same
+ * account get consecutive nonces (the contract increments actionNonce on each), so they must land in order.
+ */
 export async function executeActions(cfg: AppConfig, actions: OwnerAction[], progress: Progress) {
   const deadline = nowSec() + 900n;
   progress("sign", "now");
-  const nonces = await Promise.all(actions.map((a) => nonceFor(cfg, a.account)));
+  const base = await Promise.all(actions.map((a) => nonceFor(cfg, a.account)));
+  const seen = new Map<string, number>();
+  const nonces = actions.map((a, i) => {
+    const k = a.account.account.toLowerCase();
+    const n = seen.get(k) ?? 0;
+    seen.set(k, n + 1);
+    return base[i] + BigInt(n);
+  });
   const sigs = await withSigner(async (signer) => {
     const out: Hex[] = [];
     for (let i = 0; i < actions.length; i++) {
@@ -181,8 +192,10 @@ export async function executeActions(cfg: AppConfig, actions: OwnerAction[], pro
   });
   progress("sign", "done");
   const results: RelayResult[] = [];
+  const failed = new Set<string>();
   for (let i = 0; i < actions.length; i++) {
     const a = actions[i];
+    if (failed.has(a.account.account.toLowerCase())) continue;
     progress(`relay:${i}`, "now");
     const r = await api.relayExecute({
       account: a.account.account,
@@ -191,8 +204,34 @@ export async function executeActions(cfg: AppConfig, actions: OwnerAction[], pro
     });
     results.push(r);
     progress(`relay:${i}`, r.status === "success" ? "done" : "failed", r);
+    // A later action for the same account would carry a nonce that never comes.
+    if (r.status !== "success") failed.add(a.account.account.toLowerCase());
   }
   return results;
+}
+
+/**
+ * Detach (or re-attach) one follow: signs the engine's Detach message and the given owner actions (e.g.
+ * SET_PAUSED) in one passkey session, posts the detach first (the keeper stops copying at once), then relays
+ * the actions in order with consecutive nonces.
+ */
+export async function detachWith(cfg: AppConfig, acct: MirrorAccount, detached: boolean, actions: { kind: number; data: Hex }[]) {
+  const deadline = nowSec() + 900n;
+  const base = await nonceFor(cfg, acct);
+  const { detachSig, sigs } = await withSigner(async (signer) => {
+    const detachSig = await signer.signTypedData!(detachTypedData(acct.account, cfg.chainId, detached, deadline));
+    const sigs: Hex[] = [];
+    for (let i = 0; i < actions.length; i++) sigs.push(await signAction(signer, cfg, acct.account, { kind: actions[i].kind, data: actions[i].data, nonce: base + BigInt(i), deadline }));
+    return { detachSig, sigs };
+  });
+  const d = await api.detach(acct.account, { detached, deadline: deadline.toString(), signature: detachSig });
+  const results: RelayResult[] = [];
+  for (let i = 0; i < actions.length; i++) {
+    const r = await api.relayExecute({ account: acct.account, action: { kind: actions[i].kind, data: actions[i].data, nonce: (base + BigInt(i)).toString(), deadline: deadline.toString() }, signature: sigs[i] });
+    results.push(r);
+    if (r.status !== "success") break;
+  }
+  return { detach: d, results };
 }
 
 /** Send AUSD from the owner's wallet with an ERC-3009 transferWithAuthorization (gasless). */

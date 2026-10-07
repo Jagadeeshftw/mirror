@@ -14,12 +14,15 @@ import { useLive } from "../../state/live";
 import { CopyDetailPanel } from "../copyDetail";
 import { BlockedBody, leaderName } from "../feed";
 import { engineSentence } from "../feedEngine";
+import { StopItem, stopCardText } from "../stopFeed";
 import { Icon } from "../icons";
 import { Chip, ChipS, CommitTrack, ErrorBanner, Identicon, MarketBadge, Row, Side, T } from "../kit";
 import { LiveDot } from "../kit2";
 import { useColors } from "../theme";
 import { LCard, LaptopPage } from "./Top";
 import { Table, type Col } from "./Table";
+
+const isStop = (e: FeedEvent) => e.kind === "StopTriggered" || e.kind === "LevelSet" || e.kind === "MarketClosed";
 
 export function LaptopFeed() {
   const c = useColors();
@@ -30,7 +33,7 @@ export function LaptopFeed() {
   const rpc = useRpcHealth();
   const [filter, setFilter] = useState<Filter>("all");
   const [sel, setSel] = useState<string | null>(null);
-  const rows = useMemo(() => feed.events.filter((e) => e.kind === "Mirrored" || e.kind === "Blocked" || isEngineKind(e.kind)).filter((e) => matchesFilter(e, filter)), [feed.events, filter]);
+  const rows = useMemo(() => feed.events.filter((e) => e.kind === "Mirrored" || e.kind === "Blocked" || isEngineKind(e.kind) || isStop(e)).filter((e) => matchesFilter(e, filter)), [feed.events, filter]);
   const blockedN = feed.events.filter((e) => e.kind === "Blocked").length;
   const current = rows.find((e) => e.id === sel) ?? rows.find((e) => e.kind === "Mirrored") ?? rows[0];
   const mk = (e: FeedEvent) => cfg?.markets.find((m) => m.perpId === e.perpId);
@@ -80,6 +83,8 @@ export function LaptopFeed() {
             span={(e) =>
               e.kind === "Blocked"
                 ? { from: 3, to: 7, node: <Row gap={6}><Icon name="ban" size={14} color={c.neg} /><T size={13} color={c.neg} style={{ flex: 1 }} lines={2}>{`Not copied. ${e.blocked?.rule ?? ruleName(e.blocked?.reason ?? "")}`}</T><ChipS label="Blocked" tone="neg" /></Row> }
+                : isStop(e)
+                  ? { from: 1, to: 7, node: <Row gap={6}><Icon name={stopCardText(e, cfg).icon} size={14} color={stopCardText(e, cfg).tone === "neg" ? c.neg : stopCardText(e, cfg).tone === "pos" ? c.pos : c.ac} /><T size={13} style={{ flex: 1 }} lines={1}>{stopCardText(e, cfg).title}</T><ChipS label={stopCardText(e, cfg).type} tone={stopCardText(e, cfg).tone === "neg" ? "neg" : stopCardText(e, cfg).tone === "pos" ? "ok" : "ac"} /></Row> }
                 : isEngineKind(e.kind)
                   ? { from: 3, to: 7, node: <Row gap={6}><Icon name="server" size={14} color={c.mu} /><T size={12} color="mu" style={{ flex: 1 }} lines={2}>{`${e.label ?? e.kind}. ${engineSentence(e, mk(e)?.lotDecimals ?? 0)}`}</T><ChipS label="Engine · no tx" /></Row> }
                   : null
@@ -92,6 +97,11 @@ export function LaptopFeed() {
             <T size={13} color="mu">Select a row to see its proof.</T>
           ) : current.kind === "Mirrored" ? (
             <CopyDetailPanel e={current} cfg={cfg} policy={totals?.accounts.find((a) => a.account === current.account)?.policy} onClose={() => setSel(null)} />
+          ) : isStop(current) ? (
+            <View style={{ gap: 10 }} testID="feed.stop.detail">
+              <StopItem e={current} cfg={cfg} testID="feed.stop.item" />
+              <T size={12} color="mu" lh={17}>Levels and loss stops live in your account contract. Once the price reaches a level, anyone can call it onchain: the close is reduce-only, bounded by your slippage, and the caller is paid nothing.</T>
+            </View>
           ) : current.kind === "Blocked" ? (
             <BlockedBody e={current} cfg={cfg} account={totals?.accounts.find((a) => a.account === current.account)} onClose={() => setSel(null)} />
           ) : (

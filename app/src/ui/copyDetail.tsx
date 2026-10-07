@@ -11,6 +11,16 @@ import type { AppConfig, FeedEvent, Policy } from "../lib/types";
 import { leaderName } from "./feed";
 import { Button, IconButton, Identicon, MarketBadge, Row, Sheet, Side, T } from "./kit";
 import { ProofBody } from "./proof";
+import { closedBy } from "../lib/stopEvents";
+import { useFeedAll } from "../state/data";
+import { ClosedByBlock } from "./stopFeed";
+
+/** For an opening copy: the level, market close or close-all that later closed the position, if any. */
+function useClosedBy(e: FeedEvent | null): FeedEvent | null {
+  const feed = useFeedAll();
+  if (!e || e.kind !== "Mirrored" || (e.orderType ?? 0) > 1) return null;
+  return closedBy(feed.events, e);
+}
 
 /** This copy's row in the leader's copy-quality list (leader ref, blocks), when the feed item lacks them. */
 export function useQualityFor(e: FeedEvent | null): QualityCopy | null {
@@ -76,6 +86,7 @@ function Verify({ e, cfg }: { e: FeedEvent; cfg: AppConfig | undefined }) {
 
 export function CopyDetailSheet({ e, cfg, policy, onClose }: { e: FeedEvent | null; cfg: AppConfig | undefined; policy?: Policy | null; onClose: () => void }) {
   const q = useQualityFor(e);
+  const closed = useClosedBy(e);
   if (!e) return <Sheet visible={false} onClose={onClose}>{null}</Sheet>;
   return (
     <Sheet visible onClose={onClose} testID="copy.detail" tall>
@@ -83,6 +94,7 @@ export function CopyDetailSheet({ e, cfg, policy, onClose }: { e: FeedEvent | nu
         <Header e={e} cfg={cfg} onClose={onClose} />
         <SheetScroll>
           <ProofBody e={e} cfg={cfg} policy={policy} q={q} />
+          {closed ? <ClosedByBlock e={closed} cfg={cfg} /> : null}
           <Verify e={e} cfg={cfg} />
         </SheetScroll>
       </View>
@@ -100,10 +112,12 @@ function SheetScroll({ children }: { children: React.ReactNode }) {
 
 export function CopyDetailPanel({ e, cfg, policy, onClose }: { e: FeedEvent; cfg: AppConfig | undefined; policy?: Policy | null; onClose: () => void }) {
   const q = useQualityFor(e);
+  const closed = useClosedBy(e);
   return (
     <View testID="copy.detail" style={{ gap: 14 }}>
       <Header e={e} cfg={cfg} onClose={onClose} />
       <ProofBody e={e} cfg={cfg} policy={policy} q={q} />
+      {closed ? <ClosedByBlock e={closed} cfg={cfg} /> : null}
       <Verify e={e} cfg={cfg} />
     </View>
   );

@@ -6,7 +6,7 @@ import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = fileURLToPath(new URL("../dist-web/", import.meta.url));
+const ROOT = process.env.WEB_ROOT ?? fileURLToPath(new URL("../dist-web/", import.meta.url));
 const BASE = process.env.WEB_BASE ?? "/app";
 const PORT = Number(process.env.WEB_PORT ?? 8790);
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".svg": "image/svg+xml", ".ttf": "font/ttf", ".ico": "image/x-icon", ".map": "application/json" };

@@ -718,7 +718,7 @@ export function Dialog({ visible, onClose, children, testID }: { visible: boolea
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <View style={{ flex: 1, backgroundColor: c.scrim, justifyContent: "center", padding: 24 }}>
-        <View testID={testID} style={{ backgroundColor: c.sf, borderRadius: 28, padding: 24, gap: 14 }}>
+        <View testID={testID} style={{ backgroundColor: c.sf, borderRadius: 28, padding: 24, gap: 14, width: "100%", maxWidth: 560, alignSelf: "center" }}>
           {children}
         </View>
       </View>

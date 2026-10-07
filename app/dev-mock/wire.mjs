@@ -26,9 +26,10 @@ export function wireAccount(a) {
     pnlCNS: (BigInt(a.equityCNS ?? 0) - BigInt(a.netDepositsCNS ?? 0)).toString(),
     builderFeesCNS: "0",
     paused: !!a.paused,
+    detached: !!a.detached,
     expiry: a.expiry ?? null,
-    policy: a.policy ? { ...a.policy, leaders: a.policy.leaders.map((l) => ({ ...l, stopped: false })), markets: a.policy.markets.map((m) => ({ ...m, halted: false })) } : null,
-    levels: [],
+    policy: a.policy ? { ...a.policy, leaders: a.policy.leaders.map((l) => ({ ...l, stopped: false })), markets: a.policy.markets.map((m) => ({ ...m, halted: (a.halted ?? []).includes(m.perpId) })) } : null,
+    levels: (a.levels ?? []).map((l) => ({ perpId: l.perpId, side: l.side, stopLossPNS: S(l.stopLossPNS), takeProfitPNS: S(l.takeProfitPNS), slippageBps: l.slippageBps })),
     positions: (a.positions ?? []).map((p) => ({
       perpId: p.perpId, symbol: null, side: p.side, lotLNS: S(p.lotLNS), entryPricePNS: S(p.entryPNS), markPNS: S(p.markPNS),
       depositCNS: S(p.marginCNS), unrealizedPnlCNS: S(p.upnlCNS), leaderAccountId: p.leaderAccountId ?? null,
@@ -53,7 +54,7 @@ const numericId = (id) => (/^\d+$/.test(String(id)) ? Number(id) : ids.get(id) ?
 
 export function wireFeedEvent(e, explorerTx = "https://monadvision.com/tx/") {
   if (!e) return e;
-  const engine = String(e.kind).startsWith("Engine");
+  const engine = String(e.kind).startsWith("Engine") || e.kind === "Detached";
   const b = e.blocked;
   let data = e.data ?? null;
   if (e.kind === "Mirrored") data = { lotsBefore: null, lotsAfter: null, proof: e.proof ?? null };
@@ -85,7 +86,7 @@ export function wireFeedEvent(e, explorerTx = "https://monadvision.com/tx/") {
     actual: b?.actual ?? e.actual ?? null,
     leaderRef: e.leaderRef ?? null,
     matchNow: !!e.matchNow,
-    keeper: null,
+    keeper: e.keeper ?? null,
     amount: e.amountCNS ?? null,
     latencyMs: e.latencyMs ?? null,
     proof: e.kind === "Mirrored" ? (e.proof ?? null) : null,

@@ -15,6 +15,7 @@ import { useColors } from "../../ui/theme";
 import { AdversarialFlag } from "../../ui/adversarial";
 import { useLayout } from "../../ui/layout";
 import { ShareSheet } from "../../ui/shareSheet";
+import { StopFollowSheet } from "../../ui/stopFollow";
 import { Redirect } from "expo-router";
 
 function Stat({ k, v, sub, color }: { k: string; v: string; sub?: string; color?: string }) {
@@ -57,6 +58,7 @@ function LeaderProfile() {
   const l = q.data;
   const following = totals?.accounts.find((a) => a.leader?.accountId === Number(id));
   const act = useOwnerAction();
+  const [stopping, setStopping] = useState(false);
 
   const chart = useMemo(() => {
     if (!l) return null;
@@ -322,6 +324,14 @@ function LeaderProfile() {
           Sources: Perpl fills on Monad, Nansen. Updated {Math.max(1, Math.round((Date.now() - l.updatedAt) / 60000))} min ago. Past results don't predict future returns.
         </T>
       </Scroll>
+      {following?.detached ? (
+        <View style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: c.sf, borderTopWidth: 1, borderTopColor: c.bd }}>
+          <T size={12} color="mu" lh={17} testID="leader.detached">
+            You stopped following. Positions are kept and not mirrored; the follow is paused. You manage them: levels, close, withdraw.
+          </T>
+          {act.error ? <T size={12} color="neg" testID="leader.error">{act.error}</T> : null}
+        </View>
+      ) : null}
       <View style={{ flexDirection: "row", gap: 10, paddingTop: 12, paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 8) + 4, backgroundColor: c.sf, borderTopWidth: 1, borderTopColor: c.bd }}>
         <Button icon="bell" kind={alerts ? "ton" : "out"} onPress={() => setAlerts(!alerts)} testID="leader.alerts" style={{ width: 52, paddingHorizontal: 0 }} />
         {following ? (
@@ -330,10 +340,17 @@ function LeaderProfile() {
               <T size={11} color="mu">
                 Status
               </T>
-              <T size={13} w={600} color={following.paused ? "wrnI" : "posI"} testID="follow.status">
-                {following.paused ? "Paused" : "Following"}
+              <T size={13} w={600} color={following.detached ? "neg" : following.paused ? "wrnI" : "posI"} testID="follow.status">
+                {following.detached ? "Stopped" : following.paused ? "Paused" : "Following"}
               </T>
             </View>
+            {following.detached ? (
+              <>
+                <Button icon="close" kind="out" testID="leader.stopFollow" disabled={!!act.busy} onPress={() => setStopping(true)} style={{ width: 52, paddingHorizontal: 0 }} />
+                <Button title={act.busy === "followAgain" ? "Waiting" : "Follow again"} icon="fp" flex testID="leader.followAgain" disabled={!!act.busy} onPress={() => act.followAgain(following)} />
+              </>
+            ) : (
+              <>
             <Button
               icon={following.paused ? "feed" : "pause"}
               kind="out"
@@ -342,12 +359,16 @@ function LeaderProfile() {
               onPress={() => act.setPaused([following], !following.paused)}
               style={{ width: 52, paddingHorizontal: 0 }}
             />
+            <Button icon="close" kind="out" testID="leader.stopFollow" disabled={!!act.busy} onPress={() => setStopping(true)} style={{ width: 52, paddingHorizontal: 0 }} />
             <Button title="Edit limits" icon="edit" flex testID="leader.rules" onPress={() => router.push({ pathname: "/follow/[id]", params: { id: String(l.accountId), account: following.account } })} />
+              </>
+            )}
           </>
         ) : (
           <Button title={`Follow ${shortAddr(l.address)}`} flex testID="leader.follow" onPress={() => router.push({ pathname: "/follow/[id]", params: { id: String(l.accountId) } })} />
         )}
       </View>
+      <StopFollowSheet visible={stopping} onClose={() => setStopping(false)} account={following} leaderId={Number(id)} leaderAddress={l?.address} cfg={cfg} act={act} />
     </Screen>
   );
 }

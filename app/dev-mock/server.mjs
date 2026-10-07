@@ -19,6 +19,7 @@ import {
   MIRROR_ORDERS_PARAM,
   POLICY_PARAM,
   actionTypedData,
+  detachTypedData,
   permitTypedData,
   predictAccount,
   receiveAuthTypedData,
@@ -46,6 +47,7 @@ import {
 } from "./data.mjs";
 import { SW, adversarialFor, backtest, copyQuality, engineEvent, enrich, setSwitches } from "./engine.mjs";
 import { rpcGetLogs, EQUITY_SELECTOR } from "./rpcLogs.mjs";
+import { makeStops, STRANGER } from "./stops.mjs";
 
 const PORT = Number(process.env.MOCK_PORT ?? 8787);
 let defaultScenario = process.env.MOCK_SCENARIO ?? "funded";
@@ -137,6 +139,8 @@ function ev(a, kind, fields, ageMs = 0, commitState = "finalized") {
   return e;
 }
 
+const stops = makeStops({ ev: (...a) => ev(...a), upnl: (p) => upnl(p) });
+
 function seedOwner(owner, scenario) {
   const o = { owner: cs(owner), wallet: 0n, permitNonce: 0n, notifyPub: null, pushToken: null, scenario, used3009: new Set() };
   owners.set(lc(owner), o);
@@ -227,7 +231,9 @@ function seedOwner(owner, scenario) {
   a1.feed.unshift(engineEvent(a1, "EngineSkipped", { perpId: bySymbol.SOL.perpId, orderType: 0, requested: 5, final: 0, depth: 3, limitPNS: pns("SOL", 212.6), ageMs: 15 * 60e3, block: block - 2250, leaderAccountId: A.accountId, leaderAddress: cs(A.address) }));
   mir(a2, 9e3, "BTC", "long", "close", 0.00005, 118402.0, 0, { realisedPnlCNS: "60000" });
   mir(a1, 4e3, "MON", "short", "close", 220, 0.0418, 0, { realisedPnlCNS: "110000" });
+  stops.seed(a1, a2, a3, mir);
   a1.feed.sort((x, y) => y.timestamp - x.timestamp);
+  a2.feed.sort((x, y) => y.timestamp - x.timestamp);
   a3.feed.sort((x, y) => y.timestamp - x.timestamp);
   a1.feed[0].commitState = "proposed";
   a2.feed[0].commitState = "voted";
@@ -283,6 +289,7 @@ function serializeAccount(a) {
     depositCapCNS: CAP.toString(),
     actionNonce: a.actionNonce.toString(),
     paused: a.paused,
+    detached: !!a.detached,
     expiry: a.policy?.expiry ?? 0,
     policy: a.policy,
     positions: a.positions.map((p) => {
@@ -313,6 +320,8 @@ function serializeAccount(a) {
       dailyLossHit: dl > 0 && eq < (a.todayStart * (BPS - BigInt(dl))) / BPS,
       drawdownHit: ddb > 0 && eq < (a.hwm * (BPS - BigInt(ddb))) / BPS,
     },
+    levels: [...stops.levelsOf(a).values()],
+    halted: [...stops.haltedOf(a)],
     createdAt: a.createdAt,
     teamRun: a.teamRun,
   };
@@ -709,12 +718,19 @@ async function relayExecute({ account, action, signature }) {
       }
       const policy = {
         maxLeverageHdths: Number(p.maxLeverageHdths), maxSlippageBps: Number(p.maxSlippageBps), dailyLossBps: Number(p.dailyLossBps), drawdownBps: Number(p.drawdownBps), expiry: Number(p.expiry),
-        leaders: p.leaders.map((l) => ({ accountId: Number(l.accountId), ratioBps: Number(l.ratioBps) })),
+        maxEntryDeviationBps: Number(p.maxEntryDeviationBps), stopSlippageBps: Number(p.stopSlippageBps), flattenOnStop: !!p.flattenOnStop, maxBuilderFeePer100K: Number(p.maxBuilderFeePer100K),
+        leaders: p.leaders.map((l) => ({ accountId: Number(l.accountId), ratioBps: Number(l.ratioBps), budgetCNS: l.budgetCNS.toString(), lossStopBps: Number(l.lossStopBps) })),
         markets: p.markets.map((m) => ({ perpId: Number(m.perpId), maxNotionalCNS: m.maxNotionalCNS.toString() })),
       };
       if (policy.maxSlippageBps === 0 || policy.maxSlippageBps > 1000) return err(400, "InvalidPolicy", "Invalid policy: maxSlippageBps", { revertReason: 'InvalidPolicy("maxSlippageBps")' });
       if (policy.expiry <= now() / 1000) return err(400, "InvalidPolicy", "Invalid policy: expiry", { revertReason: 'InvalidPolicy("expiry")' });
       a.policy = policy;
+      // A new policy lifts every halt a fired level set (MirrorAccount._setPolicy rebuilds the markets).
+      stops.haltedOf(a).clear();
+      if (a.detached) {
+        a.detached = false;
+        events.push(ev(a, "Detached", { txHash: null, onchain: false, label: "Following again", data: { detached: false, label: "Following again", reason: "policy" } }, 0, "offchain"));
+      }
       a.leaderAccountId = policy.leaders[0]?.accountId ?? a.leaderAccountId;
       if (kind === ACTION.FOLLOW) a.paused = false;
       const pe = ev(a, kind === ACTION.FOLLOW ? "Followed" : "PolicyUpdated", { leaderAccountId: a.leaderAccountId, leaderAddress: leaderById[a.leaderAccountId] ? cs(leaderById[a.leaderAccountId].address) : undefined }, 0, "proposed");
@@ -782,6 +798,13 @@ async function relayExecute({ account, action, signature }) {
       const e = ev(a, "Withdrawn", { amountCNS: amt.toString() }, 0, "proposed");
       e.txHash = r.txHash;
       events.push(e);
+    } else if (kind === ACTION.SET_LEVELS || kind === ACTION.CLOSE_MARKET) {
+      const out = kind === ACTION.SET_LEVELS ? stops.actSetLevels(a, msg.data) : stops.actCloseMarket(a, msg.data);
+      if (out.error) return err(400, "Reverted", out.error, { revertReason: out.error });
+      for (const e of out.events) {
+        e.txHash = r.txHash;
+        events.push(e);
+      }
     } else if (kind === ACTION.MATCH_NOW || kind === ACTION.SWEEP || kind === ACTION.EXCHANGE_CALL) {
       // accepted, no state change in the mock
     } else {
@@ -1018,6 +1041,29 @@ const server = http.createServer(async (req, res) => {
       const page = src.slice(cursor, cursor + 30);
       return send(res, 200, wireFeedPage(page, cursor + 30 < a.feed.length ? cursor + 30 : null));
     }
+    if (req.method === "GET" && (m = p.match(/^\/v1\/accounts\/(0x[0-9a-fA-F]{40})\/stops$/))) {
+      const a = accounts.get(lc(m[1]));
+      return send(res, 200, a ? stops.stopsFor(a) : { items: [] });
+    }
+    if (req.method === "POST" && (m = p.match(/^\/v1\/accounts\/(0x[0-9a-fA-F]{40})\/detach$/))) {
+      // Engine: owner-signed Detach(bool detached,uint256 deadline) in the account's domain (services/detach.ts).
+      const a = accounts.get(lc(m[1]));
+      if (!a) return send(res, 404, { error: "Unknown account", code: "unknown_account" });
+      const b = await readBody(req);
+      const deadline = BigInt(b.deadline);
+      const nowS = BigInt(Math.floor(now() / 1000));
+      if (deadline < nowS) return send(res, 400, { error: "This approval expired. Sign again.", code: "expired" });
+      if (deadline > nowS + 3600n) return send(res, 400, { error: "Deadline more than 3600 s ahead", code: "deadline_too_far" });
+      if (a.detachDeadline !== undefined && deadline <= a.detachDeadline) return send(res, 409, { error: "This approval was already used. Sign again.", code: "replayed" });
+      const signer = await recoverTypedDataAddress({ ...detachTypedData(a.account, CHAIN_ID, !!b.detached, deadline), signature: b.signature }).catch(() => null);
+      if (!signer) return send(res, 400, { error: "Signature does not decode", code: "bad_signature" });
+      if (lc(signer) !== lc(a.owner)) return send(res, 401, { error: "Signature is not from the account owner", code: "not_owner" });
+      a.detached = !!b.detached;
+      a.detachDeadline = deadline;
+      const label = a.detached ? "Stopped following; positions kept" : "Following again";
+      emitEvent(a, ev(a, "Detached", { txHash: null, onchain: false, label, data: { detached: a.detached, label, reason: "signed" } }, 0, "offchain"));
+      return send(res, 200, { account: a.account, detached: a.detached, block });
+    }
     if (req.method === "GET" && p === "/v1/stats") {
       const user = [...accounts.values()].filter((a) => !a.teamRun);
       return send(res, 200, { accountsCreated: user.length + 41, fundedAccounts: user.length + 29, netAusdDepositedCNS: "512400000", copiesExecuted: 1840, copiesBlocked: { LeverageTooHigh: 61, MarketNotAllowed: 22, ExceedsMaxNotional: 17, DailyLossStop: 4, DrawdownStop: 2 }, medianLatencyMs: 604, activeFollowers7d: 33, copies: [] });
@@ -1092,6 +1138,19 @@ const server = http.createServer(async (req, res) => {
       const b = await readBody(req);
       for (const a of accounts.values()) if (lc(a.owner) === lc(b.owner) && a.leaderAccountId === Number(b.leaderAccountId ?? 1588)) a.todayStart = equity(a) * 2n;
       return send(res, 200, { ok: true });
+    }
+    if (req.method === "POST" && p === "/__mock/trigger") {
+      // A stranger executes a level: {owner, perpId, keeper?} (the mark is moved to the level first).
+      const b = await readBody(req);
+      const a = [...accounts.values()].find((x) => lc(x.owner) === lc(b.owner) && stops.levelsOf(x).has(Number(b.perpId)));
+      if (!a) return send(res, 404, { error: "no level" });
+      const lv = stops.levelsOf(a).get(Number(b.perpId));
+      const saved = byPerp[Number(b.perpId)].markPNS;
+      byPerp[Number(b.perpId)].markPNS = BigInt(lv.takeProfitPNS !== "0" ? lv.takeProfitPNS : lv.stopLossPNS);
+      const e = stops.trigger(a, Number(b.perpId), b.keeper ?? STRANGER);
+      byPerp[Number(b.perpId)].markPNS = saved;
+      if (e) emitEvent(a, e);
+      return send(res, 200, { ok: !!e, event: e });
     }
     if (req.method === "POST" && p === "/__mock/demo-limit") {
       demo.ipHits.set(ip, Array.from({ length: demo.perIpPerHour }, () => now() - 30 * 60e3));

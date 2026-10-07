@@ -13,6 +13,7 @@ import { Button, Card, ChipS, CommitTrack, IconButton, Identicon, KV, LatencyPil
 import { ShareSheet } from "./shareSheet";
 import { SmallChip, TeamBadge } from "./kit2";
 import { EngineItem } from "./feedEngine";
+import { StopItem } from "./stopFeed";
 import { bpsText, fillDeviationBps } from "../lib/proof";
 import { copyFeeCNS, feeText } from "../lib/fees";
 import { isEngineKind, RULE_NAMES as RULES } from "../lib/blockReasons";
@@ -155,6 +156,7 @@ export function FeedItem({ e, cfg, onBlockedPress, onCopyPress, highlight, testI
   const m = mkt(cfg, e.perpId);
   const leaderAddr = e.leaderAddress ?? (e.leaderAccountId ? String(e.leaderAccountId) : "");
   if (isEngineKind(e.kind)) return <EngineItem e={e} cfg={cfg} testID={testID} name={leaderName(e)} />;
+  if (e.kind === "StopTriggered" || e.kind === "LevelSet" || e.kind === "MarketClosed") return <StopItem e={e} cfg={cfg} testID={testID} />;
   const typeLabel = e.kind === "Blocked" ? "Blocked" : e.kind === "Mirrored" ? ((e.orderType ?? 0) <= 1 ? "Copy" : "Close") : e.kind;
   const header = (
     <Row gap={8}>
@@ -283,6 +285,8 @@ export function FeedItem({ e, cfg, onBlockedPress, onCopyPress, highlight, testI
     PolicyUpdated: { icon: "edit", title: "Limits updated", tone: "ac" },
     Paused: { icon: "pause", title: e.paused ? "Following paused" : "Following resumed", tone: "nu" },
     ClosedAll: { icon: "close", title: `Closed ${e.positionsClosed ?? 0} position${e.positionsClosed === 1 ? "" : "s"}`, tone: "nu" },
+    Detached: { icon: e.data?.detached ? "pause" : "check", title: e.label ?? (e.data?.detached ? "Stopped following; positions kept" : "Following again"), tone: e.data?.detached ? "nu" : "ac" },
+    LeaderStopped: { icon: "pause", title: `Leader loss stop hit for ${shortAddr(e.leaderAddress) || "a leader"}`, tone: "nu" },
   };
   const mm = meta[e.kind] ?? { icon: "info", title: e.kind, tone: "nu" };
   return (
@@ -299,7 +303,7 @@ export function FeedItem({ e, cfg, onBlockedPress, onCopyPress, highlight, testI
             {ago(e.timestamp)} ago · block {e.block.toLocaleString("en-US")}
           </T>
           <T size={11} w={600} color="mu" upper testID={testID ? `${testID}.type` : undefined}>
-            {e.kind === "Withdrawn" ? "Withdraw" : e.kind === "Deposited" ? "Deposit" : e.kind === "Followed" ? "Follow" : e.kind}
+            {e.kind === "Withdrawn" ? "Withdraw" : e.kind === "Deposited" ? "Deposit" : e.kind === "Followed" ? "Follow" : e.kind === "Detached" ? "Mirror · no tx" : e.kind}
           </T>
         </View>
         <TxLink hash={e.txHash} onPress={() => openTx(cfg, e.txHash)} />

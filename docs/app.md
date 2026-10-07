@@ -110,6 +110,12 @@ abi-encode`, and the signatures with `cast wallet sign --data`. See
 | Edit limits | `Action{1 SET_POLICY, abi.encode(Policy)}` | execute |
 | Pause / resume (one or all follows) | `Action{2 SET_PAUSED, abi.encode(bool)}` per account | execute ×N |
 | Close all | `Action{3 CLOSE_ALL, abi.encode(uint16 100)}` per account with positions | execute ×N |
+| Edit / clear levels (one position) | `Action{9 SET_LEVELS, abi.encode(Level[1])}`, `Level{perpId, side, stopLossPNS, takeProfitPNS, slippageBps 300}`; both prices 0 clears | execute |
+| Close position | `Action{10 CLOSE_MARKET, abi.encode(uint32 perpId, uint16 300)}` | execute |
+| Resume a market after a level fired | `Action{1 SET_POLICY}` with the same policy (a new policy lifts `halted`) | execute |
+| Stop following, keep my positions | other leaders left: `SET_POLICY` without the leader. Only leader: `Detach{detached: true, deadline}` (EIP-712, account domain) + `SET_PAUSED true`, one prompt; the engine then sends no copies, opens or closes (keeper behaviour) | `/v1/accounts/:account/detach` + execute |
+| Follow again (after detach) | `Detach{detached: false}` + `SET_PAUSED false` | detach + execute |
+| Stop and close | only leader: `CLOSE_ALL 300`; otherwise `SET_POLICY` without the leader + `CLOSE_MARKET` per market it holds (consecutive nonces, one prompt) | execute ×N |
 | Withdraw | `Action{4 WITHDRAW, abi.encode(uint256)}`; to another address adds `TransferWithAuthorization` | execute (+ transfer) |
 | Top up a follow | `Permit` (or `ReceiveWithAuthorization`) | deposit |
 | Send AUSD | `TransferWithAuthorization` | transfer |
@@ -127,6 +133,9 @@ matching `MirrorAccountFactory.predictAccount`; the relayer's returned address i
 - Max leverage 1x to 15x (Perpl's BTC maximum), max slippage 1 to 1000 bps (`maxSlippageBps`),
   max notional per market, allowed markets, daily loss stop, drawdown stop, expiry.
 - Daily loss and drawdown stops pause new exposure; existing positions still follow the leader's closes.
+- Stop-loss / take-profit are not follow-sheet defaults: the contract stores them per position (`Level`), so they
+  are set from the position (Positions, Edit levels) once it is open. Anyone can execute a level once the mark
+  (and a fresh Chainlink price) has reached it; the close is reduce-only and the caller is paid nothing.
 - "Match the leader now" (ON by default) shows, per market where the leader holds a position:
   expected size, expected fill, worst price (slippage bound), notional, margin, leverage, and
   whether a rule would block it. The orders come from `POST /v1/quote/follow` and go into the

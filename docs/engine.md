@@ -65,6 +65,9 @@ sequence. Per follower (`domain/planner.ts`):
   already beyond the bound the copy is still submitted and the contract records `EntryTooFar` (below).
 - Every order carries `leaderFillPNS`: the leader's fill price from the Perpl event (Opened/Increased/Inverted/
   Closed; 0 for a decrease, liquidation or deleverage). It is statistics only; no rule trusts it.
+- **Paused accounts still get the leader's closes**: the contract refuses only opens while paused, and the keeper
+  keeps mirroring exits so a paused follower is not left holding a position the leader has left.
+- **Detached accounts get no copies at all** (opens and closes). See "Stop following, keep my positions" below.
 - Deltas under one lot are skipped. Budget (`budgetCNS`) and leader loss stop (`lossStopBps`) are left to the
   contract; the engine replays them only to name a block.
 
@@ -360,3 +363,20 @@ then closes.
   number of accounts; batch it with multicall before it grows large.
 - MirrorAccount's runtime is ~35 KB, above EIP-170. Monad accepts it; a local anvil must run with
   `--disable-code-size-limit` (and forge scripts on anvil too).
+
+## Stop following, keep my positions (detach)
+
+An owner-signed, **engine-side** state. `POST /v1/accounts/:account/detach` takes an EIP-712 signature over
+`Detach(bool detached, uint256 deadline)` in the domain `{name: "Mirror Account", version: "1", chainId,
+verifyingContract: <the account>}` (the same domain as owner actions). The engine reads the account's onchain
+`owner()` and accepts the signature only from it, with a deadline at most 3600 s ahead and later than the last
+accepted one (single use). It stores `accounts.detached` (plus the head block and the deadline) and records an
+engine-side feed item `Detached` ("Stopped following; positions kept" / "Following again").
+
+While detached the copier sends the account no copies, opens or closes, so its positions stay exactly as they
+are. **This is keeper behaviour, not enforced by the contract**: the policy still allows the keeper to copy the
+leader, and nothing onchain changes when an account detaches. The owner keeps full control onchain: levels
+(`setLevels`, executable by anyone when hit), loss stops anyone can trigger, `closeMarket`, `closeAll`, `withdraw`.
+The app also pauses the account onchain in the same passkey prompt, so no new exposure can open even through
+match-now. A new policy (`PolicyUpdated` from setPolicy or follow, in a block after the detach) or a signed
+`detached: false` clears it (feed item "Following again").

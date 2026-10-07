@@ -573,9 +573,14 @@ export default function FollowSheet() {
             <Switch on={form.flattenOnStop} onChange={(v) => set("flattenOnStop", v)} testID="follow.flattenOnStop.toggle" />
           </Row>
           <T size={12} color="mu" lh={17}>
-            If a stop is hit, anyone can trigger it onchain and close your positions, so it still works if Mirror's servers are down. The caller is paid nothing.
+            When a loss stop is hit, anyone can trigger it onchain to close your positions (reduce-only, the caller is paid nothing), so it works even if Mirror is down.
           </T>
         </View>
+        <Hint>
+          <T size={12} color="mu" lh={17} testID="follow.levels.hint">
+            Stop-loss and take-profit are set on each position once it is open (Positions, Edit levels). They are always executable by anyone when hit.
+          </T>
+        </Hint>
       </Section>
 
       <Section title="Expiry" icon="cal" sub="After this date the follow stops opening positions" testID="follow.section.expiry">

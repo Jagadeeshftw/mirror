@@ -7,17 +7,22 @@ import { useConfig, useMarkets, useTotals } from "../../state/data";
 import { AppBar } from "../../ui/chrome";
 import { CloseAllDialog } from "../../ui/closeAll";
 import { useOwnerAction } from "../../state/ownerAction";
-import { Button, Card, ErrorBanner, Identicon, Lbl, LoadingBlock, MarketBadge, Row, Screen, Scroll, Seg, Side, T } from "../../ui/kit";
+import { Button, Card, ErrorBanner, Identicon, Lbl, LoadingBlock, MarketBadge, Press, Row, Screen, Scroll, Seg, Side, T } from "../../ui/kit";
+import { Icon } from "../../ui/icons";
+import { haltedPerps, levelFor } from "../../lib/levels";
+import { HaltNotice } from "../../ui/levelEdit";
 import { useColors } from "../../ui/theme";
 import { LaptopPositions } from "../../ui/laptop/LaptopPositions";
 import { useLayout } from "../../ui/layout";
 
-function PosRow({ p, leaderAddr, sym, lotDec, priceDec }: { p: Position; leaderAddr?: string; sym: string; lotDec: number; priceDec: number }) {
+function PosRow({ p, a, leaderAddr, sym, lotDec, priceDec }: { p: Position; a: MirrorAccount; leaderAddr?: string; sym: string; lotDec: number; priceDec: number }) {
   const c = useColors();
   const pnl = toBig(p.upnlCNS);
   const margin = toBig(p.marginCNS);
+  const lv = levelFor(a.levels, p);
+  const lvText = lv ? [lv.stopLossPNS !== "0" ? `SL ${price(lv.stopLossPNS, priceDec)}` : null, lv.takeProfitPNS !== "0" ? `TP ${price(lv.takeProfitPNS, priceDec)}` : null].filter(Boolean).join(" · ") : "No stop-loss or take-profit";
   return (
-    <View testID={`position.${sym}.${p.side}`} style={{ paddingVertical: 12, paddingHorizontal: 14, gap: 10 }}>
+    <Press testID={`position.${sym}.${p.side}`} onPress={() => router.push({ pathname: "/position", params: { account: a.account, perp: String(p.perpId), side: p.side } })} style={{ paddingVertical: 12, paddingHorizontal: 14, gap: 10 }}>
       <Row gap={12}>
         <MarketBadge symbol={sym} size={36} />
         <View style={{ flex: 1 }}>
@@ -47,7 +52,7 @@ function PosRow({ p, leaderAddr, sym, lotDec, priceDec }: { p: Position; leaderA
         {[
           ["Entry", price(p.entryPNS, priceDec)],
           ["Mark", price(p.markPNS, priceDec)],
-          ["Liq.", price(p.liqPNS, priceDec)],
+          ["Liq.", p.liqPNS !== "0" ? price(p.liqPNS, priceDec) : "—"],
           ["Leader", shortAddr(leaderAddr, 4, 0).replace("…", "")],
         ].map(([k, v]) => (
           <View key={k} style={{ flex: 1 }}>
@@ -60,7 +65,14 @@ function PosRow({ p, leaderAddr, sym, lotDec, priceDec }: { p: Position; leaderA
           </View>
         ))}
       </View>
-    </View>
+      <Row gap={6}>
+        <Icon name="flag" size={13} color={lv ? c.ac : c.mu} />
+        <T size={12} mono color="mu" style={{ flex: 1 }} lines={1} testID={`position.${sym}.${p.side}.levels`}>
+          {lvText}
+        </T>
+        <Icon name="chev" size={16} color={c.mu} />
+      </Row>
+    </Press>
   );
 }
 
@@ -182,6 +194,12 @@ function PhonePositions() {
           </View>
         ) : null}
 
+        {totals.accounts.filter((a) => haltedPerps(a).length).map((a) => (
+          <View key={a.account} style={{ paddingHorizontal: 20 }}>
+            <HaltNotice symbols={haltedPerps(a).map((id) => byPerp.get(id)?.symbol ?? `#${id}`)} busy={act.busy === "resume"} onResume={() => act.resumeMarkets(a)} />
+          </View>
+        ))}
+        {act.error && !confirm ? <T size={12} color="neg" style={{ paddingHorizontal: 20 }} testID="positions.error">{act.error}</T> : null}
         <View style={{ paddingHorizontal: 20, gap: 10 }}>
           <Row justify="space-between">
             <Row gap={6}>
@@ -205,9 +223,9 @@ function PhonePositions() {
           </Row>
           {all.length ? (
             <Card list>
-              {sorted.map(({ p, addr }, i) => {
+              {sorted.map(({ p, a, addr }, i) => {
                 const m = byPerp.get(p.perpId);
-                return <PosRow key={`${p.perpId}-${p.side}-${i}`} p={p} leaderAddr={addr} sym={m?.symbol ?? `#${p.perpId}`} lotDec={m?.lotDecimals ?? 0} priceDec={m?.priceDecimals ?? 0} />;
+                return <PosRow key={`${p.perpId}-${p.side}-${i}`} p={p} a={a} leaderAddr={addr} sym={m?.symbol ?? `#${p.perpId}`} lotDec={m?.lotDecimals ?? 0} priceDec={m?.priceDecimals ?? 0} />;
               })}
             </Card>
           ) : null}
