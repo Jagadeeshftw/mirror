@@ -125,6 +125,10 @@ export interface LeaderProfile extends LeaderSummary {
 export interface LeaderRule {
   accountId: number;
   ratioBps: number;
+  /** Most margin this leader's positions may hold, AUSD 6-decimal units as a string. */
+  budgetCNS: string;
+  /** Stop copying this leader below -lossStopBps x budget (0 = off). */
+  lossStopBps: number;
 }
 export interface MarketRule {
   perpId: number;
@@ -137,8 +141,23 @@ export interface Policy {
   dailyLossBps: number;
   drawdownBps: number;
   expiry: number;
+  /** Refuse an opening copy further than this from the leader's onchain entry (0 = off). */
+  maxEntryDeviationBps: number;
+  /** Slippage bound for closes sent by a triggered stop. */
+  stopSlippageBps: number;
+  /** Anyone may close positions once a loss stop is hit. */
+  flattenOnStop: boolean;
   leaders: LeaderRule[];
   markets: MarketRule[];
+}
+
+/** Mirrors MirrorAccount.Level: an owner-signed stop-loss / take-profit on one market. */
+export interface Level {
+  perpId: number;
+  side: 0 | 1;
+  stopLossPNS: string;
+  takeProfitPNS: string;
+  slippageBps: number;
 }
 
 /** Mirrors MirrorAccount.MirrorOrder (JSON form). */
@@ -151,6 +170,7 @@ export interface MirrorOrderJson {
   leverageHdths: number;
   maxMatches: number;
   leaderRef: Hex;
+  leaderFillPNS: string;
 }
 
 export interface Position {

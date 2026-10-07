@@ -35,7 +35,7 @@ describe("struct shapes match the compiled MirrorAccount ABI", () => {
 describe("policy builder", () => {
   const now = 1_790_000_000;
   it("builds a valid policy from the follow form (ratio sizing only)", () => {
-    const form = { ...defaultForm(), ratioBps: 25, maxLeverage: 5, maxSlippageBps: 50, maxNotionalAusd: "12", markets: ["BTC", "ETH"], dailyLossPct: 10, drawdownPct: 15, expiryDays: 90 };
+    const form = { ...defaultForm(), allocationAusd: "12.00", ratioBps: 25, maxLeverage: 5, maxSlippageBps: 50, maxNotionalAusd: "12", markets: ["BTC", "ETH"], dailyLossPct: 10, drawdownPct: 15, expiryDays: 90 };
     const p = buildPolicy(form, 1043, MARKETS, now);
     expect(p).toEqual({
       maxLeverageHdths: 500,
@@ -43,7 +43,10 @@ describe("policy builder", () => {
       dailyLossBps: 1000,
       drawdownBps: 1500,
       expiry: now + 90 * 86400,
-      leaders: [{ accountId: 1043, ratioBps: 25 }],
+      maxEntryDeviationBps: 0,
+      stopSlippageBps: 300,
+      flattenOnStop: true,
+      leaders: [{ accountId: 1043, ratioBps: 25, budgetCNS: "12000000", lossStopBps: 0 }],
       markets: [
         { perpId: 1, maxNotionalCNS: "12000000" },
         { perpId: 20, maxNotionalCNS: "12000000" },
@@ -58,6 +61,9 @@ describe("policy builder", () => {
     expect(validatePolicy({ ...base, maxSlippageBps: 0 }, now)).toBe("maxSlippageBps");
     expect(validatePolicy({ ...base, maxSlippageBps: 1001 }, now)).toBe("maxSlippageBps");
     expect(validatePolicy({ ...base, maxLeverageHdths: 99 }, now)).toBe("maxLeverageHdths");
+    expect(validatePolicy({ ...base, stopSlippageBps: 0 }, now)).toBe("stopSlippageBps");
+    expect(validatePolicy({ ...base, maxEntryDeviationBps: 5001 }, now)).toBe("maxEntryDeviationBps");
+    expect(validatePolicy({ ...base, leaders: [{ ...base.leaders[0]!, budgetCNS: "0" }] }, now)).toBe("leader.budgetCNS");
     expect(validatePolicy({ ...base, expiry: now }, now)).toBe("expiry");
     expect(validatePolicy({ ...base, markets: [] }, now)).toBe("markets");
     expect(validatePolicy({ ...base, leaders: [{ accountId: 7, ratioBps: 10_001 }] }, now)).toBe("leader.ratioBps");

@@ -9,7 +9,7 @@ import {
   toHex,
   type TypedDataDomain,
 } from "viem";
-import type { Address, Hex, MirrorOrderJson, Policy } from "./types";
+import type { Address, Hex, Level, MirrorOrderJson, Policy } from "./types";
 
 export const ACTION = {
   SET_POLICY: 1,
@@ -20,6 +20,8 @@ export const ACTION = {
   SWEEP: 6,
   FOLLOW: 7,
   MATCH_NOW: 8,
+  SET_LEVELS: 9,
+  CLOSE_MARKET: 10,
 } as const;
 export type ActionKind = (typeof ACTION)[keyof typeof ACTION];
 
@@ -53,6 +55,12 @@ export const BLOCK_REASONS = [
   "DailyLossStop",
   "DrawdownStop",
   "LeverageTooLow",
+  "EntryTooFar",
+  "MarketHeldByOtherLeader",
+  "LeaderBudgetExceeded",
+  "LeaderLossStop",
+  "MarketHalted",
+  "CloseBelowTarget",
 ] as const;
 export type BlockReason = (typeof BLOCK_REASONS)[number];
 
@@ -60,6 +68,8 @@ export type BlockReason = (typeof BLOCK_REASONS)[number];
 export const LEADER_RULE_COMPONENTS = [
   { name: "accountId", type: "uint32" },
   { name: "ratioBps", type: "uint32" },
+  { name: "budgetCNS", type: "uint64" },
+  { name: "lossStopBps", type: "uint16" },
 ] as const;
 export const MARKET_RULE_COMPONENTS = [
   { name: "perpId", type: "uint32" },
@@ -74,6 +84,9 @@ export const POLICY_PARAM = {
     { name: "dailyLossBps", type: "uint16" },
     { name: "drawdownBps", type: "uint16" },
     { name: "expiry", type: "uint40" },
+    { name: "maxEntryDeviationBps", type: "uint16" },
+    { name: "stopSlippageBps", type: "uint16" },
+    { name: "flattenOnStop", type: "bool" },
     { name: "leaders", type: "tuple[]", components: LEADER_RULE_COMPONENTS },
     { name: "markets", type: "tuple[]", components: MARKET_RULE_COMPONENTS },
   ],
@@ -87,7 +100,19 @@ export const MIRROR_ORDER_COMPONENTS = [
   { name: "leverageHdths", type: "uint16" },
   { name: "maxMatches", type: "uint16" },
   { name: "leaderRef", type: "bytes32" },
+  { name: "leaderFillPNS", type: "uint64" },
 ] as const;
+export const LEVELS_PARAM = {
+  name: "levels",
+  type: "tuple[]",
+  components: [
+    { name: "perpId", type: "uint32" },
+    { name: "side", type: "uint8" },
+    { name: "stopLossPNS", type: "uint64" },
+    { name: "takeProfitPNS", type: "uint64" },
+    { name: "slippageBps", type: "uint16" },
+  ],
+} as const;
 export const MIRROR_ORDERS_PARAM = { name: "m", type: "tuple[]", components: MIRROR_ORDER_COMPONENTS } as const;
 
 function policyValue(p: Policy) {
@@ -97,7 +122,10 @@ function policyValue(p: Policy) {
     dailyLossBps: p.dailyLossBps,
     drawdownBps: p.drawdownBps,
     expiry: p.expiry,
-    leaders: p.leaders.map((l) => ({ accountId: l.accountId, ratioBps: l.ratioBps })),
+    maxEntryDeviationBps: p.maxEntryDeviationBps,
+    stopSlippageBps: p.stopSlippageBps,
+    flattenOnStop: p.flattenOnStop,
+    leaders: p.leaders.map((l) => ({ accountId: l.accountId, ratioBps: l.ratioBps, budgetCNS: BigInt(l.budgetCNS), lossStopBps: l.lossStopBps })),
     markets: p.markets.map((m) => ({ perpId: m.perpId, maxNotionalCNS: BigInt(m.maxNotionalCNS) })),
   };
 }
@@ -112,6 +140,7 @@ function orderValue(o: MirrorOrderJson) {
     leverageHdths: o.leverageHdths,
     maxMatches: o.maxMatches,
     leaderRef: o.leaderRef,
+    leaderFillPNS: BigInt(o.leaderFillPNS ?? "0"),
   };
 }
 
@@ -136,6 +165,17 @@ export function encodePaused(paused: boolean): Hex {
 export function encodeCloseAll(slippageBps: number): Hex {
   return encodeAbiParameters([{ type: "uint16" }], [slippageBps]);
 }
+/** abi.encode(Level[]) for ACTION_SET_LEVELS; a level with both prices 0 clears that market. */
+export function encodeSetLevels(levels: Level[]): Hex {
+  return encodeAbiParameters(
+    [LEVELS_PARAM],
+    [levels.map((l) => ({ perpId: l.perpId, side: l.side, stopLossPNS: BigInt(l.stopLossPNS), takeProfitPNS: BigInt(l.takeProfitPNS), slippageBps: l.slippageBps }))],
+  );
+}
+/** abi.encode(uint32 perpId, uint16 slippageBps) for ACTION_CLOSE_MARKET. */
+export function encodeCloseMarket(perpId: number, slippageBps: number): Hex {
+  return encodeAbiParameters([{ type: "uint32" }, { type: "uint16" }], [perpId, slippageBps]);
+}
 export function encodeWithdraw(amountCNS: bigint): Hex {
   return encodeAbiParameters([{ type: "uint256" }], [amountCNS]);
 }
@@ -147,12 +187,16 @@ export function validatePolicy(p: Policy, nowSec = Math.floor(Date.now() / 1000)
   if (p.dailyLossBps >= 10_000) return "dailyLossBps";
   if (p.drawdownBps >= 10_000) return "drawdownBps";
   if (p.expiry <= nowSec) return "expiry";
+  if (p.maxEntryDeviationBps > 5_000) return "maxEntryDeviationBps";
+  if (p.stopSlippageBps === 0 || p.stopSlippageBps > 2_000) return "stopSlippageBps";
   if (p.leaders.length === 0 || p.leaders.length > LIMITS.MAX_LEADERS) return "leaders";
   if (p.markets.length === 0 || p.markets.length > LIMITS.MAX_MARKETS) return "markets";
   const seen = new Set<number>();
   for (const l of p.leaders) {
     if (l.accountId === 0 || (selfAccountId && l.accountId === selfAccountId)) return "leader.accountId";
     if (l.ratioBps === 0 || l.ratioBps > LIMITS.MAX_RATIO_BPS) return "leader.ratioBps";
+    if (BigInt(l.budgetCNS) === 0n) return "leader.budgetCNS";
+    if (l.lossStopBps > 10_000) return "leader.lossStopBps";
     if (seen.has(l.accountId)) return "leader.duplicate";
     seen.add(l.accountId);
   }

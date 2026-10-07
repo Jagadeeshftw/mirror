@@ -16,6 +16,10 @@ export interface FollowForm {
   dailyLossPct: number;
   drawdownPct: number;
   expiryDays: number;
+  /** "Only copy if within X% of the leader's entry" (0 = off). */
+  entryFilterPct: number;
+  /** Anyone may execute my loss stops (reduce-only) if Mirror is down. */
+  flattenOnStop: boolean;
   matchNow: boolean;
   note: string;
 }
@@ -31,13 +35,20 @@ export function defaultForm(): FollowForm {
     dailyLossPct: 10,
     drawdownPct: 15,
     expiryDays: 90,
+    entryFilterPct: 0,
+    flattenOnStop: true,
     matchNow: true,
     note: "",
   };
 }
 
+/** Slippage bound for closes sent by a triggered stop. */
+export const STOP_SLIPPAGE_BPS = 300;
+
 export function buildPolicy(form: FollowForm, leaderAccountId: number, markets: MarketConfig[], nowSec = Math.floor(Date.now() / 1000)): Policy {
   const cap = parseUnits(form.maxNotionalAusd, 6) ?? 0n;
+  // Single-leader follow: the whole allocation is this leader's margin budget.
+  const budget = parseUnits(form.allocationAusd, 6) ?? 0n;
   const bySymbol = new Map(markets.map((m) => [m.symbol, m]));
   return {
     maxLeverageHdths: Math.round(form.maxLeverage * 100),
@@ -45,7 +56,10 @@ export function buildPolicy(form: FollowForm, leaderAccountId: number, markets: 
     dailyLossBps: Math.round(form.dailyLossPct * 100),
     drawdownBps: Math.round(form.drawdownPct * 100),
     expiry: nowSec + Math.round(form.expiryDays * 86400),
-    leaders: [{ accountId: leaderAccountId, ratioBps: Math.round(form.ratioBps) }],
+    maxEntryDeviationBps: Math.round(form.entryFilterPct * 100),
+    stopSlippageBps: STOP_SLIPPAGE_BPS,
+    flattenOnStop: form.flattenOnStop,
+    leaders: [{ accountId: leaderAccountId, ratioBps: Math.round(form.ratioBps), budgetCNS: budget.toString(), lossStopBps: 0 }],
     markets: form.markets
       .map((s) => bySymbol.get(s))
       .filter((m): m is MarketConfig => !!m)
@@ -84,5 +98,6 @@ export function formErrors(form: FollowForm, walletCNS: bigint): { field: string
   if (form.markets.length === 0) out.push({ field: "markets", message: "Allow at least one market" });
   if (form.maxSlippageBps < 1 || form.maxSlippageBps > 1000) out.push({ field: "slippage", message: "Between 0.01% and 10%" });
   if (form.ratioBps < 1 || form.ratioBps > 10_000) out.push({ field: "ratio", message: "Between 0.01% and 100%" });
+  if (form.entryFilterPct < 0 || form.entryFilterPct > 50) out.push({ field: "entryFilter", message: "Between 0% (off) and 50%" });
   return out;
 }
