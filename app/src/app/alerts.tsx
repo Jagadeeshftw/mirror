@@ -10,6 +10,9 @@ import type { PushPayload } from "../lib/types";
 import { useNotificationHistory } from "../state/notifications";
 import { useSession } from "../state/session";
 import { useAlerts } from "../state/alerts";
+import { useShareLists } from "../state/share";
+import { useConfig } from "../state/data";
+import { suggestionSummary } from "../ui/suggestions";
 import { AppBar } from "../ui/chrome";
 import { Icon, type IconName } from "../ui/icons";
 import { Button, Card, Lbl, Note, Press, Row, Screen, Scroll, T } from "../ui/kit";
@@ -26,6 +29,7 @@ const LOOK: Record<PushPayload["kind"], { icon: IconName; tone: "ac" | "ng" | "w
   deposit: { icon: "arrdown", tone: "nu" },
   withdraw: { icon: "arrup", tone: "nu" },
   demo: { icon: "bell", tone: "ac" },
+  suggestion: { icon: "msg", tone: "ac" },
 };
 
 const DAY = 86400e3;
@@ -36,6 +40,18 @@ export default function Alerts() {
   const list = useNotificationHistory();
   const { account } = useSession();
   const alerts = useAlerts(account?.address);
+  const share = useShareLists();
+  const cfg = useConfig().data;
+  const openPosition = (a: string, perpId: number, side: string) => router.push({ pathname: "/position", params: { account: a, perp: String(perpId), side } });
+  const openAlert = (p: PushPayload) => {
+    if (p.kind !== "suggestion") return router.push({ pathname: "/feed", params: p.kind === "blocked" ? { filter: "blocked" } : {} });
+    const id = Number(String(p.eventId ?? "").split(":")[1]);
+    for (const l of share.byAccount.values()) {
+      const s = l.suggestions.find((x) => x.id === id);
+      if (s) return openPosition(l.account, s.perpId, s.side);
+    }
+    router.push("/positions");
+  };
   useEffect(() => {
     void drainInbox();
   }, []);
@@ -54,6 +70,31 @@ export default function Alerts() {
             <Button title="Turn on alerts" icon="bell" size="md" onPress={alerts.turnOn} testID="alerts.enable" />
           </Card>
         ) : null}
+        {share.pending.length ? (
+          <>
+            <Lbl style={{ paddingHorizontal: 4 }}>{`Suggestions · ${share.pending.length} new`}</Lbl>
+            <Card list testID="alerts.suggestions">
+              {share.pending.map((s) => {
+                const m = cfg?.markets.find((x) => x.perpId === s.perpId);
+                return (
+                  <Press key={s.id} testID={`alerts.suggestion.${s.id}`} onPress={() => openPosition(s.account, s.perpId, s.side)} style={{ flexDirection: "row", gap: 12, paddingVertical: 12, paddingHorizontal: 14, alignItems: "flex-start" }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: c.acs, alignItems: "center", justifyContent: "center" }}>
+                      <Icon name="msg" size={18} color={c.ac} />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                      <Row>
+                        <T size={13} w={600} style={{ flex: 1 }}>{`Suggested levels for ${m?.symbol ?? `#${s.perpId}`} ${s.side}`}</T>
+                        <T size={12} mono color="mu">{when(s.createdMs)}</T>
+                      </Row>
+                      <T size={13} color="mu" lines={2}>{`${suggestionSummary(s, m?.priceDecimals ?? 0)}${s.note ? ` · "${s.note}"` : ""}`}</T>
+                      <T size={12} w={600} color="ac">Review</T>
+                    </View>
+                  </Press>
+                );
+              })}
+            </Card>
+          </>
+        ) : null}
         {list.length ? (
           <>
             <Lbl style={{ paddingHorizontal: 4 }}>Received</Lbl>
@@ -64,7 +105,7 @@ export default function Alerts() {
                   <Press
                     key={`${p.account}-${p.eventId}-${p.timestamp}`}
                     testID={`alerts.item.${i}`}
-                    onPress={() => router.push({ pathname: "/feed", params: p.kind === "blocked" ? { filter: "blocked" } : {} })}
+                    onPress={() => openAlert(p)}
                     style={{ flexDirection: "row", gap: 12, paddingVertical: 12, paddingHorizontal: 14, alignItems: "flex-start" }}
                   >
                     <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: tones[look.tone][0], alignItems: "center", justifyContent: "center" }}>

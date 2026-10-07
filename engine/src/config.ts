@@ -178,6 +178,13 @@ const EnvSchema = z.object({
   PUSH_MAX_AGE_SEC: int(900),
   /** Low-equity alert when equity falls under this percentage of net deposits (0 turns it off). */
   PUSH_LOW_EQUITY_PCT: int(50),
+  /** Shared position links: suggestions per link per IP per hour (design: one), per link per hour, per IP per hour. */
+  SHARE_SUGGEST_LINK_IP_HOURLY: int(1),
+  SHARE_SUGGEST_LINK_HOURLY: int(10),
+  SHARE_SUGGEST_IP_HOURLY: int(20),
+  /** Open links per account and pending suggestions per link. */
+  SHARE_MAX_OPEN_LINKS: int(10),
+  SHARE_MAX_PENDING: int(20),
 });
 
 const MarketSchema = z.object({

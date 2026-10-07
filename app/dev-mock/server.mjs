@@ -48,6 +48,7 @@ import {
 import { SW, adversarialFor, backtest, copyQuality, engineEvent, enrich, setSwitches } from "./engine.mjs";
 import { rpcGetLogs, EQUITY_SELECTOR } from "./rpcLogs.mjs";
 import { makeStops, STRANGER } from "./stops.mjs";
+import { makeShare } from "./share.mjs";
 import { applyPolicyLeaders, leaderBlock, leaderBooks, seedMulti } from "./budgets.mjs";
 
 const PORT = Number(process.env.MOCK_PORT ?? 8787);
@@ -423,6 +424,25 @@ function pushFor(a, e) {
   broadcast(a.owner, "push", env);
   broadcast(a.account, "push", env);
 }
+
+const share = makeShare({
+  accounts, owners, chainId: CHAIN_ID, lc, cs, send: (...a) => send(...a), readBody: (r) => readBody(r), broadcast: (...a) => broadcast(...a),
+  pushTo: (a, payload) => {
+    const o = owners.get(lc(a.owner));
+    if (!o?.notifyPub) return;
+    const env = seal(base64.decode(o.notifyPub), new TextEncoder().encode(JSON.stringify(payload)));
+    broadcast(a.account, "push", env);
+  },
+  posInfo: (a, perpId) => {
+    const p = a?.positions.find((x) => x.perpId === Number(perpId));
+    if (!p) return null;
+    const mk = byPerp[p.perpId];
+    return {
+      side: p.side, entryPNS: p.entry.toString(), markPNS: markOf(p.perpId).toString(), symbol: mk?.symbol, lotDecimals: mk?.lotDecimals ?? 0, priceDecimals: mk?.priceDecimals ?? 0,
+      copiedFrom: "0x7a3f…c91e", card: { lotLNS: p.lots.toString(), depositCNS: marginOf(p).toString(), pnlCNS: upnl(p).toString() },
+    };
+  },
+});
 
 // live generator: keeps the feed moving for connected owners
 let liveTick = 0;
@@ -1111,6 +1131,7 @@ const server = http.createServer(async (req, res) => {
       if (lim) return send(res, lim.status, lim.body, lim.body.retryAfterSec ? { "Retry-After": String(lim.body.retryAfterSec) } : {});
       return send(res, 200, { cycleId: runDemo(p.endsWith("trade") ? "trade" : "blocked") });
     }
+    if ((p.startsWith("/v1/share") || p.endsWith("/share") || p === "/__mock/suggest" || p === "/__mock/link" || p === "/__mock/endlink") && (await share.route(req, res, p))) return;
     if (req.method === "GET" && p === "/v1/push/config") return send(res, 200, { webPush: null, expo: false, sse: true });
     if (req.method === "POST" && p === "/v1/push/register") {
       const b = await readBody(req);

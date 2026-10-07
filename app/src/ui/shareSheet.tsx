@@ -46,13 +46,13 @@ export function ShareSheet({ visible, onClose, targets }: { visible: boolean; on
   return <LaptopPanel onClose={onClose}>{body}</LaptopPanel>;
 }
 
-function LaptopPanel({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+export function LaptopPanel({ children, onClose, testID = "share.sheet" }: { children: React.ReactNode; onClose: () => void; testID?: string }) {
   const c = useColors();
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: c.scrim, alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <Pressable style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} onPress={onClose} testID="share.sheet.scrim" />
-        <View testID="share.sheet" style={{ width: 480, maxWidth: "100%", maxHeight: "94%", backgroundColor: c.sf, borderRadius: 24, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 20, borderWidth: 1, borderColor: c.bd }}>
+        <Pressable style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} onPress={onClose} testID={`${testID}.scrim`} />
+        <View testID={testID} style={{ width: 480, maxWidth: "100%", maxHeight: "94%", backgroundColor: c.sf, borderRadius: 24, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 20, borderWidth: 1, borderColor: c.bd }}>
           {children}
         </View>
       </View>

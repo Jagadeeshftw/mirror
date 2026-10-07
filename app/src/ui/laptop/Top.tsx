@@ -5,9 +5,12 @@ import { ScrollView, View, type StyleProp, type ViewStyle } from "react-native";
 import { BalanceChip } from "../chrome";
 import { Button, IconButton, T } from "../kit";
 import { useColors } from "../theme";
+import { useShareLists } from "../../state/share";
 
 export function LaptopTop({ title, sub, extra }: { title: string; sub?: string; extra?: React.ReactNode }) {
   const c = useColors();
+  // Pending suggestions on shared positions: a count on the bell, which then opens Alerts.
+  const pending = useShareLists().pending.length;
   return (
     <View testID="layout.laptop.topbar" style={{ height: 72, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 28, borderBottomWidth: 1, borderBottomColor: c.bd }}>
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -24,7 +27,12 @@ export function LaptopTop({ title, sub, extra }: { title: string; sub?: string; 
       <BalanceChip />
       <Button title="Add funds" icon="arrdown" kind="ton" size="sm" onPress={() => router.push("/funds")} testID="layout.laptop.addFunds" />
       <View style={{ borderWidth: 1, borderColor: c.bd, borderRadius: 999 }}>
-        <IconButton name="bell" onPress={() => router.push("/notifications")} testID="layout.laptop.alerts" />
+        <IconButton name="bell" onPress={() => router.push(pending ? "/alerts" : "/notifications")} testID="layout.laptop.alerts" />
+        {pending ? (
+          <View pointerEvents="none" testID="layout.laptop.alerts.badge" style={{ position: "absolute", top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: c.ac, alignItems: "center", justifyContent: "center" }}>
+            <T size={11} w={600} color="onAc">{String(pending)}</T>
+          </View>
+        ) : null}
       </View>
     </View>
   );

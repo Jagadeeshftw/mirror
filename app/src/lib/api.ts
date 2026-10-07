@@ -207,6 +207,13 @@ export const api = {
   pushRegister: (body: { owner: Address; notifyPublicKey: string; expoPushToken?: string; webPush?: WebPushSubscriptionJSON }) =>
     request<{ ok: boolean; channels?: string[] }>("POST", "/v1/push/register", body),
   pushUnregister: (body: { owner: Address; target: string }) => request<{ ok: boolean }>("POST", "/v1/push/unregister", body),
+  // Shared position links (docs/api.md "Shared positions").
+  shareCreate: (body: { account: Address; perpId: number; linkId: Hex; deadline: string; signature: Hex }) =>
+    request<{ linkId: Hex; urlId: string; status: string; perpId: number; side: string }>("POST", "/v1/share", body, 30000),
+  shareRevoke: (linkId: Hex, body: { deadline: string; signature: Hex }) => request<{ linkId: Hex; status: string }>("POST", `/v1/share/${linkId}/revoke`, body),
+  shareDecline: (id: number, body: { deadline: string; signature: Hex }) => request<{ id: number; status: string }>("POST", `/v1/share/suggestions/${id}/decline`, body),
+  shareAccepted: (id: number, txHash: string) => request<{ id: number; status: string; txHash: string }>("POST", `/v1/share/suggestions/${id}/accept`, { txHash }, 30000),
+  shareList: (account: Address, key: string) => request<{ pending: number; sealed: PushEnvelope }>("GET", `/v1/accounts/${account}/share${q({ key })}`),
 
   // App-side extension (documented in docs/app.md): private follow notes, sealed on device.
   putNote: (body: { owner: Address; account: Address; note: PushEnvelope }) => request<{ ok: boolean }>("PUT", "/v1/notes", body),

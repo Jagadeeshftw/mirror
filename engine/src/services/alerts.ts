@@ -1,7 +1,7 @@
 // Which account events become alerts, and their text. The text is sealed to the device's notification key before it
 // leaves the engine (pushcrypto.ts); push providers only ever see the generic "Mirror: new activity".
 
-export type AlertKind = 'copied' | 'closed' | 'blocked' | 'stop' | 'leader_stop' | 'low_equity' | 'deposit' | 'withdraw';
+export type AlertKind = 'copied' | 'closed' | 'blocked' | 'stop' | 'leader_stop' | 'low_equity' | 'deposit' | 'withdraw' | 'suggestion';
 
 /** The decrypted payload the app shows (app/src/lib/types.ts PushPayload). */
 export interface AlertPayload {

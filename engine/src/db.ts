@@ -239,6 +239,46 @@ CREATE TABLE IF NOT EXISTS push_subs (
 );
 CREATE INDEX IF NOT EXISTS push_subs_owner ON push_subs (owner);
 
+-- Shared position links (owner-signed ShareLink; services/share.ts). status: open | revoked | closed (the position
+-- closed or flipped). Nothing about the friends who open them is stored.
+CREATE TABLE IF NOT EXISTS share_links (
+  link_id TEXT PRIMARY KEY,           -- bytes32, lowercase hex
+  account TEXT NOT NULL,              -- lowercase
+  owner TEXT NOT NULL,                -- lowercase, the signer
+  perp_id INTEGER NOT NULL,
+  side INTEGER NOT NULL,              -- side of the position when shared
+  status TEXT NOT NULL DEFAULT 'open',
+  deadline INTEGER NOT NULL,
+  signature TEXT NOT NULL,
+  created_ms INTEGER NOT NULL,
+  created_block INTEGER,
+  ended_ms INTEGER,
+  ended_reason TEXT                   -- revoked | position_closed | side_flipped
+);
+CREATE INDEX IF NOT EXISTS share_links_account ON share_links(account, status);
+
+-- Levels suggested through a link. status: pending | accepted | declined | expired (the link ended first).
+CREATE TABLE IF NOT EXISTS share_suggestions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  link_id TEXT NOT NULL,
+  account TEXT NOT NULL,
+  perp_id INTEGER NOT NULL,
+  side INTEGER NOT NULL,
+  stop_loss_pns TEXT,                 -- null: not suggested (the current level stays)
+  take_profit_pns TEXT,
+  prev_stop_loss_pns TEXT NOT NULL,   -- the onchain level when suggested
+  prev_take_profit_pns TEXT NOT NULL,
+  entry_pns TEXT NOT NULL,
+  mark_pns TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_ms INTEGER NOT NULL,
+  decided_ms INTEGER,
+  tx_hash TEXT                        -- accepted: the owner's setLevels transaction
+);
+CREATE INDEX IF NOT EXISTS share_suggestions_link ON share_suggestions(link_id, id);
+CREATE INDEX IF NOT EXISTS share_suggestions_account ON share_suggestions(account, id);
+
 CREATE TABLE IF NOT EXISTS nansen_cache (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,

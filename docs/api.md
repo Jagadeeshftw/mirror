@@ -174,6 +174,33 @@ because Monad charges the gas limit), and returns `{txHash, status, block, gasUs
 
 Limits: one cycle at a time globally, at most N per IP per hour, global daily cap.
 
+## Shared positions and suggested levels
+
+The owner shares one open position as a link (`https://mirror.0xo.in/p/<urlId>`). Anyone with the link sees a
+read-only card and may suggest a stop-loss and/or take-profit with a short note. No login, no friend list, no chat;
+nothing about the friend is stored (rate limits are in memory). The owner decides in the app: **Accept** is their own
+`setLevels` (`ACTION_SET_LEVELS`, one passkey prompt, relayed as usual); the engine only records which transaction
+carried it. Links are revocable and close for good when the position closes or flips side.
+
+Owner signatures are EIP-712 in the account's domain `{name: "Mirror Account", version: "1", chainId,
+verifyingContract: account}`, checked against the account's onchain `owner()`, deadline at most 3600 s ahead:
+`ShareLink(uint32 perpId,bytes32 linkId,uint256 deadline)`, `ShareRevoke(bytes32 linkId,uint256 deadline)`,
+`ShareDecline(uint256 suggestionId,uint256 deadline)`. `linkId` is 32 random bytes made by the app; `urlId` is its
+43-character base64url form. Every `:id` below accepts either.
+
+| Method | Path | Effect |
+|---|---|---|
+| POST | `/v1/share` | `{account, perpId, linkId, deadline, signature}` (ShareLink) → `{linkId, urlId, status: "open", perpId, side}`. The account must hold a position in `perpId`; its side is recorded. Errors 400 `weak_link_id` / `expired` / `deadline_too_far` / `bad_signature`, 401 `not_owner`, 404 `unknown_account`, 409 `link_exists` / `no_position`, 429 `too_many_links` (`SHARE_MAX_OPEN_LINKS`, 10 open per account). 60 per IP per hour |
+| GET | `/v1/share/:id` | the friend's card. Open: `{status: "open", perpId, symbol, side, sharedBy (short owner address, the only owner detail), copiedFrom (short leader address or null), lotLNS, entryPNS, markPNS, depositCNS, pnlCNS, stopLossPNS, takeProfitPNS ("0" = none), lotDecimals, priceDecimals, block}`. Ended: `{status: "revoked" \| "closed", endedReason: "revoked" \| "position_closed" \| "side_flipped", symbol, side, sharedBy}` and no numbers. The position is re-read on every call, so a closed position closes the link here too. 404 `unknown_link` |
+| POST | `/v1/share/:id/suggest` | `{stopLossPNS?, takeProfitPNS?, note?}` (integer prices as strings; omitted = keep the current level) → `{id, status: "pending", stopLossPNS, takeProfitPNS, prevStopLossPNS, prevTakeProfitPNS, note}`. Checked like the contract checks a level for the position's side, merged with the current level: a long's stop below its take-profit, a short's above (400 `level_order`); plus a level already reached at the mark (400 `level_reached`, it would fire at once), a price more than 10x from the mark (400 `level_far`), neither given (400 `level_empty`), not a positive uint64 (400 `bad_level`). `field` names the offending input. The note is plain text: control, zero-width and bidi characters and `<` `>` removed, whitespace collapsed, at most 140 characters, no links (400 `bad_note`). 410 `revoked` / `closed`. Limits (counted only for a valid suggestion): one per link per IP per hour (`SHARE_SUGGEST_LINK_IP_HOURLY`), 10 per link per hour, 20 per IP per hour, 20 pending per link (429). Sends the owner an encrypted alert (`kind: suggestion`) and a content-free `share` event on the account's stream |
+| GET | `/v1/accounts/:account/share?key=<notifyPublicKey>` | the owner's links and suggestions, sealed (envelope v1, as alerts) to `key`, which must be a notification key registered for the account's owner (`/v1/push/register`; 403 `unknown_key`). → `{pending, sealed}`; `sealed` opens to `{v: 1, account, links: [{linkId, urlId, perpId, side, status, createdMs, endedMs, endedReason}], suggestions: [{id, linkId, perpId, side, stopLossPNS, takeProfitPNS (null = not suggested), prevStopLossPNS, prevTakeProfitPNS, entryPNS, markPNS, note, status: pending \| accepted \| declined \| expired, createdMs, decidedMs, txHash}]}` (last 50 links, 100 suggestions). Like alerts, the owner's device opens it with the key from the passkey's notify PRF namespace; the server answers no one in clear |
+| POST | `/v1/share/:id/revoke` | `{deadline, signature}` (ShareRevoke) → `{linkId, status: "revoked"}`; pending suggestions expire. Idempotent |
+| POST | `/v1/share/suggestions/:sid/decline` | `{deadline, signature}` (ShareDecline) → `{id, status: "declined"}`. 409 when already accepted or expired |
+| POST | `/v1/share/suggestions/:sid/accept` | `{txHash}` → `{id, status: "accepted", txHash}`. No signature: the transaction is the proof. It must have succeeded and carry the account's `LevelSet` for the link's market and side with every suggested level (404 `unknown_tx`, 409 `tx_reverted` / `levels_mismatch`) |
+
+Links also close when the account's feed shows a close (`Mirrored` close, `StopTriggered`, `MarketClosed`,
+`ClosedAll`) and on a sweep every minute; pending suggestions of an ended link become `expired`.
+
 ## Push
 
 | Method | Path | Body |
@@ -189,10 +216,11 @@ and its numbers, e.g. "leader 10.0x, your max 5.0x"); a `Blocked` for `DailyLoss
 who triggered it: you, Mirror's keeper, or another address); `LeaderStopped`; `Deposited` / `Withdrawn`; low equity
 (equity under `PUSH_LOW_EQUITY_PCT`% of net deposits, once per account per UTC day). Events older than
 `PUSH_MAX_AGE_SEC` (900) are never alerted, so a backfill sends no history. Each event is alerted once (deduped by
-account + feed id) and at most `PUSH_RATE_PER_MIN` (20) alerts per owner per minute.
+account + feed id) and at most `PUSH_RATE_PER_MIN` (20) alerts per owner per minute. A new suggestion on a shared
+position link alerts too (`kind: suggestion`, `eventId: suggestion:<id>`, see "Shared positions").
 
 **Payload.** The alert JSON `{v: 1, kind, title, body, account, eventId, txHash, timestamp}` (`kind`: `copied`,
-`closed`, `blocked`, `stop`, `leader_stop`, `low_equity`, `deposit`, `withdraw`) is sealed to each registered
+`closed`, `blocked`, `stop`, `leader_stop`, `low_equity`, `deposit`, `withdraw`, `suggestion`) is sealed to each registered
 `notifyPublicKey` as envelope v1 `{v: 1, epk, nonce, ct}` (standard base64): ephemeral X25519 → HKDF-SHA256(salt =
 `epk || recipientPub`, info `mirror.v1.push.chacha20poly1305`) → ChaCha20-Poly1305 (AAD `mirror.v1`, tag appended).
 Test vector shared by the engine and app tests: `shared/test-vectors/push-envelope-v1.json`.

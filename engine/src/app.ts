@@ -30,6 +30,8 @@ import { CopyQualityService } from './services/quality.js';
 import { AdversarialService } from './services/adversarial.js';
 import { BacktestService } from './services/backtest.js';
 import { EquityService } from './services/equity.js';
+import { RateLimitError } from './services/ratelimit.js';
+import { startShareService, type ShareService } from './services/share-wire.js';
 
 export interface Engine {
   cfg: Config;
@@ -60,6 +62,7 @@ export interface Engine {
   adversarial: AdversarialService;
   backtest: BacktestService;
   equity: EquityService;
+  share: ShareService;
   balances: Map<string, bigint>;
   depositCap?: bigint;
   startedMs: number;
@@ -198,6 +201,11 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     keepers: () => [...senders.keys()],
   }, log.child({ mod: 'push' }));
   equity.onRecord = (a, eq, net) => push.onEquity(a, eq, net);
+  const hit = (key: string, max: number, windowMs: number, scope: string) => {
+    const r = limiter.hit(key, max, windowMs);
+    if (!r.ok) throw new RateLimitError(scope, r.resetAt);
+  };
+  const share = startShareService({ db, client, reads, market, bus, push, chainId: cfg.chainId, head: () => streams.head, hit, env });
 
   const balances = new Map<string, bigint>();
   let balanceTimer: NodeJS.Timeout | undefined;
@@ -215,7 +223,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
 
   const engine: Engine = {
     cfg, db, client, streams, reads, market, bus, limiter, fees, keepers, relayerSender, registry, watcher, copier, tracker, relayer, quote, demo,
-    leaders, views, push, nansen, stops, guard, quality, adversarial, backtest, equity, balances, startedMs: Date.now(),
+    leaders, views, push, nansen, stops, guard, quality, adversarial, backtest, equity, share, balances, startedMs: Date.now(),
     async start() {
       const id = await client.getChainId();
       if (id !== cfg.chainId) throw new Error(`RPC chain id ${id} != configured ${cfg.chainId}`);
@@ -231,6 +239,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
         engine.depositCap = await client.readContract({ address: cfg.factory, abi: mirrorAccountFactoryAbi, functionName: 'depositCap' }).catch(() => undefined);
       }
       push.start();
+      share.watch();
       if (registry) equity.start(() => registry.all().filter((a) => a.perplAccountId !== 0).map((a) => a.address));
       await refreshBalances();
       balanceTimer = setInterval(() => void refreshBalances(), 30_000);
@@ -255,6 +264,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     },
     async stop() {
       clearInterval(balanceTimer);
+      share.unwatch();
       equity.stop();
       streams.stop();
       market.stop();

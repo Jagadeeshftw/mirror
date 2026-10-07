@@ -25,6 +25,7 @@ import { stopsFlows } from "./e2e-web/flows-stops.mjs";
 import { budgetsFlows } from "./e2e-web/flows-budgets.mjs";
 import { startSite } from "./e2e-web/share-card.mjs";
 import { alertsFlows } from "./e2e-web/flows-alerts.mjs";
+import { shareFlows } from "./e2e-web/flows-share.mjs";
 import { startPushSink, subscriptionKeys, vapidKeys } from "./e2e-web/push-sink.mjs";
 
 const ENGINE_PORT = Number(process.env.E2E_ENGINE_PORT ?? 8807);
@@ -136,7 +137,7 @@ try {
   R.pageErrors = () => dev.consoleLog.filter((l) => l.startsWith("pageerror"));
   const ctx = { R, api, WEB, API, env, engineCtl, browser, dev, page: dev.page, state: R.state, site, push, RUN };
   const only = process.env.E2E_FLOWS ? process.env.E2E_FLOWS.split(",") : null;
-  for (const flows of [phoneFlows, followFlows, alertsFlows, stopsFlows, budgetsFlows, exitFlows]) {
+  for (const flows of [phoneFlows, followFlows, alertsFlows, stopsFlows, shareFlows, budgetsFlows, exitFlows]) {
     if (only && !only.includes(flows.name)) continue;
     try { await flows(ctx); } catch (e) { if (e.bail) break; await R.check(`${flows.name} completed`, dev.page, async () => { throw e; }); }
   }

@@ -15,6 +15,8 @@ import { decodePolicyLeaders } from '../domain/encode.js';
 import { ACTION } from '../domain/types.js';
 import { applyDetach, DetachError } from '../services/detach.js';
 import { mirrorAccountAbi } from '../abi/MirrorAccount.js';
+import { registerShareRoutes } from './share-routes.js';
+import { ShareError } from '../services/share-rules.js';
 
 const json = (v: unknown) => JSON.stringify(v, (_k, x) => (typeof x === 'bigint' ? x.toString() : x));
 
@@ -38,6 +40,7 @@ export function buildServer(e: Engine, log: Logger) {
     if (err instanceof RateLimitError) return reply.status(429).header('retry-after', Math.ceil((err.resetAt - Date.now()) / 1000)).send({ error: err.message, resetAt: err.resetAt });
     if (err instanceof RelayError || err instanceof DemoError) return reply.status(err.status).send({ error: err.message, ...(err instanceof RelayError && err.details ? { details: err.details } : {}) });
     if (err instanceof DetachError) return reply.status(err.status).send({ error: err.message, code: err.code });
+    if (err instanceof ShareError) return reply.status(err.status).send({ error: err.message, code: err.code, ...((err as ShareError & { field?: string }).field ? { field: (err as ShareError & { field?: string }).field } : {}) });
     if (err instanceof SimulationError) return reply.status(400).send({ error: err.message, revert: err.revert.name });
     if (err instanceof CircuitOpenError) return reply.status(503).send({ error: 'relayer temporarily unavailable' });
     if (err instanceof SendError) return reply.status(502).send({ error: 'transaction submission failed', kind: err.kind });
@@ -166,6 +169,8 @@ export function buildServer(e: Engine, log: Logger) {
       { account, detached: b.detached, deadline: BigInt(b.deadline), signature: b.signature as `0x${string}` },
     );
   });
+
+  registerShareRoutes(app as never, e, addrParam, limit);
 
   app.get('/v1/stats', async (req) => {
     const q = z.object({ page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(200).default(50) }).parse(req.query);

@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import Svg, { Circle, Line, Rect, Text as SvgText } from "react-native-svg";
 import { txUrl } from "../lib/chain";
-import { ausdSigned, pctSigned, price as fmtPrice, toBig } from "../lib/format";
+import { ausdSigned, pctSigned, price as fmtPrice, timeHM, toBig } from "../lib/format";
 import { movePct, pnlAtCNS } from "../lib/levels";
 import type { AppConfig, FeedEvent, MarketConfig, Position, PositionLevel } from "../lib/types";
 import { Icon } from "./icons";
@@ -93,7 +93,7 @@ function LevelRow({ kind, p, lv, m, testID }: { kind: "sl" | "tp"; p: Position; 
 }
 
 /** Stop-loss and take-profit rows, and where they live: "Onchain · anyone can execute when hit · signed by you". */
-export function LevelsCard({ p, lv, m, cfg, setEvent, testID = "position.levels" }: { p: Position; lv: PositionLevel | null; m: MarketConfig | undefined; cfg: AppConfig | undefined; setEvent?: FeedEvent | null; testID?: string }) {
+export function LevelsCard({ p, lv, m, cfg, setEvent, acceptedFromSuggestion, testID = "position.levels" }: { p: Position; lv: PositionLevel | null; m: MarketConfig | undefined; cfg: AppConfig | undefined; setEvent?: FeedEvent | null; acceptedFromSuggestion?: boolean; testID?: string }) {
   const c = useColors();
   return (
     <View testID={testID} style={{ backgroundColor: c.sf, borderRadius: 16, borderWidth: 1, borderColor: c.bd, paddingHorizontal: 14 }}>
@@ -104,7 +104,9 @@ export function LevelsCard({ p, lv, m, cfg, setEvent, testID = "position.levels"
       <Row gap={8} style={{ paddingVertical: 12 }}>
         <Icon name="shield" size={14} color={c.ac} />
         <T size={12} color="mu" style={{ flex: 1 }} testID={`${testID}.onchain`}>
-          {lv ? `Onchain · anyone can execute when hit · signed by you${lv.slippageBps ? ` · slippage ${lv.slippageBps / 100}%` : ""}` : "No levels yet. Levels are stored in your account contract and anyone can execute them when hit."}
+          {lv && acceptedFromSuggestion
+            ? `Onchain${setEvent?.timestamp ? ` since ${timeHM(setEvent.timestamp)}` : ""} · suggested by a friend, accepted by you`
+            : lv ? `Onchain · anyone can execute when hit · signed by you${lv.slippageBps ? ` · slippage ${lv.slippageBps / 100}%` : ""}` : "No levels yet. Levels are stored in your account contract and anyone can execute them when hit."}
         </T>
         {setEvent?.txHash ? <TxLink hash={setEvent.txHash} onPress={() => Linking.openURL(txUrl(cfg, setEvent.txHash!))} testID={`${testID}.tx`} /> : null}
       </Row>

@@ -62,6 +62,9 @@ export function LiveProvider({ children }: { children: React.ReactNode }) {
               applyCommit(qc, acct, JSON.parse(m.data));
             } else if (m.event === "push") {
               void presentEncrypted(JSON.parse(m.data) as PushEnvelope);
+            } else if (m.event === "share") {
+              // A link or suggestion changed: re-read the sealed owner list.
+              void qc.invalidateQueries({ queryKey: ["share", acct] });
             } else if (m.event === "hello") {
               setConnected(true);
             }

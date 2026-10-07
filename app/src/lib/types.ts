@@ -436,7 +436,7 @@ export interface PushEnvelope {
 /** Decrypted alert (engine: engine/src/services/alerts.ts AlertPayload). */
 export interface PushPayload {
   v?: 1;
-  kind: "copied" | "blocked" | "closed" | "stop" | "leader_stop" | "low_equity" | "expiry" | "deposit" | "withdraw" | "demo";
+  kind: "copied" | "blocked" | "closed" | "stop" | "leader_stop" | "low_equity" | "expiry" | "deposit" | "withdraw" | "demo" | "suggestion";
   title: string;
   body: string;
   account?: Address;

@@ -7,11 +7,15 @@ import { View } from "react-native";
 import { ausd, ausdSigned, leverage, lots, pctSigned, price as fmtPrice, shortAddr, toBig } from "../lib/format";
 import { haltedPerps, levelFor } from "../lib/levels";
 import type { AppConfig, FeedEvent, MarketConfig, MirrorAccount, Position } from "../lib/types";
+import { acceptedFor, openLinkFor, pendingFor, type ShareLinkInfo, type Suggestion } from "../lib/shareLink";
 import { useFeedAll } from "../state/data";
+import { useShareActions, useShareList } from "../state/share";
+import { PositionShareSheet } from "./positionShare";
+import { SuggestionReviewSheet, SuggestionsCard } from "./suggestions";
 import { useOwnerAction } from "../state/ownerAction";
 import { CopyDetailSheet } from "./copyDetail";
 import { Icon, type IconName } from "./icons";
-import { Button, MarketBadge, Press, Row, Side, T } from "./kit";
+import { Button, MarketBadge, Note, Press, Row, Side, T } from "./kit";
 import { LevelChart, LevelsCard } from "./levelCard";
 import { ClosePositionDialog, EditLevelsSheet, HaltNotice } from "./levelEdit";
 import { followerChoices, ShareSheet } from "./shareSheet";
@@ -66,6 +70,11 @@ export function PositionBody({ account, p, cfg, laptop }: { account: MirrorAccou
   const [stopping, setStopping] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [proof, setProof] = useState<FeedEvent | null>(null);
+  const [review, setReview] = useState<Suggestion | null>(null);
+  const [linkSheet, setLinkSheet] = useState<ShareLinkInfo | null>(null);
+  const [acceptedNote, setAcceptedNote] = useState<string | null>(null);
+  const shareList = useShareList(account.account);
+  const shareActs = useShareActions();
   const m = cfg?.markets.find((x) => x.perpId === p.perpId);
   const lv = levelFor(account.levels, p);
   const leaderId = p.leaderAccountId || account.leader?.accountId || 0;
@@ -75,6 +84,15 @@ export function PositionBody({ account, p, cfg, laptop }: { account: MirrorAccou
   const lastCopy = mine.find((e) => e.kind === "Mirrored" && (e.orderType ?? 0) <= 1) ?? null;
   const halted = haltedPerps(account).includes(p.perpId);
   const budget = account.policy?.leaders.find((l) => l.accountId === leaderId)?.budgetCNS;
+  const pending = pendingFor(shareList, p);
+  const accepted = acceptedFor(shareList, p, setEvent?.txHash);
+  // "Share position": the open link for this position, or a new one (one passkey signature).
+  const sharePosition = async () => {
+    const open = openLinkFor(shareList, p);
+    if (open) return setLinkSheet(open);
+    const r = await shareActs.create(account, p.perpId);
+    if (r) setLinkSheet({ linkId: r.linkId, urlId: r.urlId, perpId: p.perpId, side: p.side, status: "open", createdMs: Date.now(), endedMs: null, endedReason: null });
+  };
   const grid = (
     <View style={{ flexDirection: "row", gap: 6, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, backgroundColor: c.sf2 }}>
       {[["Entry", fmtPrice(p.entryPNS, m?.priceDecimals ?? 0)], ["Mark", fmtPrice(p.markPNS, m?.priceDecimals ?? 0)], ["Liq.", p.liqPNS !== "0" ? fmtPrice(p.liqPNS, m?.priceDecimals ?? 0) : "—"], ["Margin", ausd(p.marginCNS)]].map(([k, v]) => (
@@ -93,11 +111,14 @@ export function PositionBody({ account, p, cfg, laptop }: { account: MirrorAccou
         {grid}
       </View>
       {halted ? <HaltNotice symbols={[m?.symbol ?? `#${p.perpId}`]} busy={act.busy === "resume"} onResume={() => act.resumeMarkets(account)} testID="position.halted" /> : null}
-      <LevelsCard p={p} lv={lv} m={m} cfg={cfg} setEvent={setEvent} />
+      <LevelsCard p={p} lv={lv} m={m} cfg={cfg} setEvent={setEvent} acceptedFromSuggestion={!!accepted} />
+      {acceptedNote ? <Note tone="ac" icon="check" testID="position.suggestion.accepted">{acceptedNote}</Note> : null}
+      <SuggestionsCard items={pending} m={m} onReview={setReview} />
       <Row gap={10}>
         <Button title="Edit levels" icon="edit" kind="ton" size="md" flex onPress={() => setEdit(true)} testID="position.editLevels" />
-        <Button title="Share" icon="share" kind="out" size="md" flex onPress={() => setSharing(true)} testID="position.share" />
+        <Button title={shareActs.busy === "create" ? "Sharing…" : "Share position"} icon="share" kind="out" size="md" flex disabled={shareActs.busy === "create"} onPress={sharePosition} testID="position.share" />
       </Row>
+      {shareActs.error ? <T size={12} color="neg" testID="position.share.error">{shareActs.error}</T> : null}
       {laptop ? (
         <Row gap={10}>
           <Button title="Close position" kind="dngO" size="md" flex onPress={() => setClosing(true)} testID="position.close" />
@@ -118,6 +139,8 @@ export function PositionBody({ account, p, cfg, laptop }: { account: MirrorAccou
       <ClosePositionDialog visible={closing} onClose={() => setClosing(false)} account={account} p={p} m={m} act={act} />
       <StopFollowSheet visible={stopping} onClose={() => setStopping(false)} account={account} leaderId={leaderId} leaderAddress={leaderAddr} cfg={cfg} act={act} />
       <ShareSheet visible={sharing} onClose={() => setSharing(false)} targets={followerChoices([account])} />
+      <PositionShareSheet link={linkSheet} account={account} p={p} m={m} onClose={() => setLinkSheet(null)} onCard={() => { setLinkSheet(null); setSharing(true); }} />
+      <SuggestionReviewSheet s={review} account={account} p={p} m={m} act={act} onClose={() => setReview(null)} onAccepted={(t) => setAcceptedNote(t)} />
       <CopyDetailSheet e={proof} cfg={cfg} policy={account.policy} onClose={() => setProof(null)} />
     </View>
   );
