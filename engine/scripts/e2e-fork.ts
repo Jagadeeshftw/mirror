@@ -9,9 +9,11 @@
  *   - a second leader's copy into the demo leader's market is Blocked(MarketHeldByOtherLeader)
  *   - a leader reduction is closed down to exactly that leader's target (engine == contract targetLots)
  *   - an owner take-profit level is executed by a stranger (the stop executor) once the mark reaches it
+ *   - Perpl builder attribution: a copied open's proof.builderFeeCNS > 0 and equals Perpl's TakerOrderFilledV2
+ *     builderFeeCNS for builder 26 in the same tx; a copied close pays none; /v1/config and /v1/stats show it
  *   - team-run exclusion in /v1/stats.
  *
- *   pnpm e2e:fork            (needs anvil + forge on PATH; uses port 8545 and E2E_API_PORT, default 8787)
+ *   pnpm e2e:fork            (needs anvil + forge on PATH; uses E2E_ANVIL_PORT, default 8545, and E2E_API_PORT, default 8787)
  */
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, createWriteStream, writeFileSync } from 'node:fs';
@@ -20,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createPublicClient,
   createWalletClient,
+  decodeEventLog,
   defineChain,
   getAddress,
   http,
@@ -40,7 +43,8 @@ import { ACTION, CLOSE_LONG, OPEN_LONG, type MirrorOrder, type Policy } from '..
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const repo = join(root, '..');
 const work = join(root, '.e2e');
-const RPC = 'http://127.0.0.1:8545';
+const ANVIL_PORT = Number(process.env.E2E_ANVIL_PORT ?? 8545);
+const RPC = `http://127.0.0.1:${ANVIL_PORT}`;
 const API_PORT = Number(process.env.E2E_API_PORT ?? 8787);
 const API = `http://127.0.0.1:${API_PORT}`;
 const EXCHANGE = getAddress('0x34B6552d57a35a1D042CcAe1951BD1C370112a6F');
@@ -48,6 +52,9 @@ const AUSD = getAddress('0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a');
 const PERPL_OWNER = getAddress('0xd0a0205e9188998E0bE7F2600a715aD3CD289Cb1');
 const PRICE_ADMIN = getAddress('0x53d5c4f9a2f32f0c27671340d8af93384ea93881');
 const BTC = 1;
+/** Deploy.s.sol defaults: BUILDER_ID 26, BUILDER_FEE_PER_100K 20 (0.02%). */
+const BUILDER_ID = Number(process.env.BUILDER_ID ?? 26);
+const BUILDER_FEE_PER_100K = Number(process.env.BUILDER_FEE_PER_100K ?? 20);
 
 // anvil default keys (test only)
 const K = {
@@ -119,9 +126,9 @@ function portBusy(port: number) {
 }
 
 async function startAnvil() {
-  if (portBusy(8545)) throw new Error('port 8545 is busy; stop the other anvil first');
+  if (portBusy(ANVIL_PORT)) throw new Error(`port ${ANVIL_PORT} is busy; stop the other anvil first or set E2E_ANVIL_PORT`);
   const log = createWriteStream(join(work, 'anvil.log'));
-  const p = spawn('anvil', ['--fork-url', process.env.FORK_URL ?? 'https://rpc.monad.xyz', '--chain-id', '143', '--port', '8545', '--block-time', '1', '--disable-code-size-limit', '--silent'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const p = spawn('anvil', ['--fork-url', process.env.FORK_URL ?? 'https://rpc.monad.xyz', '--chain-id', '143', '--port', String(ANVIL_PORT), '--block-time', '1', '--disable-code-size-limit', '--silent'], { stdio: ['ignore', 'pipe', 'pipe'] });
   p.stdout?.pipe(log);
   p.stderr?.pipe(log);
   children.push(p);
@@ -172,7 +179,7 @@ function deploy(): { factory: Address; keeperRegistry: Address; block: number } 
     ['script', 'script/Deploy.s.sol', '--rpc-url', RPC, '--private-key', K.deployer, '--broadcast', '--disable-code-size-limit'],
     {
       cwd: join(repo, 'contracts'),
-      env: { ...process.env, WRITE_DEPLOYMENT: 'true', KEEPERS: `${A.keeperA.address},${A.keeperB.address}`, FOUNDRY_BROADCAST: join(work, 'broadcast') },
+      env: { ...process.env, BUILDER_ID: String(BUILDER_ID), BUILDER_FEE_PER_100K: String(BUILDER_FEE_PER_100K), WRITE_DEPLOYMENT: 'true', KEEPERS: `${A.keeperA.address},${A.keeperB.address}`, FOUNDRY_BROADCAST: join(work, 'broadcast') },
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       maxBuffer: 64 * 1024 * 1024,
@@ -324,6 +331,27 @@ const apiPolicy = (p: Policy) => ({
   markets: p.markets.map((m) => ({ ...m, maxNotionalCNS: m.maxNotionalCNS.toString() })),
 });
 
+/** Builder fees Perpl charged to `builderId` in a tx (TakerOrderFilledV2 carries no indexed account or perp). */
+async function perplBuilderFees(txHash: Hex, builderId: number) {
+  const r = await pub.getTransactionReceipt({ hash: txHash });
+  let total = 0n;
+  let fills = 0;
+  for (const l of r.logs) {
+    if (getAddress(l.address) !== EXCHANGE) continue;
+    try {
+      const ev = decodeEventLog({ abi: perplExchangeAbi, data: l.data, topics: l.topics });
+      if (ev.eventName !== 'TakerOrderFilledV2') continue;
+      const a = ev.args as { builderId: bigint; builderFeeCNS: bigint };
+      if (a.builderId !== BigInt(builderId)) continue;
+      total += a.builderFeeCNS;
+      fills += 1;
+    } catch {
+      /* not an Exchange event we know */
+    }
+  }
+  return { total, fills };
+}
+
 async function feedItem(account: Address, pred: (f: any) => boolean, what: string, timeoutMs = 60_000) {
   return waitFor(what, async () => (await api('GET', `/v1/accounts/${account}/feed?limit=200`)).items.find(pred), timeoutMs, 500);
 }
@@ -335,6 +363,12 @@ async function main() {
   const markTimer = await keepMarksFresh();
 
   const { factory, keeperRegistry, block } = deploy();
+  const impl = await pub.readContract({ address: factory, abi: mirrorAccountFactoryAbi, functionName: 'implementation' });
+  const [bId, bFee] = await Promise.all([
+    pub.readContract({ address: impl, abi: mirrorAccountAbi, functionName: 'BUILDER_ID' }),
+    pub.readContract({ address: impl, abi: mirrorAccountAbi, functionName: 'BUILDER_FEE_PER_100K' }),
+  ]);
+  check('MirrorAccount deployed with the builder attribution (BUILDER_ID / BUILDER_FEE_PER_100K)', Number(bId) === BUILDER_ID && Number(bFee) === BUILDER_FEE_PER_100K, { builderId: bId, feePer100K: bFee });
   const code = await pub.getCode({ address: await pub.readContract({ address: factory, abi: mirrorAccountFactoryAbi, functionName: 'implementation' }) });
   check('MirrorAccount implementation deployed above EIP-170 (anvil --disable-code-size-limit)', (code?.length ?? 0) / 2 - 1 > 24_576, { bytes: (code?.length ?? 0) / 2 - 1 });
 
@@ -350,7 +384,7 @@ async function main() {
   await startEngine({
     NETWORK: 'localFork',
     RPC_URL: RPC,
-    WS_RPC_URL: 'ws://127.0.0.1:8545',
+    WS_RPC_URL: `ws://127.0.0.1:${ANVIL_PORT}`,
     LOG_SUBSCRIPTION: 'auto',
     FACTORY_ADDRESS: factory,
     KEEPER_REGISTRY_ADDRESS: keeperRegistry,
@@ -374,6 +408,8 @@ async function main() {
     LOG_LEVEL: 'info',
   });
   const stopStream = watchDemoStream();
+  const cfgRes = await api('GET', '/v1/config');
+  check('/v1/config shows the builder (id, fee, opening size only)', cfgRes.builder?.id === BUILDER_ID && cfgRes.builder?.feePer100K === BUILDER_FEE_PER_100K && cfgRes.builder?.appliesTo === 'opening size only', cfgRes.builder);
 
   // 1. Create the follower account through the relayer (plus one non-team user account for the stats check).
   const created = await api('POST', '/v1/relay/create', { owner: A.follower.address, salt: '0' });
@@ -411,6 +447,7 @@ async function main() {
     maxEntryDeviationBps: 5,
     stopSlippageBps: 200,
     flattenOnStop: true,
+    maxBuilderFeePer100K: BUILDER_FEE_PER_100K,
     leaders: [
       { accountId: leaderId, ratioBps: 5_000, budgetCNS: 5_000_000n, lossStopBps: 5_000 },
       { accountId: leader2Id, ratioBps: 10_000, budgetCNS: 5_000_000n, lossStopBps: 0 },
@@ -421,6 +458,7 @@ async function main() {
   const quote = await api('POST', '/v1/quote/follow', { owner: A.follower.address, leaderAccountId: live.id, policy: apiPolicy(policy) });
   const q0 = quote.quotes[0];
   say('quote', { live, ratio, simulation: quote.simulation, q0 });
+  check('quote returns the builder fee (id, fee per 100k, estimate)', quote.builderFee?.id === BUILDER_ID && quote.builderFee?.feePer100K === BUILDER_FEE_PER_100K && typeof quote.builderFee?.estimateCNS === 'string' && typeof q0?.builderFeeCNS === 'string', { builderFee: quote.builderFee, line: q0?.builderFeeCNS });
   check('quote predicts EntryTooFar for the live leader, with the entry bound', q0?.wouldBlock?.reason === 'EntryTooFar' && q0.entryBoundPNS !== null && quote.matchOrders.length === 0, { wouldBlock: q0?.wouldBlock, leaderEntry: q0?.leaderEntryPNS, entryBound: q0?.entryBoundPNS, price: q0?.pricePNS, mark: q0?.markPNS });
 
   // Send the predicted-blocked order anyway so the rule hit is recorded onchain.
@@ -450,6 +488,10 @@ async function main() {
   const p = copyOpen.proof;
   check('copy proof in Mirrored: leader fill, leader entry, mark, follower fill, deviation', p && p.leaderFillPNS !== '0' && p.leaderEntryPNS !== '0' && p.markPNS !== '0' && p.fillPNS !== '0' && typeof p.entryDeviationBps === 'number', p);
   check('Mirrored event for the copied close', copyClose.orderTypeName === 'CloseLong' && copyClose.data.lotsAfter === '0', { tx: copyClose.txHash, lots: copyClose.lotLNS, latencyMs: copyClose.latencyMs, proof: copyClose.proof });
+  const openFee = await perplBuilderFees(copyOpen.txHash, BUILDER_ID);
+  check('copied open: proof.builderFeeCNS > 0 and equals Perpl TakerOrderFilledV2.builderFeeCNS for the builder in the same tx', BigInt(p.builderFeeCNS ?? 0) > 0n && openFee.fills >= 1 && BigInt(p.builderFeeCNS) === openFee.total, { tx: copyOpen.txHash, proofFee: p.builderFeeCNS, perplFee: openFee.total, perplFills: openFee.fills, builderId: BUILDER_ID });
+  const closeFee = await perplBuilderFees(copyClose.txHash, BUILDER_ID);
+  check('copied close: proof.builderFeeCNS 0 and no builder fee charged by Perpl', copyClose.proof?.builderFeeCNS === '0' && closeFee.total === 0n, { tx: copyClose.txHash, proofFee: copyClose.proof?.builderFeeCNS, perplFee: closeFee.total, perplFills: closeFee.fills });
 
   // 5. Demo blocked: leader opens at 10x > follower max 3x; the copy is blocked onchain with its own tx.
   const blocked = await runCycle('blocked');
@@ -515,6 +557,9 @@ async function main() {
   await sleep(2_000);
   const stats = await api('GET', '/v1/stats');
   check('stats exclude team-run', stats.excludesTeamRun === true && stats.accountsCreated === 1 && stats.fundedAccounts === 0 && stats.copiesExecuted === 0 && stats.copiesBlocked === 0 && stats.stopsTriggered === 0, { accountsCreated: stats.accountsCreated, copiesExecuted: stats.copiesExecuted });
+  check('builder fees: none counted for users, team-run fees shown separately', stats.builderFeesCNS === '0' && BigInt(stats.teamRun.builderFeesCNS) >= BigInt(p.builderFeeCNS), { users: stats.builderFeesCNS, teamRun: stats.teamRun.builderFeesCNS });
+  const acct = await api('GET', `/v1/accounts/${account}`);
+  check('account view: builderFeesCNS and policy.maxBuilderFeePer100K', BigInt(acct.builderFeesCNS) >= BigInt(p.builderFeeCNS) && acct.policy?.maxBuilderFeePer100K === BUILDER_FEE_PER_100K, { builderFeesCNS: acct.builderFeesCNS, max: acct.policy?.maxBuilderFeePer100K });
   check('team-run section lists demo copies, blocks and stops', stats.teamRun.accounts.includes(account.toLowerCase()) && stats.teamRun.copiesExecuted >= 3 && stats.teamRun.copiesBlockedPerRule.LeverageTooHigh >= 1 && stats.teamRun.copiesBlockedPerRule.MarketHeldByOtherLeader >= 1 && stats.teamRun.copiesBlockedPerRule.EntryTooFar >= 1 && stats.teamRun.stopsTriggered >= 1 && stats.teamRun.medianLatencyMs > 0, {
     copiesExecuted: stats.teamRun.copiesExecuted,
     blocked: stats.teamRun.copiesBlockedPerRule,

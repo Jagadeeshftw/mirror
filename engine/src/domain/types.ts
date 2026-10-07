@@ -34,6 +34,7 @@ export const BLOCK_REASONS = [
   'LeaderLossStop',
   'MarketHalted',
   'CloseBelowTarget',
+  'BuilderFeeTooHigh',
 ] as const;
 export type BlockReason = (typeof BLOCK_REASONS)[number];
 
@@ -93,6 +94,8 @@ export interface Policy {
   stopSlippageBps: number;
   /** Lets anyone flatten once an account or leader loss stop is hit. */
   flattenOnStop: boolean;
+  /** Highest builder fee (per 100,000 of opening notional) the owner accepts, 0..1000. */
+  maxBuilderFeePer100K: number;
   leaders: LeaderRule[];
   markets: MarketRule[];
 }

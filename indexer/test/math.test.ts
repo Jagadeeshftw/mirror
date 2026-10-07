@@ -81,7 +81,8 @@ describe("constants and env", () => {
     expect(blockReason(18)).toBe("LeaderLossStop");
     expect(blockReason(19)).toBe("MarketHalted");
     expect(blockReason(20)).toBe("CloseBelowTarget");
-    expect(blockReason(21)).toBe("Unknown");
+    expect(blockReason(21)).toBe("BuilderFeeTooHigh");
+    expect(blockReason(22)).toBe("Unknown");
   });
 
   it("decodes StopKind in Solidity order", () => {

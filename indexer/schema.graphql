@@ -69,6 +69,7 @@ enum BlockReason {
   LeaderLossStop
   MarketHalted
   CloseBelowTarget
+  BuilderFeeTooHigh
   Unknown
 }
 
@@ -300,6 +301,8 @@ type LeaderStats {
   copiesExecuted: Int!
   copiesBlocked: Int!
   copiedNotionalCNS: BigInt!
+  "Builder fees (CopyEvent.builderFeeCNS) paid by non-team-run followers on copies of this leader."
+  builderFeesCNS: BigInt!
   "Realized PnL of followers attributed to this leader (FIFO)."
   followerPnlCNS: BigInt!
   "Times a non-team-run follower's per-leader loss stop fired for this leader (LeaderStopped)."
@@ -421,6 +424,8 @@ type MirrorAccount {
   stopSlippageBps: Int!
   "Anyone may flatten the account (or a leader's positions) once a loss stop is hit."
   flattenOnStop: Boolean!
+  "Highest builder fee per 100,000 of opening notional the owner accepts; opening copies are blocked (BuilderFeeTooHigh) when the account's fixed fee is above it."
+  maxBuilderFeePer100K: Int!
   leaderAccountIds: [BigInt!]!
   leaderRatiosBps: [Int!]!
   "Per leader, same order as leaderAccountIds: most margin the leader's positions may hold."
@@ -439,6 +444,8 @@ type MirrorAccount {
   copiesBlocked: Int!
   matchNowCopies: Int!
   copiedNotionalCNS: BigInt!
+  "Sum of CopyEvent.builderFeeCNS over this account's copies (keeper copies and match-now)."
+  builderFeesCNS: BigInt!
   closeAllCount: Int!
   marketCloseCount: Int!
   stopsTriggered: Int!
@@ -593,6 +600,10 @@ type CopyEvent {
   proofFillPNS: BigInt!
   "CopyProof.entryDeviationBps: proofFillPNS vs leaderEntryPNS, positive = follower worse (opens only)."
   entryDeviationBps: Int!
+  "CopyProof.builderFeeCNS: builder fee the MirrorAccount computed for this copy (added lots x fill x rate, rounded up; 0 for closes)."
+  builderFeeCNS: BigInt!
+  "Exact builder fee from Perpl's TakerOrderFilledV2 for Mirror's builder id in this tx (the fills right before this Mirrored log). Null when no such fill was indexed (closes, or pre-builder copies)."
+  builderFeePerplCNS: BigInt
   "Follower fill price used for quality stats: the proof for opens, the follower's own Perpl event in this tx for closes."
   followerFillPNS: BigInt
   followerFillSource: FollowerFillSource!
@@ -609,7 +620,7 @@ type CopyEvent {
 
   blockNumber: Int!
   timestamp: Int! @index
-  txHash: String!
+  txHash: String! @index
   logIndex: Int!
 }
 
@@ -641,6 +652,28 @@ type BlockedCopy {
   blockNumber: Int!
   timestamp: Int! @index
   txHash: String!
+  logIndex: Int!
+}
+
+"""
+A Perpl TakerOrderFilledV2 attributed to Mirror's builder id (ENVIO_MIRROR_BUILDER_ID, default 26). The event
+carries no account or perp, so it is linked to the copy by transaction: the first Mirrored log after it in the
+same tx (Perpl fills inside execOrderV2 before the MirrorAccount emits Mirrored).
+"""
+type BuilderFeeFill {
+  "<txHash>-<logIndex>"
+  id: ID!
+  builderId: BigInt!
+  builderFeeCNS: BigInt!
+  "Perpl taker fee on the fill."
+  feeCNS: BigInt!
+  lotLNS: BigInt!
+  entryPricePNS: BigInt!
+  "The copy this fill was attributed to (null until a Mirrored log in the same tx claims it)."
+  copy: CopyEvent
+  blockNumber: Int!
+  timestamp: Int! @index
+  txHash: String! @index
   logIndex: Int!
 }
 
@@ -714,6 +747,8 @@ type GlobalStats {
   copiesBlocked: Int!
   matchNowCopies: Int!
   copiedNotionalCNS: BigInt!
+  "Sum of CopyEvent.builderFeeCNS (scope follows the follower's teamRun flag, like copiesExecuted)."
+  builderFeesCNS: BigInt!
   followerRealizedPnlCNS: BigInt!
   closeAllCount: Int!
   policyUpdates: Int!
@@ -740,6 +775,8 @@ type TeamRunStats {
   copiesBlocked: Int!
   matchNowCopies: Int!
   copiedNotionalCNS: BigInt!
+  "Sum of CopyEvent.builderFeeCNS (scope follows the follower's teamRun flag, like copiesExecuted)."
+  builderFeesCNS: BigInt!
   followerRealizedPnlCNS: BigInt!
   closeAllCount: Int!
   policyUpdates: Int!
@@ -773,6 +810,8 @@ type DailyStats {
   copiesBlocked: Int!
   matchNowCopies: Int!
   copiedNotionalCNS: BigInt!
+  "Sum of CopyEvent.builderFeeCNS for copies that day."
+  builderFeesCNS: BigInt!
   depositsCNS: BigInt!
   withdrawalsCNS: BigInt!
   perplTrades: Int!
@@ -804,6 +843,8 @@ type CopyQualityStats {
   opens: Int!
   closes: Int!
   copiedNotionalCNS: BigInt!
+  "Sum of CopyEvent.builderFeeCNS over the copies in this row (keeper copies and match-now)."
+  builderFeesCNS: BigInt!
   blocked: Int!
   "Copies with a deviation sample (filled keeper copies with a leader fill price)."
   deviationSamples: Int!

@@ -93,6 +93,8 @@ query CopyProofs($limit: Int! = 50, $offset: Int! = 0) {
     entryDeviationBps
     latencyBlocks
     latencySeconds
+    builderFeeCNS
+    builderFeePerplCNS
     leaderBlock
     leaderTimestamp
     blockNumber
@@ -111,6 +113,7 @@ fragment QualityFields on CopyQualityStats {
   opens
   closes
   copiedNotionalCNS
+  builderFeesCNS
   blocked
   deviationSamples
   deviationSamplesActual

@@ -89,6 +89,7 @@ query LeaderProfile($id: String!, $sinceDay: Int!, $trades: Int! = 50) {
       copiesExecuted
       copiesBlocked
       copiedNotionalCNS
+      builderFeesCNS
       followerPnlCNS
     }
     windows(order_by: { days: asc }) {
@@ -163,6 +164,7 @@ query OwnerAccounts($owner: String!) {
     maxSlippageBps
     dailyLossBps
     drawdownBps
+    maxBuilderFeePer100K
     leaderAccountIds
     leaderRatiosBps
     marketIds
@@ -175,6 +177,7 @@ query OwnerAccounts($owner: String!) {
     copiesExecuted
     copiesBlocked
     matchNowCopies
+    builderFeesCNS
     lastCopyAt
     perplAccount {
       accountId
@@ -262,6 +265,7 @@ query Stats($sinceDay: Int!, $activeSince: Int!, $copiesOffset: Int! = 0) {
     copiesBlocked
     matchNowCopies
     copiedNotionalCNS
+    builderFeesCNS
     followerRealizedPnlCNS
     closeAllCount
     policyUpdates
@@ -276,6 +280,7 @@ query Stats($sinceDay: Int!, $activeSince: Int!, $copiesOffset: Int! = 0) {
     copiesExecuted
     copiesBlocked
     netDepositsCNS
+    builderFeesCNS
   }
   BlockReasonCount(where: { scope: { _eq: "global" } }, order_by: { count: desc }) {
     reason
@@ -289,6 +294,7 @@ query Stats($sinceDay: Int!, $activeSince: Int!, $copiesOffset: Int! = 0) {
     copiesBlocked
     matchNowCopies
     copiedNotionalCNS
+    builderFeesCNS
     depositsCNS
     withdrawalsCNS
     perplTrades
@@ -310,6 +316,8 @@ query Stats($sinceDay: Int!, $activeSince: Int!, $copiesOffset: Int! = 0) {
     filledLotsLNS
     fillPricePNS
     notionalCNS
+    builderFeeCNS
+    builderFeePerplCNS
     isMatchNow
     txHash
     timestamp

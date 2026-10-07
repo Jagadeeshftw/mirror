@@ -56,7 +56,7 @@ describe('stop conditions (contract formulas)', () => {
 function follower(over: Partial<FollowerInfo> = {}): FollowerInfo {
   return {
     address: ACCOUNT, owner: ACCOUNT, perplAccountId: 42, paused: false, expiry: 0, maxLeverageHdths: 300, maxSlippageBps: 80, dailyLossBps: 0, drawdownBps: 0,
-    maxEntryDeviationBps: 0, stopSlippageBps: 100, flattenOnStop: false, leaders: new Map(), markets: new Map([[1, 1n]]), halted: new Set(),
+    maxEntryDeviationBps: 0, stopSlippageBps: 100, flattenOnStop: false, maxBuilderFeePer100K: 20, leaders: new Map(), markets: new Map([[1, 1n]]), halted: new Set(),
     levels: new Map([[1, { perpId: 1, side: LONG, stopLossPNS: 0n, takeProfitPNS: 1_100n, slippageBps: 100 }]]), teamRun: false, ...over,
   };
 }

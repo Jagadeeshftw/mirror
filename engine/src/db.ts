@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   max_entry_deviation_bps INTEGER,
   stop_slippage_bps INTEGER,
   flatten_on_stop INTEGER NOT NULL DEFAULT 0,
+  max_builder_fee_per_100k INTEGER,
   paused INTEGER NOT NULL DEFAULT 0,
   net_deposits TEXT NOT NULL DEFAULT '0',
   funded_block INTEGER,
@@ -94,6 +95,7 @@ CREATE TABLE IF NOT EXISTS feed (
   amount TEXT,
   latency_ms INTEGER,
   data TEXT,
+  builder_fee_cns TEXT,                -- Mirrored: CopyProof.builderFeeCNS (0 for closes)
   UNIQUE (tx_hash, log_index)
 );
 CREATE INDEX IF NOT EXISTS feed_account ON feed(account, id);
@@ -226,6 +228,8 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, decl: string]> = 
   ['account_leaders', 'stopped', 'INTEGER NOT NULL DEFAULT 0'],
   ['account_markets', 'halted', 'INTEGER NOT NULL DEFAULT 0'],
   ['leader_fills', 'price', 'TEXT'],
+  ['accounts', 'max_builder_fee_per_100k', 'INTEGER'],
+  ['feed', 'builder_fee_cns', 'TEXT'],
 ];
 
 export type Row = Record<string, SQLInputValue>;

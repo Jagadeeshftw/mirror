@@ -46,6 +46,10 @@ export interface BtParams {
   /** Follower fill = leader price moved this far against the follower (bps, may be fractional). */
   slippageBps: number;
   takerFeeBps: number;
+  /** MirrorAccount.BUILDER_FEE_PER_100K charged on opening fills (0 / undefined = none). */
+  builderFeePer100K?: number;
+  /** Owner's signed max builder fee; opening copies are blocked (BuilderFeeTooHigh) below the fee. Defaults to the fee. */
+  maxBuilderFeePer100K?: number;
   /** The keeper's slippage safety margin (SLIPPAGE_SAFETY_BPS). */
   safetyBps: number;
   startTs: number;
@@ -71,6 +75,8 @@ export interface BtResult {
   pnlCNS: string;
   pnlPct: number;
   feesCNS: string;
+  /** Builder fees on opening fills (also included in feesCNS). */
+  builderFeesCNS: string;
   maxDrawdownCNS: string;
   maxDrawdownBps: number;
   tradesCopied: number;

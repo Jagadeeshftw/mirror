@@ -59,6 +59,7 @@ export function runBacktest(events: BtEvent[], markets: BtMarket[], p: BtParams)
     pnlCNS: pnl.toString(),
     pnlPct: p.depositCNS > 0n ? Number((pnl * 1_000_000n) / p.depositCNS) / 10_000 : 0,
     feesCNS: r.totals().fees.toString(),
+    builderFeesCNS: r.totals().builderFees.toString(),
     maxDrawdownCNS: dd.cns.toString(),
     maxDrawdownBps: dd.bps,
     tradesCopied: r.copied,
@@ -80,6 +81,9 @@ export function backtestAssumptions(p: BtParams, slippageSource: string): string
     "Every leader position event is replayed in chain order; the follower copies it with the same rules the MirrorAccount contract applies (ratio target, max leverage, slippage bound, entry filter, per-market max notional, leader budget, leader loss stop, daily loss and drawdown stops).",
     `Each copy fills at the leader's own fill price moved ${p.slippageBps} bps against the follower (${slippageSource}), never past the order's limit price.`,
     `A taker fee of ${p.takerFeeBps} bps of notional is charged on every fill, opens and closes. Funding payments are ignored.`,
+    p.builderFeePer100K
+      ? `Mirror's Perpl builder fee of ${p.builderFeePer100K} per 100,000 (${(p.builderFeePer100K / 1_000).toFixed(3)}%) of the added notional is charged on every opening fill, rounded up as onchain; closes never pay it.`
+      : 'No builder fee is charged (the deployment has no builder attribution).',
     "The leader's fill price is used as the mark price at that moment; open positions are valued at the last known price of each market.",
     'Copies are assumed to always find liquidity at that price (no thin-book shrinking or skipping, no partial fills).',
     'Leader events whose size or price is unknown (positions opened before the indexed history) are skipped, and markets outside your policy are not copied.',

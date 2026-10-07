@@ -7,10 +7,10 @@ import type { Dist } from '../domain/quality.js';
  */
 
 const QUALITY_FIELDS = `copies matchNowCopies opens closes blocked deviationSamples avgDeviationBps medianDeviationBps p90DeviationBps
-  worseThanLeader latencySamples medianLatencyBlocks p90LatencyBlocks medianLatencySeconds p90LatencySeconds`;
+  worseThanLeader latencySamples medianLatencyBlocks p90LatencyBlocks medianLatencySeconds p90LatencySeconds builderFeesCNS`;
 
 const COPY_FIELDS = `txHash mirrorAccount_id leaderAccountId perpId orderType lotLNS filledLotsLNS leaderRef leaderFillReportedPNS
-  leaderFillActualPNS followerFillPNS deviationBps latencyBlocks latencySeconds blockNumber timestamp isMatchNow excludedFromStats`;
+  leaderFillActualPNS followerFillPNS deviationBps latencyBlocks latencySeconds blockNumber timestamp isMatchNow excludedFromStats builderFeeCNS builderFeePerplCNS`;
 
 export const ALL_QUERY = `query MirrorCopyQualityAll($statsWhere: CopyQualityStats_bool_exp!, $teamWhere: CopyQualityStats_bool_exp!,
   $blockWhere: BlockReasonStats_bool_exp!, $teamBlockWhere: BlockReasonStats_bool_exp!, $copyWhere: CopyEvent_bool_exp!,
@@ -48,6 +48,7 @@ export interface IdxStats {
   p90LatencyBlocks: N;
   medianLatencySeconds: N;
   p90LatencySeconds: N;
+  builderFeesCNS?: N;
 }
 
 export interface IdxCopy {
@@ -69,6 +70,9 @@ export interface IdxCopy {
   timestamp: N;
   isMatchNow: boolean;
   excludedFromStats: boolean;
+  /** MirrorAccount's computed fee (CopyProof) and Perpl's exact TakerOrderFilledV2 figure for the builder. */
+  builderFeeCNS?: N;
+  builderFeePerplCNS?: N;
 }
 
 export interface IdxBlock {
@@ -94,5 +98,6 @@ export function indexerAggregate(s: IdxStats | undefined, latencyMs: Dist) {
     latencyMs,
     latencyBlocks: { samples: z(s?.latencySamples), median: n(s?.medianLatencyBlocks), p90: n(s?.p90LatencyBlocks) },
     latencySeconds: { samples: z(s?.latencySamples), median: n(s?.medianLatencySeconds), p90: n(s?.p90LatencySeconds) },
+    builderFeesCNS: s?.builderFeesCNS === null || s?.builderFeesCNS === undefined ? '0' : String(s.builderFeesCNS),
   };
 }

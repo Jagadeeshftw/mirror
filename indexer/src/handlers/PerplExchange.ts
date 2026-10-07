@@ -5,8 +5,9 @@
 import { indexer } from "envio";
 
 import { MARKETS } from "../lib/constants.js";
+import { mirrorBuilderId } from "../lib/env.js";
 import { applyPositionChange } from "../lib/positions.js";
-import { checksum, ensureAccount, loadMarket, metaOf, type Ctx, type Meta } from "../lib/store.js";
+import { checksum, ensureAccount, eventId, loadMarket, metaOf, type Ctx, type Meta } from "../lib/store.js";
 
 // ---------------------------------------------------------------------------------------------
 // Accounts and collateral
@@ -289,6 +290,41 @@ indexer.onEvent({ contract: "PerplExchange", event: "PositionCollateralDecreased
     entryResidueQ16: 0n,
     depositCNS: p.endDepositCNS,
     updatedAt: event.block.timestamp,
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Builder fees
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Taker fills attributed to Mirror's builder id. The event has no account or perp, so the fill is linked
+ * by transaction: the Mirrored handler claims the unclaimed fills logged before it in the same tx (the
+ * normal order, since Perpl fills inside execOrderV2 before Mirrored is emitted). Fallback, should a
+ * Mirrored log ever be processed first: attach the fill to the nearest later copy in the same tx.
+ */
+indexer.onEvent({ contract: "PerplExchange", event: "TakerOrderFilledV2" }, async ({ event, context }) => {
+  const p = event.params;
+  if (p.builderId !== mirrorBuilderId()) return;
+  const m = metaOf(event);
+  const later = (await context.CopyEvent.getWhere({ txHash: { _eq: m.txHash } }))
+    .filter((c) => c.logIndex > m.logIndex)
+    .sort((a, b) => a.logIndex - b.logIndex)[0];
+  if (later) {
+    context.CopyEvent.set({ ...later, builderFeePerplCNS: (later.builderFeePerplCNS ?? 0n) + p.builderFeeCNS });
+  }
+  context.BuilderFeeFill.set({
+    id: eventId(m),
+    builderId: p.builderId,
+    builderFeeCNS: p.builderFeeCNS,
+    feeCNS: p.feeCNS,
+    lotLNS: p.lotLNS,
+    entryPricePNS: p.entryPricePNS,
+    copy_id: later?.id,
+    blockNumber: m.block,
+    timestamp: m.timestamp,
+    txHash: m.txHash,
+    logIndex: m.logIndex,
   });
 });
 

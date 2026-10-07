@@ -7,6 +7,12 @@ export const COLLATERAL_DECIMALS = 6;
 /** keccak256("MIRROR_MATCH_NOW"): MirrorAccount.MATCH_NOW_REF, marks owner match-now orders. */
 export const MATCH_NOW_REF = "0xba0016f6adaf21b42d77802a90dc5029b55fb1e05349c9553b7e1c7ed60e7d12";
 
+/**
+ * Perpl builder id MirrorAccount opening orders carry (MirrorAccount.BUILDER_ID). Perpl TakerOrderFilledV2
+ * fills with this builder id are attached to copies. ENVIO_MIRROR_BUILDER_ID overrides it (see env.ts).
+ */
+export const MIRROR_BUILDER_ID = 26n;
+
 /** Leader id used for follower lots that no Mirrored event attributed (owner/manual trades). */
 export const UNATTRIBUTED_LEADER = "0";
 
@@ -53,6 +59,7 @@ export const BLOCK_REASONS: readonly Enum<"BlockReason">[] = [
   "LeaderLossStop",
   "MarketHalted",
   "CloseBelowTarget",
+  "BuilderFeeTooHigh",
 ];
 
 export function blockReason(code: number): Enum<"BlockReason"> {

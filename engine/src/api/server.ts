@@ -76,7 +76,7 @@ export function buildServer(e: Engine, log: Logger) {
   });
 
   app.get('/v1/config', async () => {
-    const views = await e.market.views();
+    const [views, builder] = await Promise.all([e.market.views(), e.reads.builder().catch(() => undefined)]);
     return {
       chainId: e.cfg.chainId,
       rpc: e.cfg.env.PUBLIC_RPC_URL ?? e.cfg.rpcUrl,
@@ -85,6 +85,8 @@ export function buildServer(e: Engine, log: Logger) {
       contracts: { factory: e.cfg.factory ?? null, keeperRegistry: e.cfg.keeperRegistry ?? null, perplExchange: e.cfg.exchange, collateral: e.cfg.collateral, deployBlock: e.cfg.deployBlock ?? null },
       collateralDecimals: e.cfg.collateralDecimals,
       depositCapCNS: e.depositCap?.toString() ?? null,
+      // Perpl builder attribution fixed at deployment; only orders that add exposure carry it.
+      builder: builder ? { id: builder.id, feePer100K: builder.feePer100K, appliesTo: 'opening size only' } : null,
       perplMinAccountOpenCNS: e.market.minAccountOpenCNS ?? e.cfg.minAccountOpenCNS.toString(),
       keepers: e.keepers?.addresses ?? [],
       relayer: e.relayerSender?.address ?? null,

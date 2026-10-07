@@ -2,6 +2,7 @@ import type { Address, PublicClient } from 'viem';
 import { perplExchangeAbi } from '../abi/PerplExchange.js';
 import { mirrorAccountAbi } from '../abi/MirrorAccount.js';
 import { authTokenAbi } from '../abi/erc20.js';
+import { mirrorAccountFactoryAbi } from '../abi/MirrorAccountFactory.js';
 import type { Level, Side } from '../domain/types.js';
 
 export interface PerplPosition {
@@ -27,6 +28,7 @@ export interface AccountState {
   maxEntryDeviationBps: number;
   stopSlippageBps: number;
   flattenOnStop: boolean;
+  maxBuilderFeePer100K: number;
   leaders: { accountId: number; ratioBps: number; budgetCNS: bigint; lossStopBps: number }[];
   markets: { perpId: number; allowed: boolean; halted: boolean; lotDecimals: number; priceDecimals: number; maxNotionalCNS: bigint }[];
   equity: bigint;
@@ -45,6 +47,12 @@ export interface LeaderBook {
   stopped: boolean;
 }
 
+/** Contract-wide Perpl builder attribution (MirrorAccount.BUILDER_ID / BUILDER_FEE_PER_100K immutables). */
+export interface BuilderInfo {
+  id: number;
+  feePer100K: number;
+}
+
 export interface OraclePrice {
   oraclePNS: bigint;
   /** Same freshness rule as MirrorAccount._trustedMark. */
@@ -56,7 +64,34 @@ export class Reads {
     readonly client: PublicClient,
     readonly exchange: Address,
     readonly collateral: Address,
+    /** Mirror factory: its builder immutables equal every account's (shared implementation). */
+    public factory?: Address,
   ) {}
+
+  private builderCache: Promise<BuilderInfo> | undefined;
+
+  /**
+   * The builder id and fee every account is deployed with. Immutable, so read once: from the factory when known,
+   * else from `account` (any clone returns the implementation's immutables). No source: no attribution.
+   */
+  builder(account?: Address): Promise<BuilderInfo> {
+    if (this.builderCache) return this.builderCache;
+    let p: Promise<BuilderInfo>;
+    if (this.factory) {
+      const c = { address: this.factory, abi: mirrorAccountFactoryAbi } as const;
+      p = Promise.all([this.client.readContract({ ...c, functionName: 'builderId' }), this.client.readContract({ ...c, functionName: 'builderFeePer100K' })])
+        .then(([id, fee]) => ({ id: Number(id), feePer100K: Number(fee) }));
+    } else if (account) {
+      const c = { address: account, abi: mirrorAccountAbi } as const;
+      p = Promise.all([this.client.readContract({ ...c, functionName: 'BUILDER_ID' }), this.client.readContract({ ...c, functionName: 'BUILDER_FEE_PER_100K' })])
+        .then(([id, fee]) => ({ id: Number(id), feePer100K: Number(fee) }));
+    } else {
+      return Promise.resolve({ id: 0, feePer100K: 0 });
+    }
+    this.builderCache = p;
+    p.catch(() => { if (this.builderCache === p) this.builderCache = undefined; });
+    return p;
+  }
 
   async position(perpId: number, accountId: number): Promise<PerplPosition> {
     const [p, mark, valid] = await this.client.readContract({
@@ -102,7 +137,7 @@ export class Reads {
   async account(address: Address): Promise<AccountState> {
     const c = { address, abi: mirrorAccountAbi } as const;
     const r = this.client;
-    const [owner, perplAccountId, paused, expiry, maxLev, maxSlip, dailyLoss, drawdown, maxEntryDev, stopSlip, flatten, leaders, marketIds, equity, riskDay, dayStart, hwm, netDeposits, actionNonce, idle] =
+    const [owner, perplAccountId, paused, expiry, maxLev, maxSlip, dailyLoss, drawdown, maxEntryDev, stopSlip, flatten, maxBuilderFee, leaders, marketIds, equity, riskDay, dayStart, hwm, netDeposits, actionNonce, idle] =
       await Promise.all([
         r.readContract({ ...c, functionName: 'owner' }),
         r.readContract({ ...c, functionName: 'perplAccountId' }),
@@ -115,6 +150,7 @@ export class Reads {
         r.readContract({ ...c, functionName: 'maxEntryDeviationBps' }),
         r.readContract({ ...c, functionName: 'stopSlippageBps' }),
         r.readContract({ ...c, functionName: 'flattenOnStop' }),
+        r.readContract({ ...c, functionName: 'maxBuilderFeePer100K' }),
         r.readContract({ ...c, functionName: 'leaders' }),
         r.readContract({ ...c, functionName: 'marketIds' }),
         r.readContract({ ...c, functionName: 'equity' }),
@@ -144,6 +180,7 @@ export class Reads {
       maxEntryDeviationBps: maxEntryDev,
       stopSlippageBps: stopSlip,
       flattenOnStop: flatten,
+      maxBuilderFeePer100K: Number(maxBuilderFee),
       leaders: leaders.map((l) => ({ accountId: Number(l.accountId), ratioBps: Number(l.ratioBps), budgetCNS: l.budgetCNS, lossStopBps: Number(l.lossStopBps) })),
       markets,
       equity,

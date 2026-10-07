@@ -29,7 +29,7 @@ One abstraction over three sources, picked at start (`LOG_SUBSCRIPTION=auto`):
 Backfills from `MIRROR_DEPLOY_BLOCK` in 100-block chunks, then catches up on every head. One topic-only
 filter covers `AccountCreated` (accepted only from the factory) and the MirrorAccount events (accepted only
 from known clones), so a clone created in the same chunk is known before its first event. It stores
-accounts, policy (including `maxEntryDeviationBps`, `stopSlippageBps`, `flattenOnStop`), leaders (ratio, budget,
+accounts, policy (including `maxEntryDeviationBps`, `stopSlippageBps`, `flattenOnStop`, `maxBuilderFeePer100K`), leaders (ratio, budget,
 loss stop, stopped), markets (halted), owner levels and the feed (Mirrored with its copy proof, Blocked,
 Deposited, Withdrawn, PolicyUpdated, Paused, ClosedAll, LevelSet, StopTriggered, LeaderStopped, MarketClosed) in
 SQLite, with a persisted cursor so restarts resume. New columns are added to an existing database on open.
@@ -76,15 +76,29 @@ reason is still named. Outcomes:
 - Returns false (blocked): an opening copy is still submitted once per leader fill, so the rule hit is
   recorded onchain, when the reason is in `BLOCKED_SUBMIT_REASONS` (risk rules: leverage, slippage,
   notional, target, account loss stops, stale mark, `EntryTooFar`, `MarketHeldByOtherLeader`,
-  `LeaderBudgetExceeded`, `LeaderLossStop`; a submitted `LeaderLossStop` also latches `leaderStopped`).
+  `LeaderBudgetExceeded`, `LeaderLossStop`, `BuilderFeeTooHigh`; a submitted `LeaderLossStop` also latches `leaderStopped`).
   Paused/expired/market-or-leader-not-allowed/`MarketHalted` are the user's own settings and are not submitted
   on every leader fill. Blocked closes are not submitted.
 - Simulation reverts (e.g. `NothingToClose`): skipped and logged.
 
 **Copy proof.** Every `Mirrored` event carries `CopyProof {leaderFillPNS, leaderEntryPNS, markPNS, fillPNS,
-entryDeviationBps}` (follower fill derived onchain from the position before and after; deviation positive when
-the follower paid worse than the leader's entry). The registry stores it in the feed row and the API returns it
-as `proof` on Mirrored items. `Blocked` carries `leaderFillPNS` and `markPNS` (in `data`).
+entryDeviationBps, builderFeeCNS}` (follower fill derived onchain from the position before and after; deviation
+positive when the follower paid worse than the leader's entry; `builderFeeCNS` = the builder fee Perpl charged on
+the added lots, notional at the fill x `BUILDER_FEE_PER_100K` / 100,000 rounded up, 0 for closes). The registry
+stores it in the feed row (and `builder_fee_cns` for the totals) and the API returns it as `proof` on Mirrored
+items.
+
+**Builder attribution.** Every MirrorAccount is deployed with immutables `BUILDER_ID` (26) and
+`BUILDER_FEE_PER_100K` (20 = 0.02%), passed to `MirrorAccountFactory`. Opening orders (keeper copies and owner
+match now) go through Perpl's `execOrderV2` with the builder extension; every reducing path uses `execOrder` and
+never pays a builder fee. The owner signs `Policy.maxBuilderFeePer100K` (0..1000); an opening copy whose fee is
+above it is `Blocked(BuilderFeeTooHigh)` (index 21, limit = signed max, actual = fee), checked right after
+`LeaderLossStop` and before `LeverageTooLow`, and the planner's `classifyOpen` replays it in the same place. The
+engine reads the builder id and fee once (`Reads.builder()`: the factory's `builderId` / `builderFeePer100K`, else
+any account's immutables) and caches them. `BuilderFeeTooHigh` is in the default `BLOCKED_SUBMIT_REASONS`, so the
+rule hit is recorded onchain. Revenue is readable from chain data: `/v1/stats` and `/v1/stats/copy-quality` sum
+`proof.builderFeeCNS` (team-run separately), and the indexer also records Perpl's exact
+`TakerOrderFilledV2.builderFeeCNS` for builder 26. `Blocked` carries `leaderFillPNS` and `markPNS` (in `data`).
 
 Dedupe key: `account:leaderTx:perp:orderType` (unique in `copies`), so duplicate log deliveries never
 double-submit. Receipt logs go straight into the feed, so the SSE stream and the demo do not wait for the
@@ -152,7 +166,9 @@ recomputed at most once a minute:
 - Per copy: leader fill, follower fill, deviation (bps, positive = follower worse), latency in ms (engine clock,
   leader log first seen at Proposed to copy receipt; joined by tx hash in indexer mode) and in blocks.
   Aggregates: copies, match-now copies, opens, closes, blocked, deviation median / p90 / avg / worse-than-leader,
-  latency ms and blocks median / p90 (nearest rank, keeper copies only), blocks by reason. Team-run copies (team-run
+  latency ms and blocks median / p90 (nearest rank, keeper copies only), blocks by reason, `builderFeesCNS` (sum of
+the builder fee on every copy in scope, keeper and match now; indexer `CopyQualityStats.builderFeesCNS`, per copy
+Perpl's exact `builderFeePerplCNS` when linked, else the proof's). Team-run copies (team-run
   follower or demo leader) are only in the separate `teamRun` block.
 
 ### Backtest (`domain/backtest*.ts`, `services/backtest.ts`)
@@ -165,8 +181,10 @@ close-to-target, opens at the leader's order leverage, entry-guard limit), then 
 (the off-chain replay of the contract checks, including budget, leader loss stop with its latch, daily loss and
 drawdown with the contract's day-start / high-water bookkeeping, halted markets after a level). Fills are the
 leader's price moved against the follower by the leader's measured median copy deviation (≥ 3 samples, floored at
-0) or `BACKTEST_DEFAULT_SLIPPAGE_BPS` (5), never past the limit; taker fee `BACKTEST_TAKER_FEE_BPS` (3.5); funding
-ignored. Optional stop-loss / take-profit percentages from the follower's entry behave like owner levels (close and
+0) or `BACKTEST_DEFAULT_SLIPPAGE_BPS` (5), never past the limit; taker fee `BACKTEST_TAKER_FEE_BPS` (3.5); the
+builder fee (`BUILDER_FEE_PER_100K` read from chain, rounded up) on opening fills only, and `BuilderFeeTooHigh`
+when the request's optional `maxBuilderFeePer100K` is below it (`builderFeesCNS` in the result, also in
+`feesCNS`); funding ignored. Optional stop-loss / take-profit percentages from the follower's entry behave like owner levels (close and
 halt the market); `flattenOnStop` lets loss stops close everything. The result is labelled `simulation: true`,
 is deterministic (pure function of events and inputs) and returns the daily equity curve, PnL, max drawdown,
 trades copied, blocks by reason, skipped events and an `assumptions` list.
@@ -250,14 +268,16 @@ per IP and per owner (owner from the body, or the account's onchain owner).
 ### Quote (`services/quote.ts`)
 
 The policy body takes the new fields: `maxEntryDeviationBps` (default 0), `stopSlippageBps` (required,
-1..2000), `flattenOnStop` (default false) and per leader `budgetCNS` (required, > 0) and `lossStopBps` (default
+1..2000), `flattenOnStop` (default false), `maxBuilderFeePer100K` (default 20, max 1000) and per leader `budgetCNS` (required, > 0) and `lossStopBps` (default
 0). For each policy market where the leader holds a position: lots = that leader's target − what the follower
 holds for it (a market held by another leader is quoted as `MarketHeldByOtherLeader`), at the open price above
 (slippage and entry bound; `leaderEntryPNS` and `entryBoundPNS` are returned) and leverage
 `min(leader effective leverage, policy max)`. The replay accumulates the leader's margin across lines for the
 budget check. Match now has no leader order leverage to copy;
 keeper copies always use the leader's order leverage. Also returned: the expected fill from the Perpl book,
-notional and margin. `wouldBlock` comes from simulating `follow(policy, orders)` from the owner when the
+notional, margin and `builderFeeCNS` per line, and `builderFee: {id, feePer100K, estimateCNS, appliesTo}` where
+`estimateCNS` sums the lines that would execute (notional at mark x fee / 100,000, rounded up), so the follow sheet
+can show it before the passkey prompt. A policy whose max is below the fee gets `wouldBlock` `BuilderFeeTooHigh`. `wouldBlock` comes from simulating `follow(policy, orders)` from the owner when the
 account is funded, otherwise from the off-chain replay. Returned: per-market lines, `matchOrders` (the
 passing ones), `encodedMatchOrders` (`abi.encode(MirrorOrder[])`) and `followActionData`
 (`abi.encode(Policy, MirrorOrder[])`, ready to sign as `ACTION_FOLLOW`).

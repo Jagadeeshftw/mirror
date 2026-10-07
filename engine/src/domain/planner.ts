@@ -79,6 +79,15 @@ export function notionalCNS(lots: bigint, mark: bigint, lotDecimals: number, pri
   return mulDiv(lots * mark, 10n ** BigInt(collateralDecimals), 10n ** BigInt(lotDecimals + priceDecimals));
 }
 
+/** Perpl builder fee denominator (fee rates are per 100,000). */
+export const BUILDER_FEE_DENOMINATOR = 100_000n;
+
+/** Builder fee on `lots` added at `price`: notional x rate / 100,000, rounded up (as Perpl and MirrorAccount do). */
+export function builderFeeCNS(lots: bigint, price: bigint, feePer100K: number, lotDecimals: number, priceDecimals: number): bigint {
+  if (feePer100K <= 0 || lots <= 0n) return 0n;
+  return mulDivCeil(notionalCNS(lots, price, lotDecimals, priceDecimals), BigInt(feePer100K), BUILDER_FEE_DENOMINATOR);
+}
+
 /** Margin an opening order adds to its leader's budget: notional at max(limit, mark) / leverage, rounded up. */
 export function addedMarginCNS(lots: bigint, price: bigint, mark: bigint, leverageHdths: number, lotDecimals: number, priceDecimals: number) {
   const px = price > mark ? price : mark;
@@ -170,6 +179,9 @@ export interface OpenCheckState {
   priceDecimals: number;
   leaderAllowed: boolean;
   leaderStopped: boolean;
+  /** MirrorAccount.BUILDER_FEE_PER_100K (contract-wide) and the account's signed maxBuilderFeePer100K. */
+  builderFeePer100K: number;
+  maxBuilderFeePer100K: number;
   maxLeverageHdths: number;
   follower: Position;
   /** MirrorAccount.marketLeader(perpId). */
@@ -214,6 +226,7 @@ export function classifyOpen(o: MirrorOrder, s: OpenCheckState): BlockResult {
   if (s.marketHalted) return r('MarketHalted', 0n, BigInt(o.perpId));
   if (!s.leaderAllowed) return r('LeaderNotAllowed', 0n, BigInt(o.leaderAccountId));
   if (s.leaderStopped) return r('LeaderLossStop');
+  if (s.builderFeePer100K > s.maxBuilderFeePer100K) return r('BuilderFeeTooHigh', BigInt(s.maxBuilderFeePer100K), BigInt(s.builderFeePer100K));
   if (o.leverageHdths < MIN_LEVERAGE_HDTHS) return r('LeverageTooLow', BigInt(MIN_LEVERAGE_HDTHS), BigInt(o.leverageHdths));
   if (o.leverageHdths > s.maxLeverageHdths) return r('LeverageTooHigh', BigInt(s.maxLeverageHdths), BigInt(o.leverageHdths));
   if (s.follower.lots !== 0n && s.follower.side !== orderSide) return r('FlipNotAllowed', 0n, s.follower.lots);

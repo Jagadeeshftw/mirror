@@ -23,11 +23,15 @@ type AccountRow = {
   max_entry_deviation_bps: number | null;
   stop_slippage_bps: number | null;
   flatten_on_stop: number;
+  max_builder_fee_per_100k: number | null;
   paused: number;
   net_deposits: string;
   funded_block: number | null;
   last_activity_ts: number | null;
 };
+
+/** Sum of Mirrored rows' builder fees (CopyProof.builderFeeCNS), collateral units. */
+const sumBuilderFees = (rows: { builder_fee_cns?: string | null }[]) => rows.reduce((s, r) => s + BigInt(r.builder_fee_cns ?? 0), 0n);
 
 const median = (xs: number[]) => {
   if (!xs.length) return null;
@@ -107,6 +111,7 @@ export class Views {
         ).filter((x): x is NonNullable<typeof x> => Boolean(x))
       : [];
     const netDeposits = BigInt(r.net_deposits);
+    const feeRows = this.db.all<{ builder_fee_cns: string | null }>(`SELECT builder_fee_cns FROM feed WHERE account = ? AND kind = 'Mirrored'`, r.address);
     return {
       address: addr,
       owner: getAddress(r.owner),
@@ -121,6 +126,8 @@ export class Views {
       equityCNS: equity?.toString() ?? null,
       netDepositsCNS: netDeposits.toString(),
       pnlCNS: equity !== null ? (equity - netDeposits).toString() : null,
+      /** Builder fees Perpl charged on this account's copies and match-now orders (sum of proof.builderFeeCNS). */
+      builderFeesCNS: sumBuilderFees(feeRows).toString(),
       paused: r.paused === 1,
       expiry: r.expiry,
       policy: r.max_leverage_hdths
@@ -133,6 +140,7 @@ export class Views {
             maxEntryDeviationBps: r.max_entry_deviation_bps ?? 0,
             stopSlippageBps: r.stop_slippage_bps,
             flattenOnStop: r.flatten_on_stop === 1,
+            maxBuilderFeePer100K: r.max_builder_fee_per_100k ?? 0,
             leaders: leaders.map((l) => ({ accountId: l.leader_id, ratioBps: l.ratio_bps, budgetCNS: l.budget_cns, lossStopBps: l.loss_stop_bps, stopped: l.stopped === 1 })),
             markets: markets.map((m) => ({ perpId: m.perp_id, maxNotionalCNS: m.max_notional_cns, halted: m.halted === 1 })),
           }
@@ -185,6 +193,10 @@ export class Views {
         netDepositedCNS: rows.reduce((s, a) => s + BigInt(a.net_deposits), 0n).toString(),
         copiesExecuted: copies.length,
         matchNowOrders: matchNow.length,
+        /** Builder fees Perpl charged on keeper copies and match-now orders (opening size only), from Mirrored proofs. */
+        builderFeesCNS: sumBuilderFees([...copies, ...matchNow]).toString(),
+        builderFeesCopiesCNS: sumBuilderFees(copies).toString(),
+        builderFeesMatchNowCNS: sumBuilderFees(matchNow).toString(),
         copiesBlocked: blocked.length,
         copiesBlockedPerRule: perRule,
         medianLatencyMs: median(copies.map((c) => c.latency_ms).filter((x): x is number => x !== null)),

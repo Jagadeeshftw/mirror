@@ -76,7 +76,7 @@ export function loadEngineSamples(db: Db, o: EngineSampleOptions): { copies: Cop
       blocks.push({ reason: r.reason ?? 'Unknown', leaderAccountId: r.leader_id, timestamp: r.ts, matchNow, teamRun });
       continue;
     }
-    const data = r.data ? (JSON.parse(r.data) as { proof?: { leaderFillPNS?: string; fillPNS?: string } }) : {};
+    const data = r.data ? (JSON.parse(r.data) as { proof?: { leaderFillPNS?: string; fillPNS?: string; builderFeeCNS?: string } }) : {};
     const leaderFill = matchNow ? null : (big(data.proof?.leaderFillPNS) ?? big(r.leader_price));
     let followerFill = big(data.proof?.fillPNS);
     if (!followerFill && r.perpl_account_id) {
@@ -103,6 +103,7 @@ export function loadEngineSamples(db: Db, o: EngineSampleOptions): { copies: Cop
       timestamp: r.ts,
       matchNow,
       teamRun,
+      builderFeeCNS: big(data.proof?.builderFeeCNS) ?? 0n,
     });
   }
   return { copies, blocks };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   addedMarginCNS,
+  builderFeeCNS,
   classifyClose,
   classifyOpen,
   closeLotsToTarget,
@@ -177,6 +178,8 @@ describe('classifyOpen (replay of _checkOpen)', () => {
     priceDecimals: 1,
     leaderAllowed: true,
     leaderStopped: false,
+    builderFeePer100K: 20,
+    maxBuilderFeePer100K: 20,
     maxLeverageHdths: 300,
     follower: { side: LONG, lots: 0n },
     marketLeader: 0,
@@ -220,6 +223,18 @@ describe('classifyOpen (replay of _checkOpen)', () => {
   it('LeaderLossStop from realized + unrealized', () =>
     expect(classifyOpen(order, { ...ok, lossStopBps: 1000, leaderRealizedCNS: -900_000n, leaderUnrealizedCNS: -200_000n })).toEqual({ reason: 'LeaderLossStop', limit: 1_000_000n, actual: 1_100_000n }));
   it('LeaderLossStop once latched', () => expect(classifyOpen(order, { ...ok, leaderStopped: true }).reason).toBe('LeaderLossStop'));
+  it('BuilderFeeTooHigh (limit = signed max, actual = account fee)', () =>
+    expect(classifyOpen(order, { ...ok, maxBuilderFeePer100K: 10 })).toEqual({ reason: 'BuilderFeeTooHigh', limit: 10n, actual: 20n }));
+  it('a max equal to the fee passes; a zero fee passes a zero max', () => {
+    expect(classifyOpen(order, { ...ok, maxBuilderFeePer100K: 20 }).reason).toBe('None');
+    expect(classifyOpen(order, { ...ok, builderFeePer100K: 0, maxBuilderFeePer100K: 0 }).reason).toBe('None');
+  });
+  it('BuilderFeeTooHigh comes after LeaderLossStop and before LeverageTooLow', () => {
+    expect(classifyOpen(order, { ...ok, maxBuilderFeePer100K: 0, leaderStopped: true }).reason).toBe('LeaderLossStop');
+    expect(classifyOpen(order, { ...ok, maxBuilderFeePer100K: 0, leaderAllowed: false }).reason).toBe('LeaderNotAllowed');
+    expect(classifyOpen({ ...order, leverageHdths: 50 }, { ...ok, maxBuilderFeePer100K: 0 }).reason).toBe('BuilderFeeTooHigh');
+    expect(classifyOpen({ ...order, leverageHdths: 50 }, ok).reason).toBe('LeverageTooLow');
+  });
   it('DailyLossStop', () => expect(classifyOpen(order, { ...ok, equity: 11_000_000n }).reason).toBe('DailyLossStop'));
   it('DrawdownStop uses the high-water mark', () =>
     expect(classifyOpen(order, { ...ok, dailyLossBps: 0, equity: 10_000_000n, highWaterEquity: 12_000_000n }).reason).toBe('DrawdownStop'));
@@ -234,4 +249,15 @@ describe('classifyClose (replay of _checkClose)', () => {
   it('CloseBelowTarget', () => expect(classifyClose({ ...close, lotLNS: 3n }, s)).toEqual({ reason: 'CloseBelowTarget', limit: 2n, actual: 1n }));
   it('MarketHeldByOtherLeader', () => expect(classifyClose({ ...close, leaderAccountId: 8 }, s)).toMatchObject({ reason: 'MarketHeldByOtherLeader' }));
   it('reverts when there is nothing on that side', () => expect(classifyClose({ ...close, orderType: CLOSE_SHORT }, s)).toBe('revert'));
+});
+
+describe('builderFeeCNS (MirrorAccount._builderFee)', () => {
+  it('is notional x fee / 100,000, rounded up', () => {
+    // 1 lot (5 lot decimals) at 1_000_000 (1 price decimal) = 1_000_000 CNS notional; x 20 / 100,000 = 200.
+    expect(builderFeeCNS(1n, 1_000_000n, 20, 5, 1)).toBe(200n);
+    // 3 lots at 1_000_001 -> notional 3_000_003, x 20 / 100_000 = 600.0006 -> 601.
+    expect(builderFeeCNS(3n, 1_000_001n, 20, 5, 1)).toBe(601n);
+    expect(builderFeeCNS(3n, 1_000_001n, 0, 5, 1)).toBe(0n);
+    expect(builderFeeCNS(0n, 1_000_001n, 20, 5, 1)).toBe(0n);
+  });
 });

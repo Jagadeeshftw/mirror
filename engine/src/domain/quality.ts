@@ -21,6 +21,8 @@ export interface CopySample {
   timestamp: number | null;
   matchNow: boolean;
   teamRun: boolean;
+  /** Builder fee Perpl charged on this copy (CopyProof.builderFeeCNS; 0 for closes and unknown). */
+  builderFeeCNS: bigint;
 }
 
 export interface BlockSample {
@@ -46,6 +48,8 @@ export interface QualityAggregate {
   deviationBps: Dist & { avg: number | null; worseThanLeader: number };
   latencyMs: Dist;
   latencyBlocks: Dist;
+  /** Builder fees on every copy in scope, keeper and match-now (opening size only), collateral units. */
+  builderFeesCNS: string;
 }
 
 /**
@@ -89,6 +93,7 @@ export function aggregateScope(copies: CopySample[], blocks: BlockSample[]): Qua
     },
     latencyMs: dist(nums(keeper.map((c) => c.latencyMs))),
     latencyBlocks: dist(nums(keeper.map((c) => c.latencyBlocks))),
+    builderFeesCNS: copies.reduce((sum, c) => sum + c.builderFeeCNS, 0n).toString(),
   };
 }
 
@@ -143,5 +148,6 @@ export function sampleJson(c: CopySample) {
     block: c.block,
     timestamp: c.timestamp,
     matchNow: c.matchNow,
+    builderFeeCNS: c.builderFeeCNS.toString(),
   };
 }

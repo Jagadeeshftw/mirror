@@ -27,6 +27,16 @@ export const mirrorAccountAbi = [
         "name": "depositCap",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "builderId",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "builderFeePer100K",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "stateMutability": "nonpayable"
@@ -176,6 +186,32 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "function",
+    "name": "BUILDER_FEE_PER_100K",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "BUILDER_ID",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "COLLATERAL",
     "inputs": [],
     "outputs": [
@@ -248,6 +284,19 @@ export const mirrorAccountAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_BUILDER_FEE_PER_100K",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -805,6 +854,11 @@ export const mirrorAccountAbi = [
             "internalType": "bool"
           },
           {
+            "name": "maxBuilderFeePer100K",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
             "name": "leaders",
             "type": "tuple[]",
             "internalType": "struct MirrorAccount.LeaderRule[]",
@@ -1249,6 +1303,19 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "function",
+    "name": "maxBuilderFeePer100K",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "maxEntryDeviationBps",
     "inputs": [],
     "outputs": [
@@ -1531,6 +1598,11 @@ export const mirrorAccountAbi = [
             "name": "flattenOnStop",
             "type": "bool",
             "internalType": "bool"
+          },
+          {
+            "name": "maxBuilderFeePer100K",
+            "type": "uint16",
+            "internalType": "uint16"
           },
           {
             "name": "leaders",
@@ -2094,6 +2166,11 @@ export const mirrorAccountAbi = [
             "name": "entryDeviationBps",
             "type": "int32",
             "internalType": "int32"
+          },
+          {
+            "name": "builderFeeCNS",
+            "type": "uint64",
+            "internalType": "uint64"
           }
         ]
       }
@@ -2177,6 +2254,12 @@ export const mirrorAccountAbi = [
         "type": "bool",
         "indexed": false,
         "internalType": "bool"
+      },
+      {
+        "name": "maxBuilderFeePer100K",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
       },
       {
         "name": "leaders",

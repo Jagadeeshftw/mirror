@@ -15,7 +15,7 @@ export const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
 
 type Item = Record<string, unknown>;
 
-export type Proof = { leaderFillPNS: bigint; leaderEntryPNS: bigint; markPNS: bigint; fillPNS: bigint; entryDeviationBps: bigint };
+export type Proof = { leaderFillPNS: bigint; leaderEntryPNS: bigint; markPNS: bigint; fillPNS: bigint; entryDeviationBps: bigint; builderFeeCNS: bigint };
 
 export class Timeline {
   private blockNo = 60_000_100;
@@ -41,7 +41,13 @@ export class Timeline {
     return this.blockNo;
   }
 
-  add(contract: string, event: string, params: Record<string, unknown>, srcAddress?: string): this {
+  /** Leave `n` log indexes unused in the current transaction. */
+  skip(n = 1): this {
+    this.log += n;
+    return this;
+  }
+
+  add(contract: string, event: string, params: Record<string, unknown>, srcAddress?: string, logIndex?: number): this {
     this.items.push({
       contract,
       event,
@@ -49,7 +55,7 @@ export class Timeline {
       ...(srcAddress ? { srcAddress } : {}),
       block: { number: this.blockNo, timestamp: this.ts },
       transaction: { hash: this.hash },
-      logIndex: this.log++,
+      logIndex: logIndex ?? this.log++,
     });
     return this;
   }
@@ -101,6 +107,15 @@ export class Timeline {
     });
   }
 
+  /** Perpl TakerOrderFilledV2 (builder id 26 = Mirror by default). `logIndex` overrides the next log index. */
+  takerFill(builderFeeCNS: bigint, o: { builderId?: bigint; lot?: bigint; price?: bigint; fee?: bigint; logIndex?: number } = {}): this {
+    return this.add("PerplExchange", "TakerOrderFilledV2", {
+      entryPricePNS: o.price ?? 300000n, collatPricePNS: o.price ?? 300000n, pnlPricePNS: o.price ?? 300000n,
+      lotLNS: o.lot ?? 100n, feeCNS: o.fee ?? 0n, amountCNS: 0n, balanceCNS: 0n, builderId: o.builderId ?? 26n,
+      builderFeeCNS,
+    }, undefined, o.logIndex);
+  }
+
   deposit(accountId: bigint, amount: bigint, balance: bigint): this {
     return this.add("PerplExchange", "CollateralDeposit", { accountId, amountCNS: amount, balanceCNS: balance });
   }
@@ -123,7 +138,7 @@ export class Timeline {
       keeper: o.keeper ?? addr(0xbeef), leaderAccountId: o.leader, perpId: o.perpId, orderType: o.orderType,
       lotLNS: o.lot, pricePNS: o.price, leverageHdths: o.lev ?? 500n, lotsBefore: o.before, lotsAfter: o.after,
       leaderRef: o.ref ?? `0x${"ab".repeat(32)}`,
-      proof: { leaderFillPNS: 0n, leaderEntryPNS: 0n, markPNS: 0n, fillPNS: 0n, entryDeviationBps: 0n, ...o.proof },
+      proof: { leaderFillPNS: 0n, leaderEntryPNS: 0n, markPNS: 0n, fillPNS: 0n, entryDeviationBps: 0n, builderFeeCNS: 0n, ...o.proof },
     });
   }
 
@@ -136,11 +151,11 @@ export class Timeline {
   }
 
   /** leaders: [accountId, ratioBps, budgetCNS?, lossStopBps?] */
-  policy(src: string, leaders: [bigint, bigint, bigint?, bigint?][], markets: [bigint, bigint][], o: { maxLev?: bigint; maxEntryDev?: bigint; flatten?: boolean } = {}): this {
+  policy(src: string, leaders: [bigint, bigint, bigint?, bigint?][], markets: [bigint, bigint][], o: { maxLev?: bigint; maxEntryDev?: bigint; flatten?: boolean; maxBuilderFee?: bigint } = {}): this {
     return this.mirror(src, "PolicyUpdated", {
       maxLeverageHdths: o.maxLev ?? 1000n, maxSlippageBps: 50n, dailyLossBps: 500n, drawdownBps: 1000n,
       expiry: BigInt(T0 + 30 * DAY), maxEntryDeviationBps: o.maxEntryDev ?? 0n, stopSlippageBps: 300n,
-      flattenOnStop: o.flatten ?? false,
+      flattenOnStop: o.flatten ?? false, maxBuilderFeePer100K: o.maxBuilderFee ?? 20n,
       leaders: leaders.map(([accountId, ratioBps, budgetCNS, lossStopBps]) => ({
         accountId, ratioBps, budgetCNS: budgetCNS ?? 100_000_000n, lossStopBps: lossStopBps ?? 0n,
       })),

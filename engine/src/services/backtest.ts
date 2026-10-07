@@ -24,6 +24,8 @@ export const BacktestBody = z.object({
   flattenOnStop: z.boolean().default(false),
   depositCNS: u.refine((v) => v > 0n, 'depositCNS must be > 0'),
   period: z.union([z.literal(7), z.literal(30), z.literal(90), z.enum(['7', '30', '90', '7d', '30d', '90d'])]).default(30).transform((v) => Number(String(v).replace('d', '')) as 7 | 30 | 90),
+  /** Owner's max builder fee (per 100,000); defaults to the deployment's fee, so it never blocks. */
+  maxBuilderFeePer100K: z.coerce.number().int().min(0).max(1_000).optional(),
   /** Override the follower slippage assumption (bps). */
   slippageBps: z.coerce.number().min(0).max(1_000).optional(),
 });
@@ -58,6 +60,8 @@ export interface BacktestOptions {
   takerFeeBps: number;
   safetyBps: number;
   maxEvents: number;
+  /** MirrorAccount.BUILDER_FEE_PER_100K (read once from chain); none = no builder fee. */
+  builder?: () => Promise<{ id: number; feePer100K: number }>;
 }
 
 /** POST /v1/leaders/:id/backtest: history from the indexer's PositionEvent, replay in domain/backtest. */
@@ -160,6 +164,7 @@ export class BacktestService {
         ? { bps: Math.max(0, measured.bps), source: `median copy deviation measured on ${measured.samples} real copies of this leader (${measured.source}), floored at 0` }
         : { bps: this.opts.defaultSlippageBps, source: 'default assumption; not enough measured copies of this leader' };
     }
+    const builder = this.opts.builder ? await this.opts.builder().catch(() => undefined) : undefined;
     const params: BtParams = {
       leaderAccountId: leaderId,
       ratioBps: b.ratioBps,
@@ -177,6 +182,8 @@ export class BacktestService {
       depositCNS: b.depositCNS,
       slippageBps: slippage.bps,
       takerFeeBps: this.opts.takerFeeBps,
+      builderFeePer100K: builder?.feePer100K ?? 0,
+      maxBuilderFeePer100K: b.maxBuilderFeePer100K,
       safetyBps: this.opts.safetyBps,
       startTs,
       endTs: nowSec,
@@ -192,6 +199,7 @@ export class BacktestService {
       source: 'indexer',
       slippage,
       takerFeeBps: this.opts.takerFeeBps,
+      builderFee: builder ? { id: builder.id, feePer100K: builder.feePer100K, appliesTo: 'opening size only' } : null,
       ...result,
       simulation: true as const,
       trades: result.trades.slice(-200),

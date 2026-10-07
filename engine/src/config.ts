@@ -100,7 +100,7 @@ const EnvSchema = z.object({
   BLOCKED_SUBMIT_REASONS: z
     .string()
     .default(
-      'LeverageTooHigh,LeverageTooLow,SlippageTooHigh,ExceedsMaxNotional,ExceedsLeaderTarget,DailyLossStop,DrawdownStop,StaleMark,EntryTooFar,MarketHeldByOtherLeader,LeaderBudgetExceeded,LeaderLossStop',
+      'LeverageTooHigh,LeverageTooLow,SlippageTooHigh,ExceedsMaxNotional,ExceedsLeaderTarget,DailyLossStop,DrawdownStop,StaleMark,EntryTooFar,MarketHeldByOtherLeader,LeaderBudgetExceeded,LeaderLossStop,BuilderFeeTooHigh',
     )
     .transform((v) => new Set(v.split(',').map((s) => s.trim()).filter(Boolean))),
   /** Stop executor: sends triggerLevel / triggerAccountStop / triggerLeaderStop once true onchain and simulated. */

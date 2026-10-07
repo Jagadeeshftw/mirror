@@ -22,9 +22,45 @@ export const mirrorAccountFactoryAbi = [
         "name": "depositCap_",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "builderId_",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "builderFeePer100K_",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "builderFeePer100K",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "builderId",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",

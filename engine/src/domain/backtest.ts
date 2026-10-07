@@ -1,4 +1,4 @@
-import { classifyClose, classifyOpen, mulDiv, mulDivCeil, notionalCNS, planCopy, targetLots, type PlannedOrder } from './planner.js';
+import { builderFeeCNS, classifyClose, classifyOpen, mulDiv, mulDivCeil, notionalCNS, planCopy, targetLots, type PlannedOrder } from './planner.js';
 import { LONG, SHORT, isBid, isOpen, type Side } from './types.js';
 import type { BtEvent, BtMarket, BtParams, BtResult, BtTrade } from './backtest-types.js';
 
@@ -21,6 +21,7 @@ class Replay {
   private marks = new Map<number, bigint>();
   private realized = 0n; // contract leaderRealizedCNS: realized PnL net of fees (single leader)
   private fees = 0n;
+  private builderFees = 0n;
   private halted = new Set<number>();
   private paused = false;
   private leaderStopped = false;
@@ -80,9 +81,17 @@ class Replay {
     return limit !== undefined && f < limit ? limit : f;
   }
 
+  /** Builder fee on an opening fill: added notional x BUILDER_FEE_PER_100K, rounded up (closes never pay one). */
+  private builderFee(perpId: number, lots: bigint, fill: bigint) {
+    const { ld, pd } = this.dec(perpId);
+    return builderFeeCNS(lots, fill, this.p.builderFeePer100K ?? 0, ld, pd);
+  }
+
   private open(perpId: number, side: Side, lots: bigint, fill: bigint, lev: number, t: number) {
     const n = this.notional(perpId, lots, fill);
-    const fee = (n * this.fee) / P100K;
+    const builder = this.builderFee(perpId, lots, fill);
+    const fee = (n * this.fee) / P100K + builder;
+    this.builderFees += builder;
     const q = this.pos.get(perpId) ?? { side, lots: 0n, entry: 0n, margin: 0n };
     q.entry = q.lots === 0n ? fill : (q.entry * q.lots + fill * lots) / (q.lots + lots);
     q.side = side;
@@ -207,7 +216,8 @@ class Replay {
     const { ld, pd } = this.dec(e.perpId);
     const r = classifyOpen(o, {
       now: e.timestamp, paused: this.paused, expiry: Number.MAX_SAFE_INTEGER, marketAllowed: true, marketHalted: this.halted.has(e.perpId),
-      maxNotionalCNS, lotDecimals: ld, priceDecimals: pd, leaderAllowed: true, leaderStopped: this.leaderStopped, maxLeverageHdths: p.maxLeverageHdths,
+      maxNotionalCNS, lotDecimals: ld, priceDecimals: pd, leaderAllowed: true, leaderStopped: this.leaderStopped,
+      builderFeePer100K: p.builderFeePer100K ?? 0, maxBuilderFeePer100K: p.maxBuilderFeePer100K ?? p.builderFeePer100K ?? 0, maxLeverageHdths: p.maxLeverageHdths,
       follower: { side: q.side, lots: q.lots }, marketLeader: q.lots > 0n ? p.leaderAccountId : 0, markValid: true, mark, maxSlippageBps: p.maxSlippageBps,
       leader: { side: leader.side, lots: leader.lots }, leaderEntryPNS: e.entryPricePNS, maxEntryDeviationBps: p.maxEntryDeviationBps, target,
       budgetCNS: p.budgetCNS, lossStopBps: p.lossStopBps, leaderMarginCNS: this.totalMargin(), leaderUnrealizedCNS: this.totalUnrealized(),
@@ -220,7 +230,7 @@ class Replay {
     if (r.reason !== 'None') return (this.bump(this.blocked, r.reason), false);
     const fill = this.fillPrice(o.orderType, mark, o.pricePNS);
     const n = this.notional(e.perpId, o.lotLNS, fill);
-    const need = mulDivCeil(n, 100n, BigInt(Math.max(1, o.leverageHdths))) + (n * this.fee) / P100K;
+    const need = mulDivCeil(n, 100n, BigInt(Math.max(1, o.leverageHdths))) + (n * this.fee) / P100K + this.builderFee(e.perpId, o.lotLNS, fill);
     if (this.equity() - this.totalMargin() < need) return (this.bump(this.skipped, 'InsufficientCollateral'), false);
     this.open(e.perpId, side, o.lotLNS, fill, o.leverageHdths, e.timestamp);
     this.copied += 1;
@@ -239,7 +249,7 @@ class Replay {
   }
 
   totals() {
-    return { fees: this.fees };
+    return { fees: this.fees, builderFees: this.builderFees };
   }
 }
 

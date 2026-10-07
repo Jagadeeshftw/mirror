@@ -17,11 +17,11 @@ const load = (f: string): Entry[] => {
 
 const perplKeep = new Set([
   'execOrder', 'getPositionV2', 'getPositionsV2', 'getPerpetualInfoV2', 'getAccountById', 'getAccountByAddr',
-  'createAccount', 'depositCollateral', 'withdrawCollateral', 'getMinAccountOpenCNS', 'updateMarkPricePNS',
+  'execOrderV2', 'createAccount', 'depositCollateral', 'withdrawCollateral', 'getMinAccountOpenCNS', 'updateMarkPricePNS',
   'setIgnOracle', 'isPriceAdministrator', 'owner', 'numberOfAccounts',
   'PositionOpened', 'PositionOpenedV2', 'PositionIncreased', 'PositionIncreasedV2', 'PositionDecreased',
   'PositionClosed', 'PositionInverted', 'PositionLiquidated', 'PositionDeleveraged', 'PositionDeleveragedV2',
-  'MarkUpdated', 'AccountCreated',
+  'MarkUpdated', 'AccountCreated', 'TakerOrderFilledV2', 'MakerOrderFilledV2',
 ]);
 
 const files: Array<[string, string, (e: Entry) => boolean]> = [

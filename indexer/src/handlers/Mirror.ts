@@ -61,6 +61,7 @@ function newMirrorAccount(address: string, owner: string, m: Meta): MirrorAccoun
     maxEntryDeviationBps: 0,
     stopSlippageBps: 0,
     flattenOnStop: false,
+    maxBuilderFeePer100K: 0,
     leaderAccountIds: [],
     leaderRatiosBps: [],
     leaderBudgetsCNS: [],
@@ -77,6 +78,7 @@ function newMirrorAccount(address: string, owner: string, m: Meta): MirrorAccoun
     copiesBlocked: 0,
     matchNowCopies: 0,
     copiedNotionalCNS: 0n,
+    builderFeesCNS: 0n,
     closeAllCount: 0,
     marketCloseCount: 0,
     stopsTriggered: 0,
@@ -258,6 +260,7 @@ indexer.onEvent({ contract: "MirrorAccount", event: "PolicyUpdated" }, async ({ 
     maxEntryDeviationBps: Number(p.maxEntryDeviationBps),
     stopSlippageBps: Number(p.stopSlippageBps),
     flattenOnStop: p.flattenOnStop,
+    maxBuilderFeePer100K: Number(p.maxBuilderFeePer100K),
     leaderAccountIds: p.leaders.map((l) => l.accountId),
     leaderRatiosBps: p.leaders.map((l) => Number(l.ratioBps)),
     leaderBudgetsCNS: p.leaders.map((l) => l.budgetCNS),
@@ -280,6 +283,7 @@ indexer.onEvent({ contract: "MirrorAccount", event: "PolicyUpdated" }, async ({ 
       maxEntryDeviationBps: updated.maxEntryDeviationBps,
       stopSlippageBps: updated.stopSlippageBps,
       flattenOnStop: updated.flattenOnStop,
+      maxBuilderFeePer100K: updated.maxBuilderFeePer100K,
       leaders: p.leaders.map((l) => ({
         accountId: l.accountId.toString(),
         ratioBps: Number(l.ratioBps),
@@ -467,6 +471,24 @@ async function copyQuality(
   };
 }
 
+/**
+ * Claim the Mirror-builder Perpl fills (BuilderFeeFill) logged earlier in this tx and not yet claimed by
+ * an earlier copy: Perpl emits TakerOrderFilledV2 inside execOrderV2, before the MirrorAccount emits
+ * Mirrored, so they belong to this copy. Returns their summed builder fee, or undefined when none.
+ */
+async function claimBuilderFills(context: Ctx, m: Meta, copyId: string): Promise<bigint | undefined> {
+  const fills = (await context.BuilderFeeFill.getWhere({ txHash: { _eq: m.txHash } })).filter(
+    (f) => f.copy_id === undefined && f.logIndex < m.logIndex,
+  );
+  if (fills.length === 0) return undefined;
+  let total = 0n;
+  for (const f of fills) {
+    total += f.builderFeeCNS;
+    context.BuilderFeeFill.set({ ...f, copy_id: copyId });
+  }
+  return total;
+}
+
 indexer.onEvent({ contract: "MirrorAccount", event: "Mirrored" }, async ({ event, context }) => {
   const m = metaOf(event);
   const p = event.params;
@@ -491,6 +513,8 @@ indexer.onEvent({ contract: "MirrorAccount", event: "Mirrored" }, async ({ event
   const ref = p.leaderRef.toLowerCase();
   const isMatchNow = ref === MATCH_NOW_REF;
   const id = eventId(m);
+  const builderFee = p.proof.builderFeeCNS;
+  const builderFeePerpl = await claimBuilderFills(context, m, id);
 
   // ---- copy-quality proof, from chain data only
   const q = await copyQuality(context, m, {
@@ -528,6 +552,8 @@ indexer.onEvent({ contract: "MirrorAccount", event: "Mirrored" }, async ({ event
     isMatchNow,
     teamRun: ma.teamRun,
     ...q,
+    builderFeeCNS: builderFee,
+    builderFeePerplCNS: builderFeePerpl,
     excludedFromStats: excluded,
     blockNumber: m.block,
     timestamp: m.timestamp,
@@ -543,6 +569,7 @@ indexer.onEvent({ contract: "MirrorAccount", event: "Mirrored" }, async ({ event
     isMatchNow,
     isOpen,
     notionalCNS: notional,
+    builderFeeCNS: builderFee,
     deviationBps: q.deviationBps ?? null,
     deviationActual: q.leaderFillBasis === "ACTUAL",
     latencyBlocks: q.latencyBlocks ?? null,
@@ -587,6 +614,7 @@ indexer.onEvent({ contract: "MirrorAccount", event: "Mirrored" }, async ({ event
       ...s,
       copiesExecuted: s.copiesExecuted + 1,
       copiedNotionalCNS: s.copiedNotionalCNS + notional,
+      builderFeesCNS: s.builderFeesCNS + builderFee,
     }));
   }
 
@@ -595,6 +623,7 @@ indexer.onEvent({ contract: "MirrorAccount", event: "Mirrored" }, async ({ event
     copiesExecuted: ma.copiesExecuted + 1,
     matchNowCopies: ma.matchNowCopies + (isMatchNow ? 1 : 0),
     copiedNotionalCNS: ma.copiedNotionalCNS + notional,
+    builderFeesCNS: ma.builderFeesCNS + builderFee,
     lastCopyAt: m.timestamp,
     lastActivityAt: m.timestamp,
   };
@@ -604,12 +633,14 @@ indexer.onEvent({ contract: "MirrorAccount", event: "Mirrored" }, async ({ event
     copiesExecuted: s.copiesExecuted + 1,
     matchNowCopies: s.matchNowCopies + (isMatchNow ? 1 : 0),
     copiedNotionalCNS: s.copiedNotionalCNS + notional,
+    builderFeesCNS: s.builderFeesCNS + builderFee,
   }));
   await bumpDaily(context, ma.teamRun, m, (d) => ({
     ...d,
     copiesExecuted: d.copiesExecuted + 1,
     matchNowCopies: d.matchNowCopies + (isMatchNow ? 1 : 0),
     copiedNotionalCNS: d.copiedNotionalCNS + notional,
+    builderFeesCNS: d.builderFeesCNS + builderFee,
   }));
   activity(context, updated, m, "MIRRORED", { copy_id: id, amountCNS: notional });
 });

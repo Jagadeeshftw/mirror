@@ -3,7 +3,7 @@
  * so the unprefixed names are accepted as a fallback for self-hosting only.
  */
 
-import { TEAM_RUN_ACCOUNT_IDS, TEAM_RUN_ADDRESSES } from "./constants.js";
+import { MIRROR_BUILDER_ID, TEAM_RUN_ACCOUNT_IDS, TEAM_RUN_ADDRESSES } from "./constants.js";
 
 function read(name: string): string {
   return process.env[`ENVIO_${name}`] ?? process.env[name] ?? "";
@@ -52,4 +52,15 @@ export function resolveAddressesEnabled(): boolean {
 
 export function rpcUrl(): string {
   return read("RPC_URL") || "https://rpc.monad.xyz";
+}
+
+/** Perpl builder id of Mirror's opening orders: ENVIO_MIRROR_BUILDER_ID, else MIRROR_BUILDER_ID (26). */
+export function mirrorBuilderId(): bigint {
+  const raw = read("MIRROR_BUILDER_ID").trim();
+  if (!raw) return MIRROR_BUILDER_ID;
+  try {
+    return BigInt(raw);
+  } catch {
+    return MIRROR_BUILDER_ID;
+  }
 }

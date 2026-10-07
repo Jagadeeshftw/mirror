@@ -45,6 +45,7 @@ export interface FollowerInfo {
   maxEntryDeviationBps: number;
   stopSlippageBps: number;
   flattenOnStop: boolean;
+  maxBuilderFeePer100K: number;
   leaders: Map<number, LeaderRuleInfo>;
   markets: Map<number, bigint>;
   /** Markets where an owner level fired (opening copies blocked until the next policy). */
@@ -66,6 +67,7 @@ type AccountRow = {
   max_entry_deviation_bps: number | null;
   stop_slippage_bps: number | null;
   flatten_on_stop: number;
+  max_builder_fee_per_100k: number | null;
 };
 
 /**
@@ -200,8 +202,9 @@ export class Registry {
         this.db.tx(() => {
           this.db.run(
             `UPDATE accounts SET max_leverage_hdths = ?, max_slippage_bps = ?, daily_loss_bps = ?, drawdown_bps = ?, expiry = ?,
-               max_entry_deviation_bps = ?, stop_slippage_bps = ?, flatten_on_stop = ? WHERE address = ?`,
-            a.maxLeverageHdths, a.maxSlippageBps, a.dailyLossBps, a.drawdownBps, Number(a.expiry), a.maxEntryDeviationBps, a.stopSlippageBps, a.flattenOnStop ? 1 : 0, addr,
+               max_entry_deviation_bps = ?, stop_slippage_bps = ?, flatten_on_stop = ?, max_builder_fee_per_100k = ? WHERE address = ?`,
+            a.maxLeverageHdths, a.maxSlippageBps, a.dailyLossBps, a.drawdownBps, Number(a.expiry), a.maxEntryDeviationBps, a.stopSlippageBps, a.flattenOnStop ? 1 : 0,
+            a.maxBuilderFeePer100K, addr,
           );
           this.db.run('DELETE FROM account_leaders WHERE account = ?', addr);
           this.db.run('DELETE FROM account_markets WHERE account = ?', addr);
@@ -219,6 +222,7 @@ export class Registry {
           data: JSON.stringify({
             maxLeverageHdths: a.maxLeverageHdths, maxSlippageBps: a.maxSlippageBps, dailyLossBps: a.dailyLossBps, drawdownBps: a.drawdownBps,
             expiry: Number(a.expiry), maxEntryDeviationBps: a.maxEntryDeviationBps, stopSlippageBps: a.stopSlippageBps, flattenOnStop: a.flattenOnStop,
+            maxBuilderFeePer100K: a.maxBuilderFeePer100K,
             leaders: a.leaders.map((x) => ({ accountId: Number(x.accountId), ratioBps: Number(x.ratioBps), budgetCNS: x.budgetCNS.toString(), lossStopBps: Number(x.lossStopBps) })),
             markets: a.markets.map((x) => ({ perpId: Number(x.perpId), maxNotionalCNS: x.maxNotionalCNS.toString() })),
           }),
@@ -284,10 +288,11 @@ export class Registry {
         feed = {
           ...base, keeper: a.keeper, leader_id: Number(a.leaderAccountId), perp_id: Number(a.perpId), order_type: a.orderType, lots: a.lotLNS.toString(),
           price: a.pricePNS.toString(), leverage: a.leverageHdths, leader_ref: a.leaderRef, latency_ms: this.latencyFor(l.transactionHash),
+          builder_fee_cns: p.builderFeeCNS.toString(),
           data: JSON.stringify({
             lotsBefore: a.lotsBefore.toString(),
             lotsAfter: a.lotsAfter.toString(),
-            proof: { leaderFillPNS: p.leaderFillPNS.toString(), leaderEntryPNS: p.leaderEntryPNS.toString(), markPNS: p.markPNS.toString(), fillPNS: p.fillPNS.toString(), entryDeviationBps: p.entryDeviationBps },
+            proof: { leaderFillPNS: p.leaderFillPNS.toString(), leaderEntryPNS: p.leaderEntryPNS.toString(), markPNS: p.markPNS.toString(), fillPNS: p.fillPNS.toString(), entryDeviationBps: p.entryDeviationBps, builderFeeCNS: p.builderFeeCNS.toString() },
           }),
         };
         break;
@@ -384,6 +389,7 @@ export class Registry {
       maxEntryDeviationBps: r.max_entry_deviation_bps ?? 0,
       stopSlippageBps: r.stop_slippage_bps ?? 0,
       flattenOnStop: r.flatten_on_stop === 1,
+      maxBuilderFeePer100K: r.max_builder_fee_per_100k ?? 0,
       leaders,
       markets,
       halted,

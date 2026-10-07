@@ -242,12 +242,13 @@ export class Copier {
 
   /** Without eth_simulateV1 logs, replays the contract's checks to name the rule. */
   private async explainBlock(f: FollowerInfo, o: PlannedOrder, follower: PerplPosition): Promise<BlockedInfo> {
-    const [s, marketLeader, leaderPos, book, block] = await Promise.all([
+    const [s, marketLeader, leaderPos, book, block, builder] = await Promise.all([
       this.reads.account(f.address),
       this.reads.marketLeader(f.address, o.perpId),
       this.reads.position(o.perpId, o.leaderAccountId),
       this.reads.leaderBook(f.address, o.leaderAccountId),
       this.reads.client.getBlock(),
+      this.reads.builder(f.address),
     ]);
     const m = s.markets.find((x) => x.perpId === o.perpId);
     const rule = s.leaders.find((l) => l.accountId === o.leaderAccountId);
@@ -268,6 +269,8 @@ export class Copier {
       priceDecimals: m?.priceDecimals ?? 0,
       leaderAllowed: Boolean(rule),
       leaderStopped: book.stopped,
+      builderFeePer100K: builder.feePer100K,
+      maxBuilderFeePer100K: s.maxBuilderFeePer100K,
       maxLeverageHdths: s.maxLeverageHdths,
       follower: { side: follower.side, lots: follower.lots },
       marketLeader,

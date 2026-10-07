@@ -47,6 +47,7 @@ export class CopyQualityService {
         latencyMs: 'engine clock: leader event first seen (Proposed) to copy receipt',
         latencyBlocks: 'copy block - leader block',
         percentiles: 'nearest rank; samples from keeper copies only (match-now has no leader fill)',
+        builderFeesCNS: 'builder fees Perpl charged on copies in scope (keeper and match-now, opening size only), collateral units',
       },
       ...view(src.global),
       teamRun: { label: 'team-run (demo leader / demo follower); excluded from every number above', ...view(src.teamRun) },
@@ -84,6 +85,8 @@ export class CopyQualityService {
       timestamp: Number(c.timestamp),
       matchNow: Boolean(c.isMatchNow),
       teamRun: Boolean(c.excludedFromStats),
+      // Perpl's exact figure when the indexer linked it, else the contract's computed one.
+      builderFeeCNS: BigInt(c.builderFeePerplCNS ?? c.builderFeeCNS ?? 0),
     };
   }
 

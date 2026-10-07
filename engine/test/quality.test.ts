@@ -34,7 +34,7 @@ describe('nearestRank', () => {
 
 const sample = (o: Partial<CopySample>): CopySample => ({
   txHash: '0x1', account: '0xa', leaderAccountId: 1, perpId: 1, orderType: OPEN_LONG, lotLNS: '1', leaderRef: '0xl', leaderFillPNS: 100n,
-  followerFillPNS: 100n, deviationBps: 0, latencyMs: 1000, latencyBlocks: 2, block: 1, timestamp: 1, matchNow: false, teamRun: false, ...o,
+  followerFillPNS: 100n, deviationBps: 0, latencyMs: 1000, latencyBlocks: 2, block: 1, timestamp: 1, matchNow: false, teamRun: false, builderFeeCNS: 0n, ...o,
 });
 
 describe('aggregation and team-run exclusion', () => {
@@ -58,6 +58,7 @@ describe('aggregation and team-run exclusion', () => {
       deviationBps: { samples: 3, median: 10, p90: 30, avg: 12, worseThanLeader: 2 },
       latencyMs: { samples: 3, median: 1200, p90: 1500 },
       latencyBlocks: { samples: 3, median: 3, p90: 4 },
+      builderFeesCNS: '0',
     });
     expect(q.global.blockedByReason).toEqual({ LeverageTooHigh: 2, EntryTooFar: 1 });
     expect(q.global.copies.map((c) => c.block)).toEqual([4, 3, 2, 1]);

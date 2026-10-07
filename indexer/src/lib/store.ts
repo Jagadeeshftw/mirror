@@ -241,6 +241,7 @@ export function newLeaderStats(account: PerplAccount): LeaderStats {
     copiesExecuted: 0,
     copiesBlocked: 0,
     copiedNotionalCNS: 0n,
+    builderFeesCNS: 0n,
     followerPnlCNS: 0n,
     followerLeaderStops: 0,
   };
@@ -286,6 +287,7 @@ function emptyScope(id: string): ScopeStats {
     copiesBlocked: 0,
     matchNowCopies: 0,
     copiedNotionalCNS: 0n,
+    builderFeesCNS: 0n,
     followerRealizedPnlCNS: 0n,
     closeAllCount: 0,
     policyUpdates: 0,
@@ -325,6 +327,7 @@ export async function bumpDaily(ctx: Ctx, teamRun: boolean, m: Meta, fn: (d: Dai
     copiesBlocked: 0,
     matchNowCopies: 0,
     copiedNotionalCNS: 0n,
+    builderFeesCNS: 0n,
     depositsCNS: 0n,
     withdrawalsCNS: 0n,
     perplTrades: 0,
@@ -603,6 +606,7 @@ function emptyQuality(scope: string, k: QualityKey): CopyQualityStats {
     opens: 0,
     closes: 0,
     copiedNotionalCNS: 0n,
+    builderFeesCNS: 0n,
     blocked: 0,
     deviationSamples: 0,
     deviationSamplesActual: 0,
@@ -626,6 +630,8 @@ export type CopySample = {
   isMatchNow: boolean;
   isOpen: boolean;
   notionalCNS: bigint;
+  /** CopyProof.builderFeeCNS */
+  builderFeeCNS: bigint;
   /** null = no deviation sample */
   deviationBps: number | null;
   deviationActual: boolean;
@@ -675,6 +681,7 @@ export async function recordCopyQuality(
       opens: cur.opens + (c.isOpen ? 1 : 0),
       closes: cur.closes + (c.isOpen ? 0 : 1),
       copiedNotionalCNS: cur.copiedNotionalCNS + c.notionalCNS,
+      builderFeesCNS: cur.builderFeesCNS + c.builderFeeCNS,
       deviationSamples: devN,
       deviationSamplesActual: cur.deviationSamplesActual + (c.deviationBps !== null && c.deviationActual ? 1 : 0),
       deviationSumBps: devSum,

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { mirrorAccountAbi } from '../abi/MirrorAccount.js';
 import type { Reads } from '../chain/reads.js';
 import { simulateCall, decodeBoolArray } from '../chain/simulate.js';
-import { addedMarginCNS, classifyOpen, entryBound, notionalCNS, openPrice, targetLots, mulDiv } from '../domain/planner.js';
+import { addedMarginCNS, builderFeeCNS, classifyOpen, entryBound, notionalCNS, openPrice, targetLots, mulDiv } from '../domain/planner.js';
 import { encodeFollowData, encodeOrders, toOrderStruct, toPolicyStruct, ZERO_REF } from '../domain/encode.js';
 import { LONG, ORDER_TYPE_NAMES, openTypeFor, type MirrorOrder, type Policy, type Side } from '../domain/types.js';
 import type { MarketData } from '../perpl/market.js';
@@ -32,6 +32,8 @@ export const PolicyBody = z.object({
   // Required onchain (1..2000): no default, the user picks how much slippage a triggered stop may take.
   stopSlippageBps: z.coerce.number().int().min(1).max(2_000),
   flattenOnStop: flag.default(false),
+  // Highest builder fee per 100,000 of opening notional the owner accepts (contract cap 1000 = 1%).
+  maxBuilderFeePer100K: z.coerce.number().int().min(0).max(1_000).default(20),
   leaders: z
     .array(
       z.object({
@@ -70,6 +72,8 @@ export interface QuoteLine {
   bookSource: string | null;
   notionalCNS: string;
   marginCNS: string;
+  /** Builder fee estimate on this line's opening size: notional x fee / 100,000, rounded up. */
+  builderFeeCNS: string;
   leverageHdths: number;
   leaderLeverageHdths: number;
   leaderLotLNS: string;
@@ -111,6 +115,7 @@ export class QuoteService {
     const deployed = account ? await this.relayer.isAccount(account) : false;
     const state = deployed && account ? await this.reads.account(account) : undefined;
     const funded = Boolean(state && state.perplAccountId !== 0);
+    const builder = await this.reads.builder(deployed ? account : undefined);
 
     const lines: QuoteLine[] = [];
     const orders: MirrorOrder[] = [];
@@ -181,6 +186,7 @@ export class QuoteService {
         bookSource: fill?.source ?? null,
         notionalCNS: notional.toString(),
         marginCNS: mulDiv(notional, 100n, BigInt(leverage)).toString(),
+        builderFeeCNS: builderFeeCNS(lots, mark, builder.feePer100K, lotDecimals, priceDecimals).toString(),
         leverageHdths: leverage,
         leaderLeverageHdths: leaderLev,
         leaderLotLNS: leader.lots.toString(),
@@ -207,6 +213,8 @@ export class QuoteService {
         priceDecimals,
         leaderAllowed: true,
         leaderStopped: false,
+        builderFeePer100K: builder.feePer100K,
+        maxBuilderFeePer100K: policy.maxBuilderFeePer100K,
         maxLeverageHdths: policy.maxLeverageHdths,
         follower: { side: follower.side, lots: follower.lots },
         marketLeader,
@@ -259,7 +267,10 @@ export class QuoteService {
       }
     }
 
-    const passing = orders.filter((_, i) => !lines[orderLine[i]!]!.wouldBlock);
+    const passingIdx = orders.map((_, i) => i).filter((i) => !lines[orderLine[i]!]!.wouldBlock);
+    const passing = passingIdx.map((i) => orders[i]!);
+    // Only the opening size planned here pays the builder fee; closes never carry attribution.
+    const estimateCNS = passingIdx.reduce((sum, i) => sum + BigInt(lines[orderLine[i]!]!.builderFeeCNS), 0n);
     return {
       owner: b.owner,
       account: account ?? null,
@@ -269,6 +280,7 @@ export class QuoteService {
       simulation,
       simulationError: simulationError ?? null,
       quotes: lines,
+      builderFee: { id: builder.id, feePer100K: builder.feePer100K, estimateCNS: estimateCNS.toString(), appliesTo: 'opening size only' as const },
       matchOrders: passing.map((o) => ({ ...o, lotLNS: o.lotLNS.toString(), pricePNS: o.pricePNS.toString(), leaderFillPNS: o.leaderFillPNS.toString() })),
       encodedMatchOrders: encodeOrders(passing),
       followActionData: encodeFollowData(policy, passing),

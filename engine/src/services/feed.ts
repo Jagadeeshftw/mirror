@@ -26,6 +26,8 @@ export interface FeedRow {
   amount: string | null;
   latency_ms: number | null;
   data: string | null;
+  /** Mirrored: builder fee Perpl charged on the copy (CopyProof.builderFeeCNS); null for other kinds. */
+  builder_fee_cns?: string | null;
 }
 
 export function feedJson(r: FeedRow, explorerTx: string) {
@@ -59,7 +61,7 @@ export function feedJson(r: FeedRow, explorerTx: string) {
     keeper: r.keeper,
     amount: r.amount,
     latencyMs: r.latency_ms,
-    /** Mirrored only: leader fill and entry, mark, follower fill and entry deviation, as emitted onchain. */
+    /** Mirrored only: leader fill and entry, mark, follower fill, entry deviation and builder fee, as emitted onchain. */
     proof: (data?.proof as Record<string, unknown> | undefined) ?? null,
     data,
   };
@@ -70,10 +72,10 @@ export type FeedInsert = Omit<FeedRow, 'id' | 'commit_state'> & { commit_state?:
 export function insertFeed(db: Db, f: FeedInsert): FeedRow | undefined {
   const res = db.run(
     `INSERT OR IGNORE INTO feed (account, kind, tx_hash, log_index, block, block_hash, ts, commit_state, leader_id, perp_id, order_type,
-      lots, price, leverage, reason, limit_v, actual_v, leader_ref, keeper, amount, latency_ms, data)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      lots, price, leverage, reason, limit_v, actual_v, leader_ref, keeper, amount, latency_ms, data, builder_fee_cns)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     f.account, f.kind, f.tx_hash, f.log_index, f.block, f.block_hash, f.ts, f.commit_state ?? 'proposed', f.leader_id, f.perp_id,
-    f.order_type, f.lots, f.price, f.leverage, f.reason, f.limit_v, f.actual_v, f.leader_ref, f.keeper, f.amount, f.latency_ms, f.data,
+    f.order_type, f.lots, f.price, f.leverage, f.reason, f.limit_v, f.actual_v, f.leader_ref, f.keeper, f.amount, f.latency_ms, f.data, f.builder_fee_cns ?? null,
   );
   if (Number(res.changes) === 0) {
     if (f.latency_ms !== null) {

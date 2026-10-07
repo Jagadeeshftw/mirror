@@ -142,6 +142,119 @@ export const perplExchangeAbi = [
   },
   {
     "type": "function",
+    "name": "execOrderV2",
+    "inputs": [
+      {
+        "name": "orderDesc",
+        "type": "tuple",
+        "internalType": "struct OrderDesc",
+        "components": [
+          {
+            "name": "orderDescId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "perpId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "orderType",
+            "type": "uint8",
+            "internalType": "enum OrderDescEnum"
+          },
+          {
+            "name": "orderId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "pricePNS",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "lotLNS",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "expiryBlock",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "postOnly",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "fillOrKill",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "immediateOrCancel",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "maxMatches",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "leverageHdths",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "lastExecutionBlock",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "amountCNS",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "maxNegPnlCollatBPS",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      },
+      {
+        "name": "extension",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "signature",
+        "type": "tuple",
+        "internalType": "struct OrderSignature",
+        "components": [
+          {
+            "name": "perpId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "orderId",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "getAccountByAddr",
     "inputs": [
       {
@@ -783,6 +896,79 @@ export const perplExchangeAbi = [
       },
       {
         "name": "id",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MakerOrderFilledV2",
+    "inputs": [
+      {
+        "name": "perpId",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "accountId",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "orderId",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "pricePNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "lotLNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "feeCNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "lockedBalanceCNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amountCNS",
+        "type": "int256",
+        "indexed": false,
+        "internalType": "int256"
+      },
+      {
+        "name": "balanceCNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "builderId",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "builderFeeCNS",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1616,6 +1802,67 @@ export const perplExchangeAbi = [
       },
       {
         "name": "priceResiduePNSQ16",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TakerOrderFilledV2",
+    "inputs": [
+      {
+        "name": "entryPricePNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "collatPricePNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "pnlPricePNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "lotLNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "feeCNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amountCNS",
+        "type": "int256",
+        "indexed": false,
+        "internalType": "int256"
+      },
+      {
+        "name": "balanceCNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "builderId",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "builderFeeCNS",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"

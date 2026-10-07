@@ -77,7 +77,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
   const bus = new Bus();
   const limiter = new RateLimiter();
   const streams = new ChainStreams(client, cfg.wsRpcUrl, env.LOG_SUBSCRIPTION, env.POLL_INTERVAL_MS, log.child({ mod: 'streams' }));
-  const reads = new Reads(client, cfg.exchange, cfg.collateral);
+  const reads = new Reads(client, cfg.exchange, cfg.collateral, cfg.factory);
   const fees = new FeeOracle(client);
   const bookMarkets = [...new Set([env.DEMO_PERP_ID, ...cfg.markets.map((m) => m.perpId)])];
   const market = new MarketData(
@@ -171,7 +171,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     flagScore: env.ADVERSARIAL_FLAG_SCORE,
     minIncidents: env.ADVERSARIAL_MIN_INCIDENTS,
   }, isTeamRun);
-  const backtest = new BacktestService(indexer, quality, { defaultSlippageBps: env.BACKTEST_DEFAULT_SLIPPAGE_BPS, takerFeeBps: env.BACKTEST_TAKER_FEE_BPS, safetyBps: env.SLIPPAGE_SAFETY_BPS, maxEvents: env.BACKTEST_MAX_EVENTS }, { db, markets: cfg.markets });
+  const backtest = new BacktestService(indexer, quality, { defaultSlippageBps: env.BACKTEST_DEFAULT_SLIPPAGE_BPS, takerFeeBps: env.BACKTEST_TAKER_FEE_BPS, safetyBps: env.SLIPPAGE_SAFETY_BPS, maxEvents: env.BACKTEST_MAX_EVENTS, builder: () => reads.builder() }, { db, markets: cfg.markets });
   const quote = relayer
     ? new QuoteService(client, reads, market, relayer, env.SLIPPAGE_SAFETY_BPS, env.MAX_MATCHES, { guard, adversarial, refuseFlagged: env.ADVERSARIAL_REFUSE_FOLLOWS })
     : undefined;

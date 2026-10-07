@@ -16,6 +16,7 @@ export type PolicyStruct = {
   maxEntryDeviationBps: number;
   stopSlippageBps: number;
   flattenOnStop: boolean;
+  maxBuilderFeePer100K: number;
   leaders: readonly { accountId: number; ratioBps: number; budgetCNS: bigint; lossStopBps: number }[];
   markets: readonly { perpId: number; maxNotionalCNS: bigint }[];
 };
@@ -41,6 +42,7 @@ export const toPolicyStruct = (p: Policy): PolicyStruct => ({
   maxEntryDeviationBps: p.maxEntryDeviationBps,
   stopSlippageBps: p.stopSlippageBps,
   flattenOnStop: p.flattenOnStop,
+  maxBuilderFeePer100K: p.maxBuilderFeePer100K,
   leaders: p.leaders.map((l) => ({ accountId: l.accountId, ratioBps: l.ratioBps, budgetCNS: l.budgetCNS, lossStopBps: l.lossStopBps })),
   markets: p.markets.map((m) => ({ perpId: m.perpId, maxNotionalCNS: m.maxNotionalCNS })),
 });
