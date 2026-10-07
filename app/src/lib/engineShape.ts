@@ -116,12 +116,16 @@ export function normalizeAccount(raw: any): MirrorAccount {
     pnl: {
       realisedCNS: str(raw?.pnl?.realisedCNS ?? (byLeader.length ? sum("realisedCNS") : "0")),
       unrealisedCNS: str(raw?.pnl?.unrealisedCNS ?? (byLeader.length ? sum("unrealisedCNS") : positions.reduce((s, p) => s + big(p.upnlCNS), 0n))),
-      // Not served by the engine: realised PnL since 00:00 UTC.
-      todayCNS: str(raw?.pnl?.todayCNS),
+      // Engine: equity now vs the first snapshot of the UTC day, net of deposits and withdrawals.
+      todayCNS: str(raw?.pnl?.todayCNS ?? raw?.todayPnlCNS),
       byLeader,
     },
     leader: raw?.leader ?? (leaderId ? { accountId: leaderId, address: (leaderAddr ?? "") as Address, labels: leaderLabels.get(leaderId) ?? [] } : null),
-    stops: raw?.stops ?? { dailyLossHit: false, drawdownHit: false },
+    // Engine: `[{t (s), equityCNS}]` for the last 30 days; the app's {t (ms), v (raw units)}.
+    equityHistory: Array.isArray(raw?.equityHistory)
+      ? raw.equityHistory.map((p: any) => ({ t: ms(p.t), v: p.v !== undefined ? Number(p.v) : Number(big(p.equityCNS)) }))
+      : undefined,
+    stops: raw?.stops ?? { dailyLossHit: !!raw?.dailyLossHit, drawdownHit: !!raw?.drawdownHit },
     createdAt: ms(raw?.createdAt ?? raw?.createdTs ?? 0),
     teamRun: !!raw?.teamRun,
   };
@@ -132,7 +136,8 @@ export function normalizeOwnerAccounts(raw: any, owner: Address): OwnerAccounts 
   const list: any[] = Array.isArray(raw) ? raw : (raw?.accounts ?? []);
   return {
     owner: checksum(raw?.owner ?? owner),
-    walletBalanceCNS: raw?.walletBalanceCNS,
+    // Engine: `walletCNS`, the owner's AUSD balance read from the collateral token.
+    walletBalanceCNS: raw?.walletBalanceCNS ?? raw?.walletCNS ?? undefined,
     accounts: list.filter((a) => a && a.deployed !== false && a.predicted !== true).map(normalizeAccount),
   };
 }
@@ -191,6 +196,11 @@ export function normalizeFeedEvent(raw: any): FeedEvent {
     timestamp: ms(raw?.timestamp),
     commitState: raw?.commitState ?? "proposed",
     latencyMs: numOr(raw?.latencyMs, undefined) as number | undefined,
+    leaderBlock: numOr(raw?.leaderBlock, undefined) as number | undefined,
+    latencyBlocks: numOr(raw?.latencyBlocks, undefined) as number | undefined,
+    realisedPnlCNS: raw?.realisedPnlCNS ?? undefined,
+    leaderLotLNS: raw?.leaderLotLNS ?? undefined,
+    leaderLeverageHdths: numOr(raw?.leaderLeverageHdths, undefined) as number | undefined,
     leaderAccountId: leaderId,
     leaderAddress: raw?.leaderAddress ?? (leaderId ? leaderAddresses.get(leaderId) : undefined),
     perpId,

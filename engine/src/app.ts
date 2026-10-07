@@ -28,6 +28,7 @@ import { IndexerClient } from './services/indexer.js';
 import { CopyQualityService } from './services/quality.js';
 import { AdversarialService } from './services/adversarial.js';
 import { BacktestService } from './services/backtest.js';
+import { EquityService } from './services/equity.js';
 
 export interface Engine {
   cfg: Config;
@@ -57,6 +58,7 @@ export interface Engine {
   quality: CopyQualityService;
   adversarial: AdversarialService;
   backtest: BacktestService;
+  equity: EquityService;
   balances: Map<string, bigint>;
   depositCap?: bigint;
   startedMs: number;
@@ -176,7 +178,10 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     ? new QuoteService(client, reads, market, relayer, env.SLIPPAGE_SAFETY_BPS, env.MAX_MATCHES, { guard, adversarial, refuseFlagged: env.ADVERSARIAL_REFUSE_FOLLOWS })
     : undefined;
   const leaders = new LeaderService(db, reads, market, fallbackRegistry, nansen, env.INDEXER_GRAPHQL_URL, () => demo?.leaderAccountId ?? 0, log.child({ mod: 'leaders' }));
-  const views = new Views(db, reads, market, fallbackRegistry, relayer, cfg.explorerTx);
+  const equity = new EquityService(db, (a) => reads.equity(a), { intervalMs: env.EQUITY_SNAPSHOT_MS }, log.child({ mod: 'equity' }));
+  // Every copy, deposit, withdrawal and close-all records the account's equity right away.
+  if (registry) registry.onAccountActivity = (account, kind) => void equity.snapshot(account, kind, true);
+  const views = new Views(db, reads, market, fallbackRegistry, relayer, cfg.explorerTx, equity);
   const push = new PushService(db, fallbackRegistry, bus, { enabled: env.PUSH_ENABLED, accessToken: env.EXPO_ACCESS_TOKEN }, log.child({ mod: 'push' }));
 
   const balances = new Map<string, bigint>();
@@ -195,7 +200,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
 
   const engine: Engine = {
     cfg, db, client, streams, reads, market, bus, limiter, fees, keepers, relayerSender, registry, watcher, copier, tracker, relayer, quote, demo,
-    leaders, views, push, nansen, stops, guard, quality, adversarial, backtest, balances, startedMs: Date.now(),
+    leaders, views, push, nansen, stops, guard, quality, adversarial, backtest, equity, balances, startedMs: Date.now(),
     async start() {
       const id = await client.getChainId();
       if (id !== cfg.chainId) throw new Error(`RPC chain id ${id} != configured ${cfg.chainId}`);
@@ -211,6 +216,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
         engine.depositCap = await client.readContract({ address: cfg.factory, abi: mirrorAccountFactoryAbi, functionName: 'depositCap' }).catch(() => undefined);
       }
       push.start();
+      if (registry) equity.start(() => registry.all().filter((a) => a.perplAccountId !== 0).map((a) => a.address));
       await refreshBalances();
       balanceTimer = setInterval(() => void refreshBalances(), 30_000);
       balanceTimer.unref();
@@ -234,6 +240,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     },
     async stop() {
       clearInterval(balanceTimer);
+      equity.stop();
       streams.stop();
       market.stop();
       await copier?.drain(10_000);

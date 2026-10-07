@@ -1,5 +1,6 @@
 {
  "owner": "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
+ "walletCNS": "180000000",
  "accounts": [
   {
    "address": "0xC4668F465E7BD81eba43D664EFb1a23d59a534Df",
@@ -9,21 +10,43 @@
    "salt": "0x0000000000000000000000000000000000000000000000000000000000000000",
    "teamRun": false,
    "perplAccountId": 5,
-   "createdBlock": 126,
-   "createdTx": "0x9cf73c8d8f0b34cc12794529a7800ae2b85a9cd79d07e103a7140052237fbeb8",
+   "createdBlock": 147,
+   "createdTx": "0x8fa75040370c469c16855b927574fc9ee55f07aed9c8e8d83288d35bcc36e7fd",
    "balanceCNS": "19143630",
-   "equityCNS": "19999126",
+   "equityCNS": "19999848",
    "netDepositsCNS": "20000000",
-   "pnlCNS": "-874",
+   "pnlCNS": "-152",
+   "todayPnlCNS": "-152",
+   "equityHistory": [
+    {
+     "t": 1791375128,
+     "equityCNS": "20000000"
+    },
+    {
+     "t": 1791375129,
+     "equityCNS": "20000178"
+    }
+   ],
+   "dailyLossHit": false,
+   "drawdownHit": false,
+   "risk": {
+    "dailyLossHit": false,
+    "drawdownHit": false,
+    "dailyLossFloorCNS": "18000000",
+    "drawdownFloorCNS": "16000000",
+    "dayStartEquityCNS": "20000000",
+    "highWaterEquityCNS": "20000000"
+   },
+   "createdAt": 1791375125,
    "builderFeesCNS": "343",
    "paused": false,
-   "expiry": 1799145454,
+   "expiry": 1799151125,
    "policy": {
     "maxLeverageHdths": 500,
     "maxSlippageBps": 50,
     "dailyLossBps": 1000,
     "drawdownBps": 2000,
-    "expiry": 1799145454,
+    "expiry": 1799151125,
     "maxEntryDeviationBps": 100,
     "stopSlippageBps": 300,
     "flattenOnStop": true,
@@ -53,16 +76,16 @@
      "side": "long",
      "lotLNS": "2",
      "entryPricePNS": "855428",
-     "markPNS": "855462",
+     "markPNS": "855823",
      "depositCNS": "855428",
-     "unrealizedPnlCNS": "68",
+     "unrealizedPnlCNS": "790",
      "leaderAccountId": 3
     }
    ],
    "pnlByLeader": [
     {
      "leaderAccountId": 3,
-     "unrealizedPnlCNS": "68",
+     "unrealizedPnlCNS": "790",
      "realizedPnlCNS": "-942",
      "marginCNS": "855428",
      "budgetCNS": "20000000",

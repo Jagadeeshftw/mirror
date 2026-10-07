@@ -31,15 +31,15 @@ describe("owner accounts and accounts", () => {
     expect(a.deployed).toBe(true);
     expect(a.equityCNS).toBe(raw.equityCNS);
     expect(a.policy?.maxEntryDeviationBps).toBe(100);
-    expect(a.pnl.unrealisedCNS).toBe("68");
-    expect(a.pnl.realisedCNS).toBe("-942");
-    expect(a.pnl.todayCNS).toBe("0");
-    expect(a.pnl.byLeader[0]).toEqual({ leaderAccountId: 3, realisedCNS: "-942", unrealisedCNS: "68" });
+    const book = raw.pnlByLeader[0];
+    expect(a.pnl.unrealisedCNS).toBe(book.unrealizedPnlCNS);
+    expect(a.pnl.realisedCNS).toBe(book.realizedPnlCNS);
+    expect(a.pnl.byLeader[0]).toEqual({ leaderAccountId: 3, realisedCNS: book.realizedPnlCNS, unrealisedCNS: book.unrealizedPnlCNS });
     expect(a.positions).toHaveLength(1);
     const p = a.positions[0];
-    expect(p).toMatchObject({ perpId: 1, side: "long", lotLNS: "2", entryPNS: "855428", marginCNS: "855428", upnlCNS: "68", leaderAccountId: 3 });
-    // 2 lots x 85546.2 at 5 lot / 1 price decimals = 1.710924 AUSD notional, about 2x on 0.855 margin.
-    expect(p.notionalCNS).toBe("1710924");
+    expect(p).toMatchObject({ perpId: 1, side: "long", lotLNS: "2", entryPNS: "855428", marginCNS: "855428", upnlCNS: book.unrealizedPnlCNS, leaderAccountId: 3 });
+    // 2 lots x mark at 5 lot / 1 price decimals = 2 x markPNS CNS notional (about 1.71 AUSD), about 2x on 0.855 margin.
+    expect(p.notionalCNS).toBe(String(2n * BigInt(raw.positions[0].markPNS)));
     expect(p.leverageHdths).toBe(200);
     expect(a.marginCNS).toBe("855428");
     expect(BigInt(a.withdrawableCNS)).toBe(BigInt(raw.equityCNS) - 855428n);
@@ -79,15 +79,17 @@ describe("feed", () => {
     expect(m.pricePNS).toBe("855428");
     expect(copyFeeCNS(m)).toBeGreaterThan(0n);
     expect(m.notionalCNS).toBe("1710856");
-    expect(m.latencyMs).toBe(403);
+    expect(m.latencyMs).toBe(fx("feed-user-withdrawn").items.find((i: any) => i.kind === "Mirrored").latencyMs);
   });
 
   it("Blocked: flat fields become blocked{}, and the entry-filter sentence reads the leader's entry", () => {
     const b = ev("Blocked");
-    expect(b.blocked).toEqual({ reason: "EntryTooFar", reasonCode: expect.any(Number), limit: "863982", actual: "881393", rule: "Entry filter 1%" });
+    const rawB = fx("feed-user-withdrawn").items.find((i: any) => i.kind === "Blocked");
+    expect(b.blocked).toEqual({ reason: "EntryTooFar", reasonCode: expect.any(Number), limit: "863982", actual: rawB.actual, rule: "Entry filter 1%" });
     expect(b.blocked!.reasonCode).toBeGreaterThan(0);
     const x = explainBlock(cfg, b);
-    expect(x.sentence).toBe("Price moved 3.0% past the leader's entry; your limit is 1%. Not copied.");
+    // The run moves the mark 3% above the leader's entry before the leader adds: about 3% past it.
+    expect(x.sentence).toMatch(/^Price moved 3\.\d% past the leader's entry; your limit is 1%\. Not copied\.$/);
   });
 
   it("LeverageTooHigh from the demo follower's blocked trade carries the leader's leverage", () => {
@@ -100,7 +102,7 @@ describe("feed", () => {
 
   it("account events keep amounts and flags", () => {
     expect(ev("Deposited").amountCNS).toBe("20000000");
-    expect(ev("Withdrawn").amountCNS).toBe("19997819");
+    expect(ev("Withdrawn").amountCNS).toBe(fx("feed-user-withdrawn").items.find((i: any) => i.kind === "Withdrawn").amount);
     expect(ev("ClosedAll").positionsClosed).toBe(1);
     expect(ev("Paused").paused).toBe(true);
   });

@@ -33,6 +33,9 @@ export class DemoError extends Error {
 
 type Kind = 'trade' | 'blocked';
 
+/** A blocked cycle closes the leader position again after this long. */
+export const BLOCKED_HOLD_MS = 2_000;
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -80,7 +83,12 @@ export class DemoService {
     return this.db.get<{ n: number }>('SELECT COUNT(*) AS n FROM demo_cycles WHERE started_ms > ?', since)?.n ?? 0;
   }
 
-  async start(kind: Kind, ip: string): Promise<{ cycleId: string; kind: Kind; status: string; stream: string }> {
+  /** How long the leader holds before closing in a cycle of this kind (the app says "after about N s"). */
+  holdMs(kind: string) {
+    return kind === 'trade' ? this.opts.holdMs : BLOCKED_HOLD_MS;
+  }
+
+  async start(kind: Kind, ip: string): Promise<{ cycleId: string; kind: Kind; status: string; stream: string; holdMs: number }> {
     if (!this.enabled || !this.leader) throw new DemoError(503, 'demo not configured');
     if (!this.leaderAccountId) await this.init();
     if (!this.leaderAccountId) throw new DemoError(503, 'demo leader has no Perpl account');
@@ -105,7 +113,7 @@ export class DemoService {
     void this.run(id, kind).finally(() => {
       this.current = undefined;
     });
-    return { cycleId: id, kind, status: 'started', stream: '/v1/stream?account=demo' };
+    return { cycleId: id, kind, status: 'started', stream: '/v1/stream?account=demo', holdMs: this.holdMs(kind) };
   }
 
   private step(id: string, step: string, data: Record<string, unknown> = {}) {
@@ -172,7 +180,7 @@ export class DemoService {
     const seen: BusEvent[] = [];
     const off = this.bus.subscribe('demo', (e) => seen.push(e));
     try {
-      this.step(id, 'leader_opening', { kind, perpId: this.opts.perpId, lots: lots.toString(), leverageHdths: leverage });
+      this.step(id, 'leader_opening', { kind, perpId: this.opts.perpId, lots: lots.toString(), leverageHdths: leverage, holdMs: this.holdMs(kind) });
       const openTx = await this.leaderOrder(OPEN_LONG, lots, leverage);
       this.db.run('UPDATE demo_cycles SET open_tx = ? WHERE id = ?', openTx, id);
       this.step(id, 'leader_opened', { txHash: openTx });
@@ -189,7 +197,7 @@ export class DemoService {
         this.step(id, 'holding', { ms: this.opts.holdMs });
         await sleep(this.opts.holdMs);
       } else {
-        await sleep(2_000);
+        await sleep(BLOCKED_HOLD_MS);
       }
 
       const pos = await this.reads.position(this.opts.perpId, this.leaderAccountId);
@@ -235,7 +243,7 @@ export class DemoService {
     const leaderPos = this.leaderAccountId ? await this.reads.position(this.opts.perpId, this.leaderAccountId).catch(() => undefined) : undefined;
     const follower = this.opts.followerAccount ? this.registry.get(this.opts.followerAccount) : undefined;
     const followerPos = follower?.perplAccountId ? await this.reads.position(this.opts.perpId, follower.perplAccountId).catch(() => undefined) : undefined;
-    const cycles = this.db.all<Record<string, unknown>>('SELECT * FROM demo_cycles ORDER BY started_ms DESC LIMIT 20').map((c) => ({ ...c, steps: JSON.parse(String(c.steps)) }));
+    const cycles = this.db.all<Record<string, unknown>>('SELECT * FROM demo_cycles ORDER BY started_ms DESC LIMIT 20').map((c) => ({ ...c, holdMs: this.holdMs(String(c.kind)), steps: JSON.parse(String(c.steps)) }));
     return {
       enabled: this.enabled,
       running: this.current ?? null,
@@ -243,6 +251,7 @@ export class DemoService {
       lots: this.opts.lots,
       leverageHdths: this.opts.leverageHdths,
       blockedLeverageHdths: this.opts.blockedLeverageHdths,
+      holdMsByKind: { trade: this.holdMs('trade'), blocked: this.holdMs('blocked') },
       limits: { perIpHourly: this.opts.ipHourly, dailyCap: this.opts.dailyCap, usedToday: this.dailyCount() },
       leader: { address: this.leader?.address ?? null, accountId: this.leaderAccountId || null, teamRun: true, position: leaderPos ? { side: leaderPos.side, lotLNS: leaderPos.lots.toString() } : null },
       follower: {

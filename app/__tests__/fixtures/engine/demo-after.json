@@ -5,6 +5,10 @@
  "lots": 1,
  "leverageHdths": 200,
  "blockedLeverageHdths": 1000,
+ "holdMsByKind": {
+  "trade": 5000,
+  "blocked": 2000
+ },
  "limits": {
   "perIpHourly": 50,
   "dailyCap": 500,
@@ -40,141 +44,145 @@
  },
  "cycles": [
   {
-   "id": "30ff49e3-0f48-464d-94ab-f2112607c378",
+   "id": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
    "kind": "blocked",
    "ip": "127.0.0.1",
    "status": "done",
-   "started_ms": 1791369448010,
-   "ended_ms": 1791369451220,
-   "open_tx": "0x42f212c8a8816fecb740ea154c4d0c0109c373137b425b446ba9c1b4c3705810",
-   "close_tx": "0xaf98381257eb54e1b8771f5c685c397dfa7602cab0040e4e46017a4f2c3ecfcc",
-   "copy_tx": "0x0482e6ffcb92696db65f241b5a490d55dad105f7515dee91936f161457e6047f",
+   "started_ms": 1791375119616,
+   "ended_ms": 1791375122816,
+   "open_tx": "0x3f6623203b3aa0970c49cf17c331c2638851f973c481ba413d5408d4467b54b6",
+   "close_tx": "0xcb1ef5b5063b73d791d5c5e8bd1e47cc27e1b15e97b72367bd2da2e1eebb0bc4",
+   "copy_tx": "0x983c438a29adf31e1c916188dd9068a6503aeac10683e267b05e6686fe67e098",
    "copy_close_tx": null,
    "error": null,
    "steps": [
     {
      "type": "demo",
-     "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+     "cycleId": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
      "step": "leader_opening",
-     "at": 1791369448010,
+     "at": 1791375119616,
      "kind": "blocked",
      "perpId": 1,
      "lots": "1",
-     "leverageHdths": 1000
+     "leverageHdths": 1000,
+     "holdMs": 2000
     },
     {
      "type": "demo",
-     "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+     "cycleId": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
      "step": "leader_opened",
-     "at": 1791369448420,
-     "txHash": "0x42f212c8a8816fecb740ea154c4d0c0109c373137b425b446ba9c1b4c3705810"
+     "at": 1791375120017,
+     "txHash": "0x3f6623203b3aa0970c49cf17c331c2638851f973c481ba413d5408d4467b54b6"
     },
     {
      "type": "demo",
-     "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+     "cycleId": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
      "step": "copy_blocked",
-     "at": 1791369448823,
-     "txHash": "0x0482e6ffcb92696db65f241b5a490d55dad105f7515dee91936f161457e6047f",
+     "at": 1791375120418,
+     "txHash": "0x983c438a29adf31e1c916188dd9068a6503aeac10683e267b05e6686fe67e098",
      "reason": "LeverageTooHigh",
-     "latencyMs": 399
+     "latencyMs": 401
     },
     {
      "type": "demo",
-     "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+     "cycleId": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
      "step": "leader_closing",
-     "at": 1791369450826,
+     "at": 1791375122420,
      "lots": "1"
     },
     {
      "type": "demo",
-     "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+     "cycleId": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
      "step": "leader_closed",
-     "at": 1791369451220,
-     "txHash": "0xaf98381257eb54e1b8771f5c685c397dfa7602cab0040e4e46017a4f2c3ecfcc"
+     "at": 1791375122816,
+     "txHash": "0xcb1ef5b5063b73d791d5c5e8bd1e47cc27e1b15e97b72367bd2da2e1eebb0bc4"
     },
     {
      "type": "demo",
-     "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+     "cycleId": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
      "step": "done",
-     "at": 1791369451220
+     "at": 1791375122816
     }
-   ]
+   ],
+   "holdMs": 2000
   },
   {
-   "id": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+   "id": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
    "kind": "trade",
    "ip": "127.0.0.1",
    "status": "done",
-   "started_ms": 1791369439467,
-   "ended_ms": 1791369445624,
-   "open_tx": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41",
-   "close_tx": "0xff31baab6114d00409fd0d54a53b40b7b82a920e0da1771663104134a21a0402",
-   "copy_tx": "0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
-   "copy_close_tx": "0xe80b7678e66e6b36b6a9ac28a1bfd40dac24d27d30dc0acd4f8998a769df4cd8",
+   "started_ms": 1791375111069,
+   "ended_ms": 1791375117220,
+   "open_tx": "0x73e44357e0ae2f49860ef91509e35316a3269bb41aa65bfb88ebe3b8ebd4e373",
+   "close_tx": "0xe05815770c6c13e31e4ac339f058ef41f0be8da9f15cce7fe28bbd46f9b429ea",
+   "copy_tx": "0x1aecb205ef0bddec6f12f4aa79f69034cb00a682d75e8cb8f627218964eb5a16",
+   "copy_close_tx": "0x1d27ce9ca32b52f8cc63756c86df70137c66e5d6ef1b834720ae4723a2eb01a3",
    "error": null,
    "steps": [
     {
      "type": "demo",
-     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
      "step": "leader_opening",
-     "at": 1791369439468,
+     "at": 1791375111070,
      "kind": "trade",
      "perpId": 1,
      "lots": "1",
-     "leverageHdths": 200
+     "leverageHdths": 200,
+     "holdMs": 5000
     },
     {
      "type": "demo",
-     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
      "step": "leader_opened",
-     "at": 1791369439619,
-     "txHash": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41"
+     "at": 1791375111218,
+     "txHash": "0x73e44357e0ae2f49860ef91509e35316a3269bb41aa65bfb88ebe3b8ebd4e373"
     },
     {
      "type": "demo",
-     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
      "step": "copy_executed",
-     "at": 1791369440123,
-     "txHash": "0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
+     "at": 1791375111621,
+     "txHash": "0x1aecb205ef0bddec6f12f4aa79f69034cb00a682d75e8cb8f627218964eb5a16",
      "reason": null,
-     "latencyMs": 403
-    },
-    {
-     "type": "demo",
-     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
-     "step": "holding",
-     "at": 1791369440123,
-     "ms": 5000
-    },
-    {
-     "type": "demo",
-     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
-     "step": "leader_closing",
-     "at": 1791369445126,
-     "lots": "1"
-    },
-    {
-     "type": "demo",
-     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
-     "step": "leader_closed",
-     "at": 1791369445220,
-     "txHash": "0xff31baab6114d00409fd0d54a53b40b7b82a920e0da1771663104134a21a0402"
-    },
-    {
-     "type": "demo",
-     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
-     "step": "copy_closed",
-     "at": 1791369445624,
-     "txHash": "0xe80b7678e66e6b36b6a9ac28a1bfd40dac24d27d30dc0acd4f8998a769df4cd8",
      "latencyMs": 400
     },
     {
      "type": "demo",
-     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
+     "step": "holding",
+     "at": 1791375111621,
+     "ms": 5000
+    },
+    {
+     "type": "demo",
+     "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
+     "step": "leader_closing",
+     "at": 1791375116623,
+     "lots": "1"
+    },
+    {
+     "type": "demo",
+     "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
+     "step": "leader_closed",
+     "at": 1791375116816,
+     "txHash": "0xe05815770c6c13e31e4ac339f058ef41f0be8da9f15cce7fe28bbd46f9b429ea"
+    },
+    {
+     "type": "demo",
+     "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
+     "step": "copy_closed",
+     "at": 1791375117220,
+     "txHash": "0x1d27ce9ca32b52f8cc63756c86df70137c66e5d6ef1b834720ae4723a2eb01a3",
+     "latencyMs": 400
+    },
+    {
+     "type": "demo",
+     "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
      "step": "done",
-     "at": 1791369445624
+     "at": 1791375117220
     }
-   ]
+   ],
+   "holdMs": 5000
   }
  ]
 }

@@ -3,7 +3,7 @@
   "event": "hello",
   "data": {
    "channel": "0xc4668f465e7bd81eba43d664efb1a23d59a534df",
-   "block": 133
+   "block": 154
   }
  },
  {
@@ -11,8 +11,8 @@
   "data": {
    "type": "commit",
    "id": 9,
-   "txHash": "0x6b6444d20c2c0cf87d73ddf354bc11f601d5dea03bd2e13b08f03404930c9876",
-   "block": 127,
+   "txHash": "0x9fd21717dc6ca7c4ef882d5432403a8a141dfa281776c0cca291b6a65b93fcba",
+   "block": 148,
    "kind": "Deposited",
    "commitState": "voted"
   }
@@ -22,8 +22,8 @@
   "data": {
    "type": "commit",
    "id": 10,
-   "txHash": "0x75d0f4d4f899536ca96ac5f5593f01638fe52e90f18749ac0b576f8532c53f88",
-   "block": 128,
+   "txHash": "0xfedf0099c851c33fe905c70dafa41c16b042edde748da15141ceb97e8bc5ca0b",
+   "block": 149,
    "kind": "PolicyUpdated",
    "commitState": "voted"
   }
@@ -33,8 +33,8 @@
   "data": {
    "type": "commit",
    "id": 9,
-   "txHash": "0x6b6444d20c2c0cf87d73ddf354bc11f601d5dea03bd2e13b08f03404930c9876",
-   "block": 127,
+   "txHash": "0x9fd21717dc6ca7c4ef882d5432403a8a141dfa281776c0cca291b6a65b93fcba",
+   "block": 148,
    "kind": "Deposited",
    "commitState": "finalized"
   }
@@ -44,8 +44,8 @@
   "data": {
    "type": "commit",
    "id": 10,
-   "txHash": "0x75d0f4d4f899536ca96ac5f5593f01638fe52e90f18749ac0b576f8532c53f88",
-   "block": 128,
+   "txHash": "0xfedf0099c851c33fe905c70dafa41c16b042edde748da15141ceb97e8bc5ca0b",
+   "block": 149,
    "kind": "PolicyUpdated",
    "commitState": "finalized"
   }
@@ -56,11 +56,11 @@
    "type": "copy",
    "account": "0xC4668F465E7BD81eba43D664EFb1a23d59a534Df",
    "stage": "submitting",
-   "leaderRef": "0x899744170182bb452fddbd76f0c89bf07b8bd836662507c67470d769ec10720f",
+   "leaderRef": "0x23e37a2e0d2ead7b733c49a88ab9be4381862f4d856d57512ba3745a1cdfff98",
    "perpId": 1,
    "orderType": 0,
    "lotLNS": "2",
-   "pricePNS": "859385",
+   "pricePNS": "859839",
    "leverageHdths": 200,
    "expected": "executed",
    "reason": null,
@@ -77,31 +77,36 @@
     "kind": "Mirrored",
     "onchain": true,
     "label": null,
-    "txHash": "0x6845cd55948dab1133b602b542e8d9c97cccc8cb32f54ceca9c2ae2c9c8eef43",
-    "txUrl": "https://monadvision.com/tx/0x6845cd55948dab1133b602b542e8d9c97cccc8cb32f54ceca9c2ae2c9c8eef43",
+    "txHash": "0x5f455be09cdb446fda3f37684d5847cf1164e838f3bfa5d7163c94ac9bda1d94",
+    "txUrl": "https://monadvision.com/tx/0x5f455be09cdb446fda3f37684d5847cf1164e838f3bfa5d7163c94ac9bda1d94",
     "logIndex": 13,
-    "block": 136,
-    "timestamp": 1791369457,
+    "block": 157,
+    "timestamp": 1791375129,
     "commitState": "proposed",
     "leaderAccountId": 3,
     "perpId": 1,
     "orderType": 0,
     "orderTypeName": "OpenLong",
     "lotLNS": "2",
-    "pricePNS": "859385",
+    "pricePNS": "859839",
     "leverageHdths": 200,
     "reason": null,
     "limit": null,
     "actual": null,
-    "leaderRef": "0x899744170182bb452fddbd76f0c89bf07b8bd836662507c67470d769ec10720f",
+    "leaderRef": "0x23e37a2e0d2ead7b733c49a88ab9be4381862f4d856d57512ba3745a1cdfff98",
     "matchNow": false,
     "keeper": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
     "amount": null,
-    "latencyMs": 403,
+    "latencyMs": 401,
+    "leaderBlock": 156,
+    "latencyBlocks": 1,
+    "realisedPnlCNS": null,
+    "leaderLotLNS": null,
+    "leaderLeverageHdths": null,
     "proof": {
      "leaderFillPNS": "855428",
      "leaderEntryPNS": "855428",
-     "markPNS": "855536",
+     "markPNS": "855988",
      "fillPNS": "855428",
      "entryDeviationBps": 0,
      "builderFeeCNS": "343"
@@ -112,7 +117,7 @@
      "proof": {
       "leaderFillPNS": "855428",
       "leaderEntryPNS": "855428",
-      "markPNS": "855536",
+      "markPNS": "855988",
       "fillPNS": "855428",
       "entryDeviationBps": 0,
       "builderFeeCNS": "343"
@@ -127,10 +132,10 @@
    "type": "copy",
    "account": "0xC4668F465E7BD81eba43D664EFb1a23d59a534Df",
    "stage": "included",
-   "leaderRef": "0x899744170182bb452fddbd76f0c89bf07b8bd836662507c67470d769ec10720f",
-   "txHash": "0x6845cd55948dab1133b602b542e8d9c97cccc8cb32f54ceca9c2ae2c9c8eef43",
-   "block": 136,
-   "latencyMs": 403,
+   "leaderRef": "0x23e37a2e0d2ead7b733c49a88ab9be4381862f4d856d57512ba3745a1cdfff98",
+   "txHash": "0x5f455be09cdb446fda3f37684d5847cf1164e838f3bfa5d7163c94ac9bda1d94",
+   "block": 157,
+   "latencyMs": 401,
    "blocked": null
   }
  },
@@ -139,8 +144,8 @@
   "data": {
    "type": "commit",
    "id": 11,
-   "txHash": "0x6845cd55948dab1133b602b542e8d9c97cccc8cb32f54ceca9c2ae2c9c8eef43",
-   "block": 136,
+   "txHash": "0x5f455be09cdb446fda3f37684d5847cf1164e838f3bfa5d7163c94ac9bda1d94",
+   "block": 157,
    "kind": "Mirrored",
    "commitState": "voted"
   }
@@ -150,8 +155,8 @@
   "data": {
    "type": "commit",
    "id": 11,
-   "txHash": "0x6845cd55948dab1133b602b542e8d9c97cccc8cb32f54ceca9c2ae2c9c8eef43",
-   "block": 136,
+   "txHash": "0x5f455be09cdb446fda3f37684d5847cf1164e838f3bfa5d7163c94ac9bda1d94",
+   "block": 157,
    "kind": "Mirrored",
    "commitState": "finalized"
   }
@@ -162,7 +167,7 @@
    "type": "copy",
    "account": "0xC4668F465E7BD81eba43D664EFb1a23d59a534Df",
    "stage": "submitting",
-   "leaderRef": "0x16493902511d0759b7f3a60941d6a6e354aedd0becbf64ba660a437bd35863c9",
+   "leaderRef": "0x5cd97822c4e46fc1a3240a1059bb4def13b3a8c9c3c80e07c027ef3ffadc041f",
    "perpId": 1,
    "orderType": 0,
    "lotLNS": "1",
@@ -178,16 +183,16 @@
   "data": {
    "type": "feed",
    "item": {
-    "id": 16,
+    "id": 15,
     "account": "0xc4668f465e7bd81eba43d664efb1a23d59a534df",
     "kind": "Blocked",
     "onchain": true,
     "label": null,
-    "txHash": "0xfe5030517641ad074fb3b67e3ceb8cf6fda30ffe499db3307be16a2204010efb",
-    "txUrl": "https://monadvision.com/tx/0xfe5030517641ad074fb3b67e3ceb8cf6fda30ffe499db3307be16a2204010efb",
-    "logIndex": 1,
-    "block": 146,
-    "timestamp": 1791369461,
+    "txHash": "0x0493df03f89a2ca91696cbfb6c89579bfae9fc68a23a3d874f222ee6a3d01c02",
+    "txUrl": "https://monadvision.com/tx/0x0493df03f89a2ca91696cbfb6c89579bfae9fc68a23a3d874f222ee6a3d01c02",
+    "logIndex": 0,
+    "block": 166,
+    "timestamp": 1791375132,
     "commitState": "proposed",
     "leaderAccountId": 3,
     "perpId": 1,
@@ -198,16 +203,21 @@
     "leverageHdths": null,
     "reason": "EntryTooFar",
     "limit": "863982",
-    "actual": "881393",
-    "leaderRef": "0x16493902511d0759b7f3a60941d6a6e354aedd0becbf64ba660a437bd35863c9",
+    "actual": "881712",
+    "leaderRef": "0x5cd97822c4e46fc1a3240a1059bb4def13b3a8c9c3c80e07c027ef3ffadc041f",
     "matchNow": false,
     "keeper": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
     "amount": null,
     "latencyMs": 400,
+    "leaderBlock": 165,
+    "latencyBlocks": 1,
+    "realisedPnlCNS": null,
+    "leaderLotLNS": "10",
+    "leaderLeverageHdths": 200,
     "proof": null,
     "data": {
      "leaderFillPNS": "855428",
-     "markPNS": "881393"
+     "markPNS": "881712"
     }
    }
   }
@@ -218,9 +228,9 @@
    "type": "copy",
    "account": "0xC4668F465E7BD81eba43D664EFb1a23d59a534Df",
    "stage": "included",
-   "leaderRef": "0x16493902511d0759b7f3a60941d6a6e354aedd0becbf64ba660a437bd35863c9",
-   "txHash": "0xfe5030517641ad074fb3b67e3ceb8cf6fda30ffe499db3307be16a2204010efb",
-   "block": 146,
+   "leaderRef": "0x5cd97822c4e46fc1a3240a1059bb4def13b3a8c9c3c80e07c027ef3ffadc041f",
+   "txHash": "0x0493df03f89a2ca91696cbfb6c89579bfae9fc68a23a3d874f222ee6a3d01c02",
+   "block": 166,
    "latencyMs": 400,
    "blocked": "EntryTooFar"
   }
@@ -229,9 +239,9 @@
   "event": "commit",
   "data": {
    "type": "commit",
-   "id": 16,
-   "txHash": "0xfe5030517641ad074fb3b67e3ceb8cf6fda30ffe499db3307be16a2204010efb",
-   "block": 146,
+   "id": 15,
+   "txHash": "0x0493df03f89a2ca91696cbfb6c89579bfae9fc68a23a3d874f222ee6a3d01c02",
+   "block": 166,
    "kind": "Blocked",
    "commitState": "voted"
   }
@@ -240,9 +250,9 @@
   "event": "commit",
   "data": {
    "type": "commit",
-   "id": 16,
-   "txHash": "0xfe5030517641ad074fb3b67e3ceb8cf6fda30ffe499db3307be16a2204010efb",
-   "block": 146,
+   "id": 15,
+   "txHash": "0x0493df03f89a2ca91696cbfb6c89579bfae9fc68a23a3d874f222ee6a3d01c02",
+   "block": 166,
    "kind": "Blocked",
    "commitState": "finalized"
   }

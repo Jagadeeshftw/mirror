@@ -9,7 +9,7 @@
    "accountId": 3,
    "address": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
    "score": -7.68,
-   "pnlUsd": -0.00171,
+   "pnlUsd": -0.001069,
    "pnlPct": 0,
    "maxDrawdownPct": 0,
    "winRate": 0,
@@ -77,37 +77,6 @@
    "winRate": 0,
    "avgLeverage": 10,
    "trades": 3,
-   "markets": [
-    "BTC"
-   ],
-   "followers": 0,
-   "nansen": {
-    "labels": [],
-    "monad": null,
-    "crossVenue": null,
-    "fetchedAt": null
-   },
-   "riskFlags": [],
-   "teamRun": false,
-   "adversarial": {
-    "exitsIntoFollowers": 0,
-    "bookMoving": 0,
-    "lastSeen": null,
-    "score": 0,
-    "flagged": false,
-    "copiedFills": 0
-   }
-  },
-  {
-   "accountId": 4,
-   "address": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6",
-   "score": -8.42,
-   "pnlUsd": -0.000855,
-   "pnlPct": 0,
-   "maxDrawdownPct": 0,
-   "winRate": 0,
-   "avgLeverage": 2,
-   "trades": 2,
    "markets": [
     "BTC"
    ],

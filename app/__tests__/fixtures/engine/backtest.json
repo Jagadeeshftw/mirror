@@ -1,8 +1,8 @@
 {
  "leaderAccountId": 3,
  "period": "7d",
- "from": 1790764654,
- "to": 1791369454,
+ "from": 1790770325,
+ "to": 1791375125,
  "source": "indexer",
  "slippage": {
   "bps": 5,
@@ -75,7 +75,7 @@
  "openPositions": [],
  "trades": [
   {
-   "t": 1791369439,
+   "t": 1791375111,
    "perpId": 1,
    "action": "open",
    "side": "long",
@@ -85,7 +85,7 @@
    "pnlCNS": "-471"
   },
   {
-   "t": 1791369445,
+   "t": 1791375116,
    "perpId": 1,
    "action": "close",
    "side": "long",

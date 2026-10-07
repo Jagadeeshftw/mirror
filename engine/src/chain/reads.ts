@@ -134,6 +134,11 @@ export class Reads {
     return this.client.readContract({ address: this.collateral, abi: authTokenAbi, functionName: 'balanceOf', args: [addr] });
   }
 
+  /** MirrorAccount.equity(): idle collateral plus the Perpl account's value. */
+  async equity(address: Address): Promise<bigint> {
+    return this.client.readContract({ address, abi: mirrorAccountAbi, functionName: 'equity' });
+  }
+
   async account(address: Address): Promise<AccountState> {
     const c = { address, abi: mirrorAccountAbi } as const;
     const r = this.client;

@@ -8,7 +8,9 @@ import { getLogsChunked, normalizeLog, type ChainLog, type ChainStreams } from '
 import type { SendResult } from '../chain/sender.js';
 import { STOP_KINDS, type Level, type Side } from '../domain/types.js';
 import type { Bus } from './bus.js';
-import { feedJson, insertFeed, reasonName, type FeedInsert } from './feed.js';
+import { feedJson, insertFeed, reasonName, type FeedInsert, type FeedRow } from './feed.js';
+import { applyCopyFacts, isCloseOrder, storePerplEvent } from './copyfacts.js';
+import { POSITION_TOPICS, decodePositionEvent } from './watcher.js';
 
 const accountEvents = [
   'PerplAccountCreated', 'PolicyUpdated', 'PausedSet', 'Deposited', 'Withdrawn', 'ClosedAll', 'Mirrored', 'Blocked',
@@ -88,6 +90,8 @@ export class Registry {
   onFeed?: (row: ReturnType<typeof feedJson>) => void;
   /** Called after any policy/leader change so watchers can refresh their leader set. */
   onLeadersChanged?: () => void;
+  /** Called (after the backfill) on each new copy, deposit, withdrawal or close-all, e.g. to snapshot equity. */
+  onAccountActivity?: (account: string, kind: string) => void;
 
   constructor(
     private readonly db: Db,
@@ -314,17 +318,50 @@ export class Registry {
       this.onLeadersChanged?.();
     }
     if (feed) {
-      const row = insertFeed(this.db, feed);
-      if (row) {
+      const inserted = insertFeed(this.db, feed);
+      if (inserted) {
+        const perplId = this.accounts.get(addr)?.perplAccountId;
+        const row = applyCopyFacts(this.db, inserted, perplId);
         const json = feedJson(row, this.explorerTx);
         this.bus.publish(addr, { type: 'feed', item: json });
         this.onFeed?.(json);
+        if (row.kind === 'Mirrored' && isCloseOrder(row.order_type) && row.realised_pnl_cns == null) void this.fillRealisedLater(row, perplId);
+        if (this.backfilled && ['Mirrored', 'Deposited', 'Withdrawn', 'ClosedAll'].includes(row.kind)) this.onAccountActivity?.(addr, row.kind);
       }
+    }
+  }
+
+  /**
+   * A copied close's realised PnL when the follower's Perpl close event was not stored yet: waits for it briefly,
+   * then falls back to the change the contract booked in leaderRealizedCNS over the copy's block.
+   */
+  private async fillRealisedLater(row: FeedRow, perplId: number | undefined) {
+    for (const ms of [500, 1_500, 3_000]) {
+      await new Promise((r) => setTimeout(r, ms));
+      if (applyCopyFacts(this.db, row, perplId).realised_pnl_cns != null) return;
+    }
+    if (row.leader_id === null || row.block < 1) return;
+    try {
+      const c = { address: getAddress(row.account), abi: mirrorAccountAbi, functionName: 'leaderRealizedCNS', args: [row.leader_id] } as const;
+      const [after, before] = await Promise.all([
+        this.client.readContract({ ...c, blockNumber: BigInt(row.block) }),
+        this.client.readContract({ ...c, blockNumber: BigInt(row.block - 1) }),
+      ]);
+      this.db.run('UPDATE feed SET realised_pnl_cns = ? WHERE id = ? AND realised_pnl_cns IS NULL', (after - before).toString(), row.id);
+    } catch (err) {
+      this.log.debug({ tx: row.tx_hash, err: (err as Error).message }, 'realised PnL read failed');
     }
   }
 
   /** Records a transaction's receipt logs now (copies, stop triggers) rather than waiting for the next head. */
   async handleReceipt(res: SendResult) {
+    // The copy's own Perpl position events first, so a copied close carries its realised PnL right away.
+    const ts = Math.floor(Date.now() / 1000);
+    for (const raw of res.receipt.logs) {
+      if (!raw.topics[0] || !POSITION_TOPICS.includes(raw.topics[0] as Hex)) continue;
+      const ev = decodePositionEvent({ data: raw.data, topics: raw.topics as Hex[] });
+      if (ev) storePerplEvent(this.db, { transactionHash: res.hash, logIndex: raw.logIndex ?? 0, blockNumber: Number(res.blockNumber) }, ts, ev);
+    }
     for (const raw of res.receipt.logs) {
       await this.handle(
         normalizeLog({

@@ -96,6 +96,10 @@ CREATE TABLE IF NOT EXISTS feed (
   latency_ms INTEGER,
   data TEXT,
   builder_fee_cns TEXT,                -- Mirrored: CopyProof.builderFeeCNS (0 for closes)
+  leader_block INTEGER,                -- Mirrored / Blocked: block of the leader fill that triggered the copy
+  leader_lots TEXT,                    -- Blocked: lots the leader traded in that fill
+  leader_leverage INTEGER,             -- Blocked: the leader's leverage on that fill
+  realised_pnl_cns TEXT,               -- Mirrored closes: realised PnL of the copy (Perpl close event or leaderRealizedCNS change)
   UNIQUE (tx_hash, log_index)
 );
 CREATE INDEX IF NOT EXISTS feed_account ON feed(account, id);
@@ -183,6 +187,17 @@ CREATE TABLE IF NOT EXISTS guard_events (
 CREATE INDEX IF NOT EXISTS guard_events_account ON guard_events(account, id);
 CREATE INDEX IF NOT EXISTS guard_events_leader ON guard_events(leader_id, id);
 
+-- Account equity over time: at most one periodic snapshot per EQUITY_SNAPSHOT_MS, plus one on every copy,
+-- deposit and withdrawal. net_deposits is the contract's netDeposits at that moment (today's PnL is net of flows).
+CREATE TABLE IF NOT EXISTS equity_snapshots (
+  account TEXT NOT NULL,              -- lowercase
+  ts INTEGER NOT NULL,                -- unix seconds
+  equity_cns TEXT NOT NULL,
+  net_deposits_cns TEXT NOT NULL,
+  reason TEXT NOT NULL                -- periodic | view | Mirrored | Deposited | Withdrawn | ClosedAll
+);
+CREATE INDEX IF NOT EXISTS equity_snapshots_account ON equity_snapshots(account, ts);
+
 CREATE TABLE IF NOT EXISTS demo_cycles (
   id TEXT PRIMARY KEY,
   kind TEXT NOT NULL,
@@ -230,6 +245,10 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, decl: string]> = 
   ['leader_fills', 'price', 'TEXT'],
   ['accounts', 'max_builder_fee_per_100k', 'INTEGER'],
   ['feed', 'builder_fee_cns', 'TEXT'],
+  ['feed', 'leader_block', 'INTEGER'],
+  ['feed', 'leader_lots', 'TEXT'],
+  ['feed', 'leader_leverage', 'INTEGER'],
+  ['feed', 'realised_pnl_cns', 'TEXT'],
 ];
 
 export type Row = Record<string, SQLInputValue>;

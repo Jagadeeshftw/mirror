@@ -6,6 +6,10 @@ import { MATCH_NOW_REF } from './constants.js';
 import { feedJson, type FeedRow } from './feed.js';
 import type { RegistryLike } from './registry.js';
 import type { Relayer } from './relayer.js';
+import { applyCopyFacts } from './copyfacts.js';
+import type { EquityService } from './equity.js';
+import { riskView, type RiskView } from '../domain/risk.js';
+import type { AccountState } from '../chain/reads.js';
 
 type AccountRow = {
   address: string;
@@ -48,6 +52,7 @@ export class Views {
     private readonly registry: RegistryLike,
     private readonly relayer: Relayer | undefined,
     private readonly explorerTx: string,
+    private readonly equity?: EquityService,
   ) {}
 
   private teamRun(r: { address: string; owner: string }) {
@@ -62,17 +67,20 @@ export class Views {
     const levels = this.db.all<{ perp_id: number; side: number; stop_loss_pns: string; take_profit_pns: string; slippage_bps: number }>('SELECT * FROM account_levels WHERE account = ?', r.address);
     const addr = getAddress(r.address);
     let equity: bigint | null = null;
+    let state: AccountState | undefined;
     let idle = 0n;
     let perplBalance = 0n;
     try {
-      [equity, idle, perplBalance] = await Promise.all([
-        this.reads.account(addr).then((s) => s.equity),
+      [state, idle, perplBalance] = await Promise.all([
+        this.reads.account(addr),
         this.reads.tokenBalance(addr),
         r.perpl_account_id ? this.reads.perplBalance(r.perpl_account_id) : Promise.resolve(0n),
       ]);
     } catch {
       /* chain read failed; return indexed data */
     }
+    if (state) equity = state.equity;
+    if (equity !== null) this.equity?.noteView(r.address, equity);
     const positions = r.perpl_account_id
       ? (
           await Promise.all(
@@ -111,6 +119,11 @@ export class Views {
         ).filter((x): x is NonNullable<typeof x> => Boolean(x))
       : [];
     const netDeposits = BigInt(r.net_deposits);
+    // The contract's loss stops against current equity (MirrorAccount._checkLossStops).
+    const risk: RiskView | null = state
+      ? riskView({ equity: state.equity, riskDay: state.riskDay, dayStartEquity: state.dayStartEquity, highWaterEquity: state.highWaterEquity, dailyLossBps: state.dailyLossBps, drawdownBps: state.drawdownBps })
+      : null;
+    const today = equity !== null && this.equity ? this.equity.today(r.address, equity, netDeposits) : null;
     const feeRows = this.db.all<{ builder_fee_cns: string | null }>(`SELECT builder_fee_cns FROM feed WHERE account = ? AND kind = 'Mirrored'`, r.address);
     return {
       address: addr,
@@ -126,6 +139,16 @@ export class Views {
       equityCNS: equity?.toString() ?? null,
       netDepositsCNS: netDeposits.toString(),
       pnlCNS: equity !== null ? (equity - netDeposits).toString() : null,
+      /** Equity now minus the first snapshot of the UTC day, net of deposits and withdrawals since (null without one). */
+      todayPnlCNS: today?.toString() ?? null,
+      /** Last 30 days of equity snapshots, oldest first: `{t (unix s), equityCNS}`. */
+      equityHistory: this.equity?.history(r.address) ?? [],
+      /** The contract's daily loss / drawdown stops evaluated against current equity (hold new exposure when true). */
+      dailyLossHit: risk?.dailyLossHit ?? false,
+      drawdownHit: risk?.drawdownHit ?? false,
+      risk,
+      /** Unix seconds of the AccountCreated block. */
+      createdAt: r.created_ts,
       /** Builder fees Perpl charged on this account's copies and match-now orders (sum of proof.builderFeeCNS). */
       builderFeesCNS: sumBuilderFees(feeRows).toString(),
       paused: r.paused === 1,
@@ -159,7 +182,9 @@ export class Views {
       const predicted = await this.relayer.predict(owner, zeroSalt).catch(() => undefined);
       if (predicted) accounts.push({ address: predicted, owner, deployed: false, predicted: true, salt: zeroSalt, teamRun: this.registry.isTeamRun(owner) } as never);
     }
-    return { owner, accounts };
+    // The owner's own wallet balance of the collateral token (AUSD), raw units; null when the read fails.
+    const wallet = await this.reads.tokenBalance(owner).catch(() => null);
+    return { owner, walletCNS: wallet?.toString() ?? null, accounts };
   }
 
   feed(account: string, cursor?: number, limit = 50) {
@@ -167,7 +192,10 @@ export class Views {
       `SELECT * FROM feed WHERE account = ? ${cursor ? 'AND id < ?' : ''} ORDER BY id DESC LIMIT ?`,
       ...(cursor ? [account.toLowerCase(), cursor, limit] : [account.toLowerCase(), limit]),
     );
-    return { items: rows.map((r) => feedJson(r, this.explorerTx)), nextCursor: rows.length === limit ? rows.at(-1)!.id : null };
+    const perplId = this.db.get<{ perpl_account_id: number | null }>('SELECT perpl_account_id FROM accounts WHERE address = ?', account.toLowerCase())?.perpl_account_id;
+    // Leader block / leader order / realised PnL that were not stored yet when the item was first recorded.
+    const filled = rows.map((r) => applyCopyFacts(this.db, r, perplId));
+    return { items: filled.map((r) => feedJson(r, this.explorerTx)), nextCursor: rows.length === limit ? rows.at(-1)!.id : null };
   }
 
   stats(page = 1, limit = 50, keepers: string[] = []) {

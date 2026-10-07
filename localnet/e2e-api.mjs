@@ -260,6 +260,8 @@ try {
   check("owner set a take-profit with a passkey-signed action (relayed)", setLv.status === "success", { tx: setLv.txHash, takeProfitPNS: lv[0].takeProfitPNS.toString() });
   const stranger = acct(keccak256(toHex(`stranger-${RUN}`)));
   await fetch(`${env.faucetUrl}/fund`, { method: "POST", body: JSON.stringify({ address: stranger.address, ausd: 0, mon: 1 }) });
+  // Refresh the market makers' quotes (they expire after ~40 s on the localnet) so the reduce-only IOC finds bids.
+  await fetch(`${env.faucetUrl}/mark`, { method: "POST", body: JSON.stringify({ perpId: 20, price: Number(ethPos.mark) / 100 }) });
   const th = await wallet(stranger).writeContract({ address: userAccount, abi: MA, functionName: "triggerLevel", args: [20n] });
   const tr = await pub.waitForTransactionReceipt({ hash: th });
   const ethAfter = await position(20, userPerpl);

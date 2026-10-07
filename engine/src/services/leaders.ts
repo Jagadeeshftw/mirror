@@ -4,6 +4,7 @@ import type { Reads } from '../chain/reads.js';
 import type { MarketData } from '../perpl/market.js';
 import { nansenAdjust, type NansenProfile, type NansenSignal } from '../nansen/client.js';
 import type { RegistryLike } from './registry.js';
+import { normalizeKind, tradeStats, type TradeEvent } from '../domain/leaderstats.js';
 
 export const WINDOWS: Record<string, number> = { '7d': 7 * 86_400, '30d': 30 * 86_400, '90d': 90 * 86_400 };
 
@@ -108,6 +109,7 @@ const PROFILE_QUERY = `query LeaderProfile($id: String!, $sinceDay: Int!, $trade
       market { symbol lotDecimals priceDecimals lastPricePNS } }
     events(order_by: [{blockNumber: desc}, {logIndex: desc}], limit: $trades) { kind perpId side lotsBeforeLNS lotsAfterLNS lotsTradedLNS pricePNS priceSource
       notionalCNS realizedPnlCNS fundingCNS feeCNS leverageHdths blockNumber timestamp txHash }
+    statsEvents: events(order_by: [{blockNumber: desc}, {logIndex: desc}], limit: 1000) { kind perpId lotsAfterLNS realizedPnlCNS timestamp }
   }
 }`;
 
@@ -132,7 +134,17 @@ interface IndexerProfile {
   equityCurve?: Array<{ day: Num; cumulativeNetPnlCNS: string; equityCNS: string; drawdownCNS: string }>;
   positions?: Array<{ perpId: Num; side: string; lotsLNS: string; entryPricePNS: string; depositCNS: string; leverageHdths: Num; market?: { symbol: string; lotDecimals: number; priceDecimals: number } }>;
   events?: Array<{ kind: string; perpId: Num; side: string; lotsAfterLNS: string; pricePNS: string; realizedPnlCNS: string; leverageHdths: Num; blockNumber: Num; timestamp: Num; txHash: string }>;
+  statsEvents?: Array<{ kind: string; perpId: Num; lotsAfterLNS: string | null; realizedPnlCNS: string | null; timestamp: Num }>;
 }
+
+const bigOrNull = (v: unknown) => {
+  try {
+    return v === null || v === undefined || v === '' ? null : BigInt(v as string);
+  } catch {
+    return null;
+  }
+};
+
 
 /**
  * Score for indexer rows, as suggested in docs/indexer.md:
@@ -177,6 +189,22 @@ export class LeaderService {
     return this.market.meta(perpId)?.symbol ?? String(perpId);
   }
 
+  /** Perpl account ids owned by MirrorAccounts: copies, never ordinary leaders. */
+  private mirrorIds(): Set<number> {
+    return new Set(this.registry.all().map((a) => a.perplAccountId).filter((id) => id !== 0));
+  }
+
+  /**
+   * Never listed as an ordinary leader: MirrorAccounts (by Perpl id or address) and team-run accounts other than
+   * the team-run demo leader (which is listed, flagged teamRun).
+   */
+  private hidden(id: number, address: string | null | undefined, mirrorIds = this.mirrorIds()) {
+    if (mirrorIds.has(id)) return true;
+    if (!address) return false;
+    if (this.registry.get(address)) return true;
+    return this.registry.isTeamRun(address) && id !== this.teamRunLeaderId();
+  }
+
   private followers(id: number) {
     return this.registry.followersOf(id).length;
   }
@@ -200,7 +228,9 @@ export class LeaderService {
     if (lw) {
       const days = (WINDOWS[window] ?? WINDOWS['30d']!) / 86_400;
       const perpFilter = marketSymbol ? this.market.markets().find((m) => m.symbol.toLowerCase() === marketSymbol.toLowerCase())?.perpId : undefined;
+      const mirrorIds = this.mirrorIds();
       const rows = lw
+        .filter((r) => !this.hidden(Number(r.accountId), r.leaderStats?.address, mirrorIds))
         .filter((r) => perpFilter === undefined || (r.leaderStats?.marketsTraded ?? []).map(Number).includes(perpFilter))
         .map((r) => {
           const nansen = r.leaderStats?.address ? (this.nansen.get(r.leaderStats.address) ?? null) : null;
@@ -233,10 +263,11 @@ export class LeaderService {
       `SELECT * FROM perpl_events WHERE ts >= ? ${perpFilter !== undefined ? 'AND perp_id = ?' : ''} ORDER BY block, log_index`,
       ...(perpFilter !== undefined ? [since, perpFilter] : [since]),
     );
-    const stats = [...aggregate(rows).values()];
+    const mirrorIds = this.mirrorIds();
+    const stats = [...aggregate(rows).values()].filter((s) => !mirrorIds.has(s.accountId));
     // Pre-rank by realized PnL and activity, then fetch onchain equity for the top candidates only.
     const candidates = stats.filter((s) => s.closes > 0 || s.trades >= 2).sort((a, b) => Number(b.pnlCNS - a.pnlCNS)).slice(0, Math.max(limit * 2, 50));
-    const out = await Promise.all(candidates.map((s) => this.view(s)));
+    const out = (await Promise.all(candidates.map((s) => this.view(s)))).filter((v) => !this.hidden(v.accountId, v.address, mirrorIds));
     const sorted = out.sort((a, b) => (sort === 'pnl' ? b.pnlUsd - a.pnlUsd : sort === 'drawdown' ? a.maxDrawdownPct - b.maxDrawdownPct : b.score - a.score));
     return { source: 'engine', nansenSource: this.nansen.mode, window, sort, eventsConsidered: rows.length, leaders: sorted.slice(0, limit) };
   }
@@ -278,7 +309,7 @@ export class LeaderService {
       trades: win ? Number(win.trades) : 0,
       markets: (st?.marketsTraded ?? []).map((m) => this.symbol(Number(m))),
       followers: Number(st?.followers ?? 0),
-      stats: st ?? null,
+      stats: { ...(st ?? {}), ...this.indexerTradeStats(pa, window) },
       windows: pa.windows ?? [],
       equityCurve: (pa.equityCurve ?? []).map((e) => ({ t: Number(e.day) * 86_400, pnlCNS: e.cumulativeNetPnlCNS, equityCNS: e.equityCNS, drawdownCNS: e.drawdownCNS })),
       openPositions: positions,
@@ -287,6 +318,14 @@ export class LeaderService {
       riskFlags: flags,
       notes: nansen?.crossVenue ? [`Also trades on ${nansen.crossVenue.venue}: ${nansen.crossVenue.positions} open positions, account value $${nansen.crossVenue.accountValueUsd.toFixed(0)}`] : [],
     };
+  }
+
+  private indexerTradeStats(pa: IndexerProfile, window: string) {
+    const since = Math.floor(Date.now() / 1000) - (WINDOWS[window] ?? WINDOWS['30d']!);
+    const evs: TradeEvent[] = (pa.statsEvents ?? pa.events ?? [])
+      .map((e) => ({ t: Number(e.timestamp), perpId: Number(e.perpId), kind: normalizeKind(e.kind), lotsAfter: bigOrNull(e.lotsAfterLNS), pnlCNS: bigOrNull(e.realizedPnlCNS) }))
+      .filter((e) => e.t >= since);
+    return tradeStats(evs);
   }
 
   async indexerStatus(): Promise<{ progressBlock: number; sourceBlock: number; isReady: boolean } | null> {
@@ -359,6 +398,7 @@ export class LeaderService {
       ...base,
       source: 'engine',
       window,
+      stats: tradeStats(rows.map((r) => ({ t: r.ts, perpId: r.perp_id, kind: r.kind, lotsAfter: bigOrNull(r.lots_after), pnlCNS: bigOrNull(r.delta_pnl) }))),
       equityCurve: s.curve.map((p) => ({ t: p.t, pnlCNS: p.pnlCNS.toString() })),
       openPositions: positions,
       recentTrades: rows.slice(-50).reverse().map((r) => ({ txHash: r.tx_hash, block: r.block, t: r.ts, perpId: r.perp_id, symbol: this.symbol(r.perp_id), kind: r.kind, side: r.position_type === 0 ? 'long' : 'short', lotsAfter: r.lots_after, pricePNS: r.price, realizedPnlCNS: r.delta_pnl, leverageHdths: r.leverage })),

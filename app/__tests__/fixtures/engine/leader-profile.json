@@ -2,7 +2,7 @@
  "accountId": 3,
  "address": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
  "score": -7.68,
- "pnlUsd": -0.00171,
+ "pnlUsd": -0.001069,
  "pnlPct": 0,
  "maxDrawdownPct": 0,
  "winRate": 0,
@@ -25,35 +25,43 @@
  "teamRun": true,
  "source": "engine",
  "window": "30d",
+ "stats": {
+  "profitFactor": 0,
+  "grossProfitCNS": "0",
+  "grossLossCNS": "1069",
+  "largestLossCNS": "-855",
+  "avgHoldSec": 4,
+  "roundTrips": 2
+ },
  "equityCurve": [
   {
-   "t": 1791369445,
+   "t": 1791375116,
    "pnlCNS": "-855"
   },
   {
-   "t": 1791369451,
-   "pnlCNS": "-1710"
+   "t": 1791375122,
+   "pnlCNS": "-1069"
   }
  ],
  "openPositions": [],
  "recentTrades": [
   {
-   "txHash": "0xaf98381257eb54e1b8771f5c685c397dfa7602cab0040e4e46017a4f2c3ecfcc",
-   "block": 120,
-   "t": 1791369451,
+   "txHash": "0xcb1ef5b5063b73d791d5c5e8bd1e47cc27e1b15e97b72367bd2da2e1eebb0bc4",
+   "block": 141,
+   "t": 1791375122,
    "perpId": 1,
    "symbol": "BTC",
    "kind": "close",
    "side": "long",
    "lotsAfter": "0",
-   "pricePNS": "854573",
-   "realizedPnlCNS": "-855",
+   "pricePNS": "855214",
+   "realizedPnlCNS": "-214",
    "leverageHdths": null
   },
   {
-   "txHash": "0x42f212c8a8816fecb740ea154c4d0c0109c373137b425b446ba9c1b4c3705810",
-   "block": 113,
-   "t": 1791369448,
+   "txHash": "0x3f6623203b3aa0970c49cf17c331c2638851f973c481ba413d5408d4467b54b6",
+   "block": 134,
+   "t": 1791375120,
    "perpId": 1,
    "symbol": "BTC",
    "kind": "open",
@@ -64,9 +72,9 @@
    "leverageHdths": 1000
   },
   {
-   "txHash": "0xff31baab6114d00409fd0d54a53b40b7b82a920e0da1771663104134a21a0402",
-   "block": 105,
-   "t": 1791369445,
+   "txHash": "0xe05815770c6c13e31e4ac339f058ef41f0be8da9f15cce7fe28bbd46f9b429ea",
+   "block": 126,
+   "t": 1791375116,
    "perpId": 1,
    "symbol": "BTC",
    "kind": "close",
@@ -77,9 +85,9 @@
    "leverageHdths": null
   },
   {
-   "txHash": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41",
-   "block": 91,
-   "t": 1791369439,
+   "txHash": "0x73e44357e0ae2f49860ef91509e35316a3269bb41aa65bfb88ebe3b8ebd4e373",
+   "block": 112,
+   "t": 1791375111,
    "perpId": 1,
    "symbol": "BTC",
    "kind": "open",

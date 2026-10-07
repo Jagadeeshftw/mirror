@@ -5,6 +5,7 @@ import type { Logger } from '../log.js';
 import { metrics } from '../metrics.js';
 import { getLogsChunked, type ChainLog, type ChainStreams } from '../chain/streams.js';
 import type { Side } from '../domain/types.js';
+import { storePerplEvent } from './copyfacts.js';
 
 export const POSITION_EVENTS = [
   'PositionOpened',
@@ -142,12 +143,7 @@ export class LeaderWatcher {
     const ev = decodePositionEvent(l);
     if (!ev) return;
     metrics.perplEvents.inc({ kind: ev.kind });
-    this.db.run(
-      `INSERT OR IGNORE INTO perpl_events (tx_hash, log_index, block, ts, account_id, perp_id, kind, position_type, lots_after, lots_before, price, delta_pnl, leverage)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      l.transactionHash, l.logIndex, l.blockNumber, l.blockTimestamp ?? Math.floor(l.observedMs / 1000), ev.accountId, ev.perpId, ev.kind, ev.positionType,
-      ev.lotsAfter?.toString() ?? null, ev.lotsBefore?.toString() ?? null, ev.pricePNS?.toString() ?? null, ev.deltaPnlCNS?.toString() ?? null, ev.leverageHdths ?? null,
-    );
+    storePerplEvent(this.db, l, l.blockTimestamp ?? Math.floor(l.observedMs / 1000), ev);
     if (!live || !this.isFollowed(ev.accountId)) return;
 
     metrics.leaderEvents.inc({ kind: ev.kind });

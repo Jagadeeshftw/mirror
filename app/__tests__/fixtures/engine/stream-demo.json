@@ -3,7 +3,7 @@
   "event": "hello",
   "data": {
    "channel": "demo",
-   "block": 89
+   "block": 110
   }
  },
  {
@@ -11,8 +11,8 @@
   "data": {
    "type": "commit",
    "id": 1,
-   "txHash": "0x60eb9dcffcb4082aaff70105aa49fabffdaa6048bbed2c7990032b88c0618c02",
-   "block": 82,
+   "txHash": "0x67b6bbcaa8a7bc1ce90ce3e27c21a8f919a64221f519cb83159651d786aef834",
+   "block": 103,
    "kind": "Deposited",
    "commitState": "voted"
   }
@@ -22,8 +22,8 @@
   "data": {
    "type": "commit",
    "id": 2,
-   "txHash": "0x763386777cc2ec4e9c542fe87ef2cd943adaa555b4a27105f4db804ec28916a6",
-   "block": 83,
+   "txHash": "0x6f0b652d67c64c7e18d8340d76fde40dcba5c4a08b864d6db0f523438f92df2a",
+   "block": 104,
    "kind": "PolicyUpdated",
    "commitState": "voted"
   }
@@ -33,8 +33,8 @@
   "data": {
    "type": "commit",
    "id": 1,
-   "txHash": "0x60eb9dcffcb4082aaff70105aa49fabffdaa6048bbed2c7990032b88c0618c02",
-   "block": 82,
+   "txHash": "0x67b6bbcaa8a7bc1ce90ce3e27c21a8f919a64221f519cb83159651d786aef834",
+   "block": 103,
    "kind": "Deposited",
    "commitState": "finalized"
   }
@@ -44,8 +44,8 @@
   "data": {
    "type": "commit",
    "id": 2,
-   "txHash": "0x763386777cc2ec4e9c542fe87ef2cd943adaa555b4a27105f4db804ec28916a6",
-   "block": 83,
+   "txHash": "0x6f0b652d67c64c7e18d8340d76fde40dcba5c4a08b864d6db0f523438f92df2a",
+   "block": 104,
    "kind": "PolicyUpdated",
    "commitState": "finalized"
   }
@@ -54,23 +54,24 @@
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+   "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
    "step": "leader_opening",
-   "at": 1791369439468,
+   "at": 1791375111070,
    "kind": "trade",
    "perpId": 1,
    "lots": "1",
-   "leverageHdths": 200
+   "leverageHdths": 200,
+   "holdMs": 5000
   }
  },
  {
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+   "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
    "step": "leader_opened",
-   "at": 1791369439619,
-   "txHash": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41"
+   "at": 1791375111218,
+   "txHash": "0x73e44357e0ae2f49860ef91509e35316a3269bb41aa65bfb88ebe3b8ebd4e373"
   }
  },
  {
@@ -79,11 +80,11 @@
    "type": "copy",
    "account": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6",
    "stage": "submitting",
-   "leaderRef": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41",
+   "leaderRef": "0x73e44357e0ae2f49860ef91509e35316a3269bb41aa65bfb88ebe3b8ebd4e373",
    "perpId": 1,
    "orderType": 0,
    "lotLNS": "1",
-   "pricePNS": "863368",
+   "pricePNS": "863351",
    "leverageHdths": 200,
    "expected": "executed",
    "reason": null,
@@ -100,31 +101,36 @@
     "kind": "Mirrored",
     "onchain": true,
     "label": null,
-    "txHash": "0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
-    "txUrl": "https://monadvision.com/tx/0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
+    "txHash": "0x1aecb205ef0bddec6f12f4aa79f69034cb00a682d75e8cb8f627218964eb5a16",
+    "txUrl": "https://monadvision.com/tx/0x1aecb205ef0bddec6f12f4aa79f69034cb00a682d75e8cb8f627218964eb5a16",
     "logIndex": 6,
-    "block": 92,
-    "timestamp": 1791369440,
+    "block": 113,
+    "timestamp": 1791375111,
     "commitState": "proposed",
     "leaderAccountId": 3,
     "perpId": 1,
     "orderType": 0,
     "orderTypeName": "OpenLong",
     "lotLNS": "1",
-    "pricePNS": "863368",
+    "pricePNS": "863351",
     "leverageHdths": 200,
     "reason": null,
     "limit": null,
     "actual": null,
-    "leaderRef": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41",
+    "leaderRef": "0x73e44357e0ae2f49860ef91509e35316a3269bb41aa65bfb88ebe3b8ebd4e373",
     "matchNow": false,
     "keeper": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
     "amount": null,
-    "latencyMs": 403,
+    "latencyMs": 400,
+    "leaderBlock": 112,
+    "latencyBlocks": 1,
+    "realisedPnlCNS": null,
+    "leaderLotLNS": null,
+    "leaderLeverageHdths": null,
     "proof": {
      "leaderFillPNS": "855428",
      "leaderEntryPNS": "855428",
-     "markPNS": "855244",
+     "markPNS": "855227",
      "fillPNS": "855428",
      "entryDeviationBps": 0,
      "builderFeeCNS": "172"
@@ -135,7 +141,7 @@
      "proof": {
       "leaderFillPNS": "855428",
       "leaderEntryPNS": "855428",
-      "markPNS": "855244",
+      "markPNS": "855227",
       "fillPNS": "855428",
       "entryDeviationBps": 0,
       "builderFeeCNS": "172"
@@ -150,10 +156,10 @@
    "type": "copy",
    "account": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6",
    "stage": "included",
-   "leaderRef": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41",
-   "txHash": "0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
-   "block": 92,
-   "latencyMs": 403,
+   "leaderRef": "0x73e44357e0ae2f49860ef91509e35316a3269bb41aa65bfb88ebe3b8ebd4e373",
+   "txHash": "0x1aecb205ef0bddec6f12f4aa79f69034cb00a682d75e8cb8f627218964eb5a16",
+   "block": 113,
+   "latencyMs": 400,
    "blocked": null
   }
  },
@@ -161,21 +167,21 @@
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+   "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
    "step": "copy_executed",
-   "at": 1791369440123,
-   "txHash": "0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
+   "at": 1791375111621,
+   "txHash": "0x1aecb205ef0bddec6f12f4aa79f69034cb00a682d75e8cb8f627218964eb5a16",
    "reason": null,
-   "latencyMs": 403
+   "latencyMs": 400
   }
  },
  {
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+   "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
    "step": "holding",
-   "at": 1791369440123,
+   "at": 1791375111621,
    "ms": 5000
   }
  },
@@ -184,8 +190,8 @@
   "data": {
    "type": "commit",
    "id": 3,
-   "txHash": "0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
-   "block": 92,
+   "txHash": "0x1aecb205ef0bddec6f12f4aa79f69034cb00a682d75e8cb8f627218964eb5a16",
+   "block": 113,
    "kind": "Mirrored",
    "commitState": "voted"
   }
@@ -195,8 +201,8 @@
   "data": {
    "type": "commit",
    "id": 3,
-   "txHash": "0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
-   "block": 92,
+   "txHash": "0x1aecb205ef0bddec6f12f4aa79f69034cb00a682d75e8cb8f627218964eb5a16",
+   "block": 113,
    "kind": "Mirrored",
    "commitState": "finalized"
   }
@@ -205,9 +211,9 @@
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+   "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
    "step": "leader_closing",
-   "at": 1791369445126,
+   "at": 1791375116623,
    "lots": "1"
   }
  },
@@ -215,10 +221,10 @@
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+   "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
    "step": "leader_closed",
-   "at": 1791369445220,
-   "txHash": "0xff31baab6114d00409fd0d54a53b40b7b82a920e0da1771663104134a21a0402"
+   "at": 1791375116816,
+   "txHash": "0xe05815770c6c13e31e4ac339f058ef41f0be8da9f15cce7fe28bbd46f9b429ea"
   }
  },
  {
@@ -227,11 +233,11 @@
    "type": "copy",
    "account": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6",
    "stage": "submitting",
-   "leaderRef": "0xff31baab6114d00409fd0d54a53b40b7b82a920e0da1771663104134a21a0402",
+   "leaderRef": "0xe05815770c6c13e31e4ac339f058ef41f0be8da9f15cce7fe28bbd46f9b429ea",
    "perpId": 1,
    "orderType": 2,
    "lotLNS": "1",
-   "pricePNS": "847461",
+   "pricePNS": "847220",
    "leverageHdths": 0,
    "expected": "executed",
    "reason": null,
@@ -248,31 +254,36 @@
     "kind": "Mirrored",
     "onchain": true,
     "label": null,
-    "txHash": "0xe80b7678e66e6b36b6a9ac28a1bfd40dac24d27d30dc0acd4f8998a769df4cd8",
-    "txUrl": "https://monadvision.com/tx/0xe80b7678e66e6b36b6a9ac28a1bfd40dac24d27d30dc0acd4f8998a769df4cd8",
+    "txHash": "0x1d27ce9ca32b52f8cc63756c86df70137c66e5d6ef1b834720ae4723a2eb01a3",
+    "txUrl": "https://monadvision.com/tx/0x1d27ce9ca32b52f8cc63756c86df70137c66e5d6ef1b834720ae4723a2eb01a3",
     "logIndex": 5,
-    "block": 106,
-    "timestamp": 1791369445,
+    "block": 127,
+    "timestamp": 1791375117,
     "commitState": "proposed",
     "leaderAccountId": 3,
     "perpId": 1,
     "orderType": 2,
     "orderTypeName": "CloseLong",
     "lotLNS": "1",
-    "pricePNS": "847461",
+    "pricePNS": "847220",
     "leverageHdths": 0,
     "reason": null,
     "limit": null,
     "actual": null,
-    "leaderRef": "0xff31baab6114d00409fd0d54a53b40b7b82a920e0da1771663104134a21a0402",
+    "leaderRef": "0xe05815770c6c13e31e4ac339f058ef41f0be8da9f15cce7fe28bbd46f9b429ea",
     "matchNow": false,
     "keeper": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
     "amount": null,
     "latencyMs": 400,
+    "leaderBlock": 126,
+    "latencyBlocks": 1,
+    "realisedPnlCNS": "-855",
+    "leaderLotLNS": null,
+    "leaderLeverageHdths": null,
     "proof": {
      "leaderFillPNS": "854573",
      "leaderEntryPNS": "0",
-     "markPNS": "855589",
+     "markPNS": "855345",
      "fillPNS": "0",
      "entryDeviationBps": 0,
      "builderFeeCNS": "0"
@@ -283,7 +294,7 @@
      "proof": {
       "leaderFillPNS": "854573",
       "leaderEntryPNS": "0",
-      "markPNS": "855589",
+      "markPNS": "855345",
       "fillPNS": "0",
       "entryDeviationBps": 0,
       "builderFeeCNS": "0"
@@ -298,9 +309,9 @@
    "type": "copy",
    "account": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6",
    "stage": "included",
-   "leaderRef": "0xff31baab6114d00409fd0d54a53b40b7b82a920e0da1771663104134a21a0402",
-   "txHash": "0xe80b7678e66e6b36b6a9ac28a1bfd40dac24d27d30dc0acd4f8998a769df4cd8",
-   "block": 106,
+   "leaderRef": "0xe05815770c6c13e31e4ac339f058ef41f0be8da9f15cce7fe28bbd46f9b429ea",
+   "txHash": "0x1d27ce9ca32b52f8cc63756c86df70137c66e5d6ef1b834720ae4723a2eb01a3",
+   "block": 127,
    "latencyMs": 400,
    "blocked": null
   }
@@ -309,10 +320,10 @@
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+   "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
    "step": "copy_closed",
-   "at": 1791369445624,
-   "txHash": "0xe80b7678e66e6b36b6a9ac28a1bfd40dac24d27d30dc0acd4f8998a769df4cd8",
+   "at": 1791375117220,
+   "txHash": "0x1d27ce9ca32b52f8cc63756c86df70137c66e5d6ef1b834720ae4723a2eb01a3",
    "latencyMs": 400
   }
  },
@@ -320,9 +331,9 @@
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+   "cycleId": "9da4ba7b-184d-4e43-8dab-4a2e4f368ff8",
    "step": "done",
-   "at": 1791369445624
+   "at": 1791375117220
   }
  },
  {
@@ -330,8 +341,8 @@
   "data": {
    "type": "commit",
    "id": 5,
-   "txHash": "0xe80b7678e66e6b36b6a9ac28a1bfd40dac24d27d30dc0acd4f8998a769df4cd8",
-   "block": 106,
+   "txHash": "0x1d27ce9ca32b52f8cc63756c86df70137c66e5d6ef1b834720ae4723a2eb01a3",
+   "block": 127,
    "kind": "Mirrored",
    "commitState": "voted"
   }
@@ -341,8 +352,8 @@
   "data": {
    "type": "commit",
    "id": 5,
-   "txHash": "0xe80b7678e66e6b36b6a9ac28a1bfd40dac24d27d30dc0acd4f8998a769df4cd8",
-   "block": 106,
+   "txHash": "0x1d27ce9ca32b52f8cc63756c86df70137c66e5d6ef1b834720ae4723a2eb01a3",
+   "block": 127,
    "kind": "Mirrored",
    "commitState": "finalized"
   }
@@ -351,23 +362,24 @@
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+   "cycleId": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
    "step": "leader_opening",
-   "at": 1791369448010,
+   "at": 1791375119616,
    "kind": "blocked",
    "perpId": 1,
    "lots": "1",
-   "leverageHdths": 1000
+   "leverageHdths": 1000,
+   "holdMs": 2000
   }
  },
  {
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+   "cycleId": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
    "step": "leader_opened",
-   "at": 1791369448420,
-   "txHash": "0x42f212c8a8816fecb740ea154c4d0c0109c373137b425b446ba9c1b4c3705810"
+   "at": 1791375120017,
+   "txHash": "0x3f6623203b3aa0970c49cf17c331c2638851f973c481ba413d5408d4467b54b6"
   }
  },
  {
@@ -376,11 +388,11 @@
    "type": "copy",
    "account": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6",
    "stage": "submitting",
-   "leaderRef": "0x42f212c8a8816fecb740ea154c4d0c0109c373137b425b446ba9c1b4c3705810",
+   "leaderRef": "0x3f6623203b3aa0970c49cf17c331c2638851f973c481ba413d5408d4467b54b6",
    "perpId": 1,
    "orderType": 0,
    "lotLNS": "1",
-   "pricePNS": "863625",
+   "pricePNS": "863770",
    "leverageHdths": 1000,
    "expected": "blocked",
    "reason": "LeverageTooHigh",
@@ -397,11 +409,11 @@
     "kind": "Blocked",
     "onchain": true,
     "label": null,
-    "txHash": "0x0482e6ffcb92696db65f241b5a490d55dad105f7515dee91936f161457e6047f",
-    "txUrl": "https://monadvision.com/tx/0x0482e6ffcb92696db65f241b5a490d55dad105f7515dee91936f161457e6047f",
+    "txHash": "0x983c438a29adf31e1c916188dd9068a6503aeac10683e267b05e6686fe67e098",
+    "txUrl": "https://monadvision.com/tx/0x983c438a29adf31e1c916188dd9068a6503aeac10683e267b05e6686fe67e098",
     "logIndex": 0,
-    "block": 114,
-    "timestamp": 1791369448,
+    "block": 135,
+    "timestamp": 1791375120,
     "commitState": "proposed",
     "leaderAccountId": 3,
     "perpId": 1,
@@ -413,15 +425,20 @@
     "reason": "LeverageTooHigh",
     "limit": "500",
     "actual": "1000",
-    "leaderRef": "0x42f212c8a8816fecb740ea154c4d0c0109c373137b425b446ba9c1b4c3705810",
+    "leaderRef": "0x3f6623203b3aa0970c49cf17c331c2638851f973c481ba413d5408d4467b54b6",
     "matchNow": false,
     "keeper": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
     "amount": null,
-    "latencyMs": 399,
+    "latencyMs": 401,
+    "leaderBlock": 134,
+    "latencyBlocks": 1,
+    "realisedPnlCNS": null,
+    "leaderLotLNS": "1",
+    "leaderLeverageHdths": 1000,
     "proof": null,
     "data": {
      "leaderFillPNS": "855428",
-     "markPNS": "855498"
+     "markPNS": "855642"
     }
    }
   }
@@ -432,10 +449,10 @@
    "type": "copy",
    "account": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6",
    "stage": "included",
-   "leaderRef": "0x42f212c8a8816fecb740ea154c4d0c0109c373137b425b446ba9c1b4c3705810",
-   "txHash": "0x0482e6ffcb92696db65f241b5a490d55dad105f7515dee91936f161457e6047f",
-   "block": 114,
-   "latencyMs": 399,
+   "leaderRef": "0x3f6623203b3aa0970c49cf17c331c2638851f973c481ba413d5408d4467b54b6",
+   "txHash": "0x983c438a29adf31e1c916188dd9068a6503aeac10683e267b05e6686fe67e098",
+   "block": 135,
+   "latencyMs": 401,
    "blocked": "LeverageTooHigh"
   }
  },
@@ -443,12 +460,12 @@
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+   "cycleId": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
    "step": "copy_blocked",
-   "at": 1791369448823,
-   "txHash": "0x0482e6ffcb92696db65f241b5a490d55dad105f7515dee91936f161457e6047f",
+   "at": 1791375120418,
+   "txHash": "0x983c438a29adf31e1c916188dd9068a6503aeac10683e267b05e6686fe67e098",
    "reason": "LeverageTooHigh",
-   "latencyMs": 399
+   "latencyMs": 401
   }
  },
  {
@@ -456,8 +473,8 @@
   "data": {
    "type": "commit",
    "id": 7,
-   "txHash": "0x0482e6ffcb92696db65f241b5a490d55dad105f7515dee91936f161457e6047f",
-   "block": 114,
+   "txHash": "0x983c438a29adf31e1c916188dd9068a6503aeac10683e267b05e6686fe67e098",
+   "block": 135,
    "kind": "Blocked",
    "commitState": "voted"
   }
@@ -467,8 +484,8 @@
   "data": {
    "type": "commit",
    "id": 7,
-   "txHash": "0x0482e6ffcb92696db65f241b5a490d55dad105f7515dee91936f161457e6047f",
-   "block": 114,
+   "txHash": "0x983c438a29adf31e1c916188dd9068a6503aeac10683e267b05e6686fe67e098",
+   "block": 135,
    "kind": "Blocked",
    "commitState": "finalized"
   }
@@ -477,9 +494,9 @@
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+   "cycleId": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
    "step": "leader_closing",
-   "at": 1791369450826,
+   "at": 1791375122420,
    "lots": "1"
   }
  },
@@ -487,19 +504,19 @@
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+   "cycleId": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
    "step": "leader_closed",
-   "at": 1791369451220,
-   "txHash": "0xaf98381257eb54e1b8771f5c685c397dfa7602cab0040e4e46017a4f2c3ecfcc"
+   "at": 1791375122816,
+   "txHash": "0xcb1ef5b5063b73d791d5c5e8bd1e47cc27e1b15e97b72367bd2da2e1eebb0bc4"
   }
  },
  {
   "event": "demo",
   "data": {
    "type": "demo",
-   "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+   "cycleId": "bcd465bf-e118-48f9-9959-4d05b8f030ac",
    "step": "done",
-   "at": 1791369451220
+   "at": 1791375122816
   }
  }
 ]

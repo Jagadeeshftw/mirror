@@ -5,7 +5,9 @@ import { leverage as fmtLev } from "./format";
 import type { DemoCycle, DemoState, DemoStep, FollowQuote, MarketState, QuoteRow } from "./types";
 import type { SseMessage } from "./sse";
 
-type StepEv = { step: string; at?: number; txHash?: string; latencyMs?: number | null; reason?: string | null; error?: string; kind?: string; perpId?: number; lots?: string; leverageHdths?: number };
+type StepEv = { step: string; at?: number; holdMs?: number; ms?: number; txHash?: string; latencyMs?: number | null; reason?: string | null; error?: string; kind?: string; perpId?: number; lots?: string; leverageHdths?: number };
+
+const numOrU = (v: unknown): number | undefined => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? undefined : Number(v));
 
 const TEMPLATE: Record<"trade" | "blocked", [string, string][]> = {
   trade: [["leader_open", "Demo leader opens"], ["copy_open", "Copy lands in the team-run demo account"], ["leader_close", "Demo leader closes"], ["copy_close", "Copy close follows"]],
@@ -24,14 +26,20 @@ export function normalizeCycle(raw: any, followerMaxLevHdths?: number | null): D
   const kind: "trade" | "blocked" = raw?.kind === "blocked" ? "blocked" : "trade";
   const evs: any[] = Array.isArray(raw?.steps) ? raw.steps : [];
   if (evs.length && evs.every((s) => typeof s?.key === "string" && typeof s?.status === "string")) {
-    return { id: String(raw.id), kind, startedAt: Number(raw.startedAt ?? raw.started_ms ?? 0), status: raw.status ?? "running", steps: evs };
+    return { id: String(raw.id), kind, startedAt: Number(raw.startedAt ?? raw.started_ms ?? 0), status: raw.status ?? "running", steps: evs, ...(raw.holdMs ? { holdMs: Number(raw.holdMs) } : {}) };
   }
   const open = evs.find((e: StepEv) => e.step === "leader_opening") as StepEv | undefined;
+  // How long the leader holds before closing: the cycle's holdMs, else the opening or holding step's.
+  const hold = numOrU(raw?.holdMs) ?? numOrU(open?.holdMs) ?? numOrU((evs.find((e: StepEv) => e.step === "holding") as StepEv | undefined)?.ms);
   const sym = marketMeta(open?.perpId)?.symbol ?? "BTC";
   const lev = open?.leverageHdths ? ` at ${fmtLev(open.leverageHdths)}` : "";
   const steps: DemoStep[] = TEMPLATE[kind].map(([key, label]) => ({
     key,
-    label: key === "leader_open" ? `${label} ${open?.lots ?? 1} lot ${sym} long${lev}` : key === "copy_blocked" && followerMaxLevHdths ? `${label}: max leverage ${fmtLev(followerMaxLevHdths)}` : label,
+    label:
+      key === "leader_open" ? `${label} ${open?.lots ?? 1} lot ${sym} long${lev}`
+      : key === "copy_blocked" && followerMaxLevHdths ? `${label}: max leverage ${fmtLev(followerMaxLevHdths)}`
+      : key === "leader_close" && hold ? `${label} after about ${Math.max(1, Math.round(hold / 1000))} s`
+      : label,
     status: "pending",
   }));
   const byKey = (k: string) => steps.find((s) => s.key === k);
@@ -54,7 +62,7 @@ export function normalizeCycle(raw: any, followerMaxLevHdths?: number | null): D
     if ((status === "done" || status === "blocked") && steps[i + 1]?.status === "pending" && raw?.status === "running") steps[i + 1].status = "running";
   }
   const status = raw?.status === "done" || raw?.status === "failed" ? raw.status : evs.some((e) => e.step === "done") ? "done" : evs.some((e) => e.step === "failed") ? "failed" : "running";
-  return { id: String(raw?.id ?? raw?.cycleId ?? ""), kind, startedAt: Number(raw?.startedAt ?? raw?.started_ms ?? open?.at ?? 0), status, steps };
+  return { id: String(raw?.id ?? raw?.cycleId ?? ""), kind, startedAt: Number(raw?.startedAt ?? raw?.started_ms ?? open?.at ?? 0), status, steps, ...(hold ? { holdMs: hold } : {}) };
 }
 
 /** GET /v1/demo, plus the demo follower's own account view (equity, policy, positions) when fetched. */

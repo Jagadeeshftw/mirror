@@ -110,6 +110,8 @@ const EnvSchema = z.object({
   STOP_CHECK_MS: int(3_000),
   /** After a trigger was sent or its simulation reverted, wait this long before trying the same stop again. */
   STOP_RETRY_MS: int(15_000),
+  /** Periodic account equity snapshots: at most one per account per this interval (copies and flows add their own). */
+  EQUITY_SNAPSHOT_MS: int(300_000),
   CIRCUIT_FAILURES: int(5),
   CIRCUIT_COOLDOWN_MS: int(30_000),
 

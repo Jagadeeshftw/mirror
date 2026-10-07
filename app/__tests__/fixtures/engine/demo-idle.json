@@ -5,6 +5,10 @@
  "lots": 1,
  "leverageHdths": 200,
  "blockedLeverageHdths": 1000,
+ "holdMsByKind": {
+  "trade": 5000,
+  "blocked": 2000
+ },
  "limits": {
   "perIpHourly": 50,
   "dailyCap": 500,

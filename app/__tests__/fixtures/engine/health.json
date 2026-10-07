@@ -1,25 +1,25 @@
 {
  "ok": true,
  "chainId": 1337,
- "block": 89,
- "uptimeSec": 5,
+ "block": 110,
+ "uptimeSec": 4,
  "streams": {
   "mode": "standard",
   "wsConnected": true
  },
  "keeper": {
   "address": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
-  "balanceWei": "9999983205570493287987",
+  "balanceWei": "9999983206778375554702",
   "all": [
    {
     "address": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
-    "balanceWei": "9999983205570493287987"
+    "balanceWei": "9999983206778375554702"
    }
   ]
  },
  "relayer": {
   "address": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
-  "balanceWei": "9999983205570493287987"
+  "balanceWei": "9999983206778375554702"
  },
  "perpl": {
   "wsConnected": false,
@@ -28,7 +28,7 @@
  },
  "indexer": {
   "lagBlocks": 0,
-  "cursor": 89,
+  "cursor": 110,
   "accounts": 1,
   "envio": null
  },

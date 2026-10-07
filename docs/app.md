@@ -114,7 +114,7 @@ The app accepts these shapes; `app/src/lib/types.ts` is the full reference and
 `app/dev-mock/server.mjs` implements all of them.
 
 - `GET /v1/config`: `{chainId, rpc, explorerTx, explorerAddress, contracts: {factory, implementation, keeperRegistry, perplExchange, collateral}, depositCapCNS, minAccountOpenCNS, markets: [{perpId, symbol, lotDecimals, priceDecimals, markPNS, maxLeverage}], teamRun}`.
-- `GET /v1/owners/:owner/accounts`: `{owner, walletBalanceCNS, accounts: MirrorAccount[]}` (a bare array also works). Each account carries `salt`, `actionNonce`, `equityHistory`, `leader` and `pnl.byLeader`.
+- `GET /v1/owners/:owner/accounts`: `{owner, walletBalanceCNS, accounts: MirrorAccount[]}` (a bare array also works; the engine's `walletCNS` maps to `walletBalanceCNS`). Each account carries `salt`, `actionNonce`, `equityHistory` (engine `{t (s), equityCNS}` maps to `{t (ms), v}`), `leader` and `pnl.byLeader`; the engine's `todayPnlCNS` maps to `pnl.todayCNS` and `dailyLossHit` / `drawdownHit` to `stops`.
 - Feed events: `{id, kind, account, txHash, block, timestamp, commitState, latencyMs, leaderAccountId, leaderAddress, perpId, orderType, lotLNS, pricePNS, leverageHdths, notionalCNS, realisedPnlCNS, matchNow, blocked: {reason, reasonCode, limit, actual, rule}}`. `leaderLotLNS` / `leaderLeverageHdths` let the Blocked sheet show the leader's own order.
 - SSE `/v1/stream?account=…`: `event: feed` (FeedEvent), `event: commit` (`{id, txHash, commitState}`), `event: push` (encrypted envelope), `event: demo` (DemoCycle with steps, latency and tx hashes), `event: hello`.
 - `POST /v1/quote/follow` body adds `policy.allocationCNS` so the quote can flag orders that don't fit the margin. Response: `{rows, orders, ordersEncoded}`.

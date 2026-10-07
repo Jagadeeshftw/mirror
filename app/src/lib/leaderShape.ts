@@ -128,11 +128,11 @@ export function normalizeLeaderProfile(raw: any): LeaderProfile {
     drawdown,
     stats: {
       profitFactor: num(st.profitFactor, losses > 0 ? Math.round((wins / losses) * 100) / 100 : 0),
-      largestLossUsd: num(st.largestLossUsd, pnls.length ? Math.min(0, ...pnls) : 0),
+      largestLossUsd: num(st.largestLossUsd, st.largestLossCNS !== undefined && st.largestLossCNS !== null ? num(st.largestLossCNS) / 1e6 : pnls.length ? Math.min(0, ...pnls) : 0),
       peakLeverage: num(st.peakLeverage, Math.round(peak * 10) / 10),
       tradesPerDay: num(st.tradesPerDay, win && num(win.activeDays) > 0 ? Math.round((num(win.trades) / num(win.activeDays)) * 10) / 10 : Math.round((perDay.reduce((s, x) => s + x.n, 0) / perDay.length) * 10) / 10),
-      // Not served by the engine: average holding time.
-      avgHoldMinutes: num(st.avgHoldMinutes),
+      // Engine: avgHoldSec from the leader's position events (flat to flat, per market).
+      avgHoldMinutes: num(st.avgHoldMinutes, st.avgHoldSec !== undefined && st.avgHoldSec !== null ? Math.round(num(st.avgHoldSec) / 60) : 0),
     },
     marketShare: share,
     tradesPerDay: perDay,

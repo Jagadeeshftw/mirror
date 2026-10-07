@@ -378,6 +378,8 @@ export interface DemoCycle {
   startedAt: number;
   status: "running" | "done" | "failed";
   steps: DemoStep[];
+  /** How long the leader holds before closing (engine `holdMs`). */
+  holdMs?: number;
 }
 
 export interface DemoState {

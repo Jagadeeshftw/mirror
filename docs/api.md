@@ -17,16 +17,57 @@ from every user and traction count.
 | GET | `/v1/health` | `{ok, chainId, block, keeper:{address, balanceWei}, relayer:{...}, perpl:{wsConnected, lastMarkAt}, indexer:{lagBlocks}}` |
 | GET | `/v1/config` | chain, contract addresses, markets (perpId, symbol, decimals, mark, min order size from Perpl context), deposit cap, Perpl min account open, team-run addresses, `builder: {id, feePer100K, appliesTo: "opening size only"}` (the Perpl builder attribution every account is deployed with; null without a factory) |
 | GET | `/v1/markets` | per market: mark, oracle, funding, OI, best bid/ask (from Perpl REST/WS) |
-| GET | `/v1/leaders?window=7d\|30d\|90d&sort=score\|pnl\|drawdown&market=BTC` | ranked leaders: `{accountId, address, score, pnlUsd, pnlPct, maxDrawdownPct, winRate, avgLeverage, trades, markets[], followers, nansen:{labels[], ...}, teamRun, adversarial}` |
-| GET | `/v1/leaders/:accountId` | profile + due-diligence card: equity curve points, stats, open positions, recent trades, Nansen labels and cross-venue notes, risk flags, `adversarial` |
+| GET | `/v1/leaders?window=7d\|30d\|90d&sort=score\|pnl\|drawdown&market=BTC` | ranked leaders: `{accountId, address, score, pnlUsd, pnlPct, maxDrawdownPct, winRate, avgLeverage, trades, markets[], followers, nansen:{labels[], ...}, teamRun, adversarial}`. Never lists a Perpl account owned by a MirrorAccount (by `perplAccountId` or address) or a team-run account; the team-run demo leader is the one exception and is listed with `teamRun: true` |
+| GET | `/v1/leaders/:accountId` | profile + due-diligence card: equity curve points, stats, open positions, recent trades, Nansen labels and cross-venue notes, risk flags, `adversarial`. `stats` includes `profitFactor` (gross realised profit / gross realised loss, null without a loss), `largestLossCNS` (most negative single realised PnL, "0" without one), `avgHoldSec` (mean flat-to-flat time per market, null without a round trip), `roundTrips`, `grossProfitCNS`, `grossLossCNS`, from the leader's position events in the window (the engine's stored Perpl events, or the indexer's last 1000 PositionEvents when configured; indexer stats keep their own fields next to these) |
 | GET | `/v1/leaders/:accountId/copy-quality?period=all\|7d\|30d` | copy quality of this leader's copies (same shape as `/v1/stats/copy-quality`) |
 | GET | `/v1/stats/copy-quality?period=all\|7d\|30d` | per copy leader fill vs follower fill, deviation, latency (ms and blocks); aggregates (including `builderFeesCNS`); blocks by reason; team-run in a separate `teamRun` block |
-| GET | `/v1/owners/:owner/accounts` | the owner's MirrorAccounts (predicted + deployed), each with balance, equity, policy (including `maxBuilderFeePer100K`), `builderFeesCNS` (sum of the builder fee on its copies), positions, PnL attributed per leader, paused, expiry |
-| GET | `/v1/accounts/:account` | one MirrorAccount in full |
+| GET | `/v1/owners/:owner/accounts` | `{owner, walletCNS, accounts}`: `walletCNS` is the owner's own AUSD balance read from the collateral token (null if the read fails); `accounts` are the owner's MirrorAccounts (predicted + deployed), each as `/v1/accounts/:account` |
+| GET | `/v1/accounts/:account` | one MirrorAccount in full: balance, equity, policy (including `maxBuilderFeePer100K`), `builderFeesCNS` (sum of the builder fee on its copies), positions, PnL attributed per leader, paused, expiry, plus the fields below |
 | GET | `/v1/accounts/:account/feed?cursor=` | Mirrored / Blocked / Deposited / Withdrawn / PolicyUpdated / Paused / ClosedAll events, each with `txHash`, `block`, `commitState` (proposed/voted/finalized), `latencyMs` (leader fill to copy tx), decoded block reason with limit/actual, Mirrored `proof` `{leaderFillPNS, leaderEntryPNS, markPNS, fillPNS, entryDeviationBps, builderFeeCNS}` (`builderFeeCNS` = builder fee Perpl charged on that copy, 0 for closes); plus engine-side `EngineShrunk` / `EngineSkipped` items (see below). Every item has `onchain` |
 | GET | `/v1/stats` | public stats: accounts created, funded accounts, net AUSD deposited, copies executed, copies blocked per rule, median latency, active followers 7d, builder fees (`builderFeesCNS` = `builderFeesCopiesCNS` + `builderFeesMatchNowCNS`, from Mirrored proofs), every executed copy with tx link (paginated); all exclude team-run (team-run totals, builder fees included, under `teamRun`) |
-| GET | `/v1/demo` | demo leader and demo follower state, recent demo cycles |
+| GET | `/v1/demo` | demo leader and demo follower state, recent demo cycles; each cycle has `holdMs` (how long the leader holds before closing: `DEMO_HOLD_MS` for `trade`, 2000 for `blocked`), and `holdMsByKind` gives both |
 | GET | `/v1/stream?account=...` | Server-Sent Events: feed events for an account (or `demo`) as they happen, including commit-state updates |
+
+### Account equity, today's PnL and loss stops
+
+Extra fields on every MirrorAccount (`/v1/accounts/:account` and each item of `/v1/owners/:owner/accounts`):
+
+```json
+{ "createdAt": 1791375125, "todayPnlCNS": "-152", "dailyLossHit": false, "drawdownHit": false,
+  "equityHistory": [ { "t": 1791375128, "equityCNS": "20000000" }, { "t": 1791375129, "equityCNS": "20000178" } ],
+  "risk": { "dailyLossHit": false, "drawdownHit": false, "dailyLossFloorCNS": "18000000", "drawdownFloorCNS": "16000000",
+            "dayStartEquityCNS": "20000000", "highWaterEquityCNS": "20000178" } }
+```
+
+- `equityHistory`: the last 30 days of equity snapshots, oldest first, `t` in unix seconds (thinned evenly to at most
+  720 points). The engine stores a snapshot per account at most every `EQUITY_SNAPSHOT_MS` (default 5 min; a periodic
+  sweep, or an account view that read equity anyway) and one on every copy (`Mirrored`), deposit, withdrawal and close
+  all, in its DB (`equity_snapshots`, kept 35 days).
+- `todayPnlCNS`: equity now minus the first snapshot of the UTC day (the last one before today when there is none
+  yet), net of deposits and withdrawals since (each snapshot stores the contract's `netDeposits`). Null without a
+  snapshot or without a chain read.
+- `dailyLossHit` / `drawdownHit`: the contract's loss stops (`MirrorAccount._checkLossStops`) against current equity:
+  a new UTC day restarts the day at current equity, the high-water mark rises with equity, and a stop holds when
+  equity is below `dayStart x (1 - dailyLossBps)` or `highWater x (1 - drawdownBps)`. `risk` has the floors (null
+  when the rule is 0). False and `risk: null` when the chain read fails.
+- `createdAt`: unix seconds of the `AccountCreated` block.
+
+### Copy facts on feed items
+
+```json
+{ "kind": "Mirrored", "orderType": 2, "block": 127, "leaderBlock": 126, "latencyBlocks": 1, "realisedPnlCNS": "-855",
+  "leaderLotLNS": null, "leaderLeverageHdths": null }
+{ "kind": "Blocked", "reason": "LeverageTooHigh", "block": 135, "leaderBlock": 134, "latencyBlocks": 1,
+  "leaderLotLNS": "1", "leaderLeverageHdths": 1000 }
+```
+
+- `leaderBlock` (Mirrored and Blocked keeper copies): block of the leader fill named by `leaderRef`;
+  `latencyBlocks` = copy block - leader block. Null for match-now orders and when the leader fill is unknown.
+- `realisedPnlCNS` (Mirrored closes, order types 2 and 3): the follower's own Perpl close event in the copy
+  transaction (sum of `deltaPnlCNS`); when that event is not stored, the change the contract booked in
+  `leaderRealizedCNS(leader)` over the copy's block. Null for opens.
+- `leaderLotLNS` / `leaderLeverageHdths` (Blocked): lots the leader traded and the leader's leverage on the fill that
+  triggered the copy (from the leader's Perpl events). Null on other kinds.
 
 ### Leader `adversarial` block
 
@@ -127,7 +168,7 @@ because Monad charges the gas limit), and returns `{txHash, status, block, gasUs
 
 | Method | Path | Effect |
 |---|---|---|
-| POST | `/v1/demo/trade` | demo leader opens 1 lot BTC on Perpl mainnet; the engine copies it into the demo follower; after ~20 s the leader closes and the copy close follows. Returns a cycle id; progress streams on `/v1/stream?account=demo` |
+| POST | `/v1/demo/trade` | demo leader opens 1 lot BTC on Perpl mainnet; the engine copies it into the demo follower; after `holdMs` (`DEMO_HOLD_MS`, default 20 s) the leader closes and the copy close follows. Returns `{cycleId, kind, status, stream, holdMs}`; progress streams on `/v1/stream?account=demo` (the `leader_opening` step carries `holdMs`) |
 | POST | `/v1/demo/blocked` | demo leader opens 1 lot at a leverage above the demo follower's max; the copy is blocked onchain (Blocked event, own tx); the leader position is closed again |
 
 Limits: one cycle at a time globally, at most N per IP per hour, global daily cap.
