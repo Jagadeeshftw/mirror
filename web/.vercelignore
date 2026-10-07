@@ -2,3 +2,4 @@ screenshots
 .env*
 node_modules
 .next
+postdeploy-evidence

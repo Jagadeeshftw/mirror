@@ -3,8 +3,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, usePathname } from "expo-router";
 import { useFonts } from "expo-font";
 import { Platform } from "react-native";
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
-import { GeistMono_400Regular, GeistMono_500Medium, GeistMono_600SemiBold } from "@expo-google-fonts/geist-mono";
 import { installPwa } from "../lib/pwa";
 import { LaptopFrame } from "../ui/laptop/Frame";
 import { useLayout } from "../ui/layout";
@@ -19,19 +17,32 @@ import { ThemeProvider, useColors } from "../ui/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// Android embeds the fonts at build time (expo-font plugin); the web build loads the same files here.
-const WEB_FONTS = Platform.OS === "web" ? { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, GeistMono_400Regular, GeistMono_500Medium, GeistMono_600SemiBold } : {};
+// Android embeds the fonts at build time (expo-font plugin); the web build loads the same files here. They are
+// vendored under assets/fonts so the web export never puts them under a node_modules path (hosts such as Vercel
+// do not serve those). Web never waits on them: every family in theme.fonts falls back to a system stack, so
+// the app renders at once and swaps to Inter / Geist Mono when (if) they arrive.
+const WEB_FONTS =
+  Platform.OS === "web"
+    ? {
+        Inter_400Regular: require("../../assets/fonts/Inter_400Regular.ttf"),
+        Inter_500Medium: require("../../assets/fonts/Inter_500Medium.ttf"),
+        Inter_600SemiBold: require("../../assets/fonts/Inter_600SemiBold.ttf"),
+        Inter_700Bold: require("../../assets/fonts/Inter_700Bold.ttf"),
+        GeistMono_400Regular: require("../../assets/fonts/GeistMono_400Regular.ttf"),
+        GeistMono_500Medium: require("../../assets/fonts/GeistMono_500Medium.ttf"),
+        GeistMono_600SemiBold: require("../../assets/fonts/GeistMono_600SemiBold.ttf"),
+      }
+    : {};
 
 function Shell() {
   const c = useColors();
   const { ready, account } = useSession();
-  const [fontsLoaded, fontError] = useFonts(WEB_FONTS);
-  const fontsReady = Platform.OS !== "web" || fontsLoaded || !!fontError;
+  useFonts(WEB_FONTS);
   const layout = useLayout();
   const path = usePathname();
   useEffect(() => {
-    if (ready && fontsReady) SplashScreen.hideAsync().catch(() => {});
-  }, [ready, fontsReady]);
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
   useEffect(() => {
     installPwa();
   }, []);
@@ -43,7 +54,7 @@ function Shell() {
   useEffect(() => {
     if (account) registerForPush(account.address).catch(() => {});
   }, [account?.address]);
-  if (!ready || !fontsReady) return null;
+  if (!ready) return null;
   const stack = (
     <Stack screenOptions={{ headerShown: false, animation: "none", animationDuration: 0, contentStyle: { backgroundColor: c.bg } }}>
       <Stack.Screen name="follow/[id]" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />

@@ -58,13 +58,19 @@ export const Tile = ({
   </div>
 );
 
+/** First line of an error, capped: RPC errors can carry kilobytes of calldata that would stretch the page. */
+export const shortReason = (reason: string) => {
+  const line = reason.split("\n").find((l) => l.trim()) ?? "";
+  return line.length > 140 ? `${line.slice(0, 140)}…` : line;
+};
+
 /** Honest empty state: the source and why it is not available. Never a placeholder number. */
 export const NotAvailable = ({ source, reason, className }: { source: string; reason?: string; className?: string }) => (
-  <div className={cn("rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground", className)}>
+  <div className={cn("min-w-0 rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground", className)}>
     <p className="font-medium text-foreground">Not available</p>
-    <p className="mt-1">
+    <p className="mt-1 break-words [overflow-wrap:anywhere]">
       {source}
-      {reason ? `: ${reason}` : ""}.
+      {reason ? `: ${shortReason(reason)}` : ""}.
     </p>
   </div>
 );

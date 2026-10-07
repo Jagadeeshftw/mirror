@@ -42,3 +42,4 @@ next-env.d.ts
 
 # Expo web export (scripts/build-app.sh); build output, deployed from this machine
 /public/app/
+/postdeploy-evidence/

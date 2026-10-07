@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SystemUI from "expo-system-ui";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { useColorScheme } from "react-native";
+import { Platform, useColorScheme } from "react-native";
 
 export const light = {
   bg: "#F6F6F3",
@@ -50,14 +50,18 @@ export const dark: Colors = {
   dark: true,
 };
 
+// On web each family carries a system fallback, so text renders before (or without) the font files.
+const UI_FALLBACK = Platform.OS === "web" ? ', system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' : "";
+const MONO_FALLBACK = Platform.OS === "web" ? ', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' : "";
+
 export const fonts = {
-  ui: "Inter_400Regular",
-  uiMedium: "Inter_500Medium",
-  uiSemi: "Inter_600SemiBold",
-  uiBold: "Inter_700Bold",
-  mono: "GeistMono_400Regular",
-  monoMedium: "GeistMono_500Medium",
-  monoSemi: "GeistMono_600SemiBold",
+  ui: "Inter_400Regular" + UI_FALLBACK,
+  uiMedium: "Inter_500Medium" + UI_FALLBACK,
+  uiSemi: "Inter_600SemiBold" + UI_FALLBACK,
+  uiBold: "Inter_700Bold" + UI_FALLBACK,
+  mono: "GeistMono_400Regular" + MONO_FALLBACK,
+  monoMedium: "GeistMono_500Medium" + MONO_FALLBACK,
+  monoSemi: "GeistMono_600SemiBold" + MONO_FALLBACK,
 };
 
 export type ThemePref = "system" | "light" | "dark";

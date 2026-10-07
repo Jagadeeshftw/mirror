@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { BRAND, DESCRIPTION, SITE_URL, TAGLINE } from "@/lib/site";
+import { DIAG_SNIPPET } from "@/lib/diag-snippet.mjs";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -56,6 +57,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Error recorder read by the post-deploy check; see lib/diag-snippet.mjs. */}
+        <script dangerouslySetInnerHTML={{ __html: DIAG_SNIPPET }} />
+      </head>
       <body className={`${inter.variable} ${mono.variable} antialiased`}>
         <a
           href="#content"
