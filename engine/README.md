@@ -19,7 +19,7 @@ and `/v1/leaders` (ranked from Perpl position events) all work against mainnet.
 
 | Command | What it does |
 |---|---|
-| `pnpm test` | vitest unit tests (planner math vs contract rounding, slippage bounds, nonce manager, x402 signing against a mock 402 server, rate limits, Perpl book, event decoding, push encryption, ranking) |
+| `pnpm test` | vitest unit tests (planner math vs contract rounding, slippage bounds, nonce manager, x402 signing against a mock 402 server, rate limits, Perpl book, event decoding, alert envelope (shared test vector) and trigger selection, ranking) |
 | `pnpm typecheck` | `tsc --noEmit` over src, scripts and tests |
 | `pnpm build` / `pnpm start` | compile to `dist/` and run it |
 | `pnpm e2e:fork` | full end-to-end run on a local anvil fork of Monad mainnet (below) |

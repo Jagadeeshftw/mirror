@@ -224,10 +224,21 @@ export function buildServer(e: Engine, log: Logger) {
 
   // ---------------------------------------------------------------- push
 
+  app.get('/v1/push/config', async () => e.push.config());
+
+  const webPushSub = z.object({ endpoint: z.string().max(1024), keys: z.object({ p256dh: z.string().max(200), auth: z.string().max(100) }) });
   app.post('/v1/push/register', async (req) => {
-    const b = z.object({ owner: z.string(), expoPushToken: z.string(), notifyPublicKey: z.string() }).parse(req.body);
+    const b = z
+      .object({ owner: z.string(), notifyPublicKey: z.string().max(100), expoPushToken: z.string().max(300).optional(), webPush: webPushSub.optional() })
+      .parse(req.body);
     limit(`push:${req.ip}`, 30, 3600_000, 'push register per-IP');
-    return e.push.register(b.owner, b.expoPushToken, b.notifyPublicKey);
+    return e.push.register(b);
+  });
+
+  app.post('/v1/push/unregister', async (req) => {
+    const b = z.object({ owner: z.string(), target: z.string().max(1024) }).parse(req.body);
+    limit(`push:${req.ip}`, 30, 3600_000, 'push register per-IP');
+    return e.push.unregister(b.owner, b.target);
   });
 
   // ---------------------------------------------------------------- ops

@@ -3,7 +3,8 @@
 // Chrome virtual authenticator (PRF), against the engine and Perpl's exchange on the localnet.
 //
 //   cd localnet && npm start                     (another shell; or: ./run-stage-a.sh --web)
-//   node e2e-web.mjs [--no-build]                (engine on 8807, web on 8818, site on 8819; E2E_ENGINE_PORT / E2E_WEB_PORT / E2E_SITE_PORT)
+//   node e2e-web.mjs [--no-build]                (engine on 8807, web on 8818, site on 8819, push sink on 8817;
+//                                                E2E_ENGINE_PORT / E2E_WEB_PORT / E2E_SITE_PORT / E2E_PUSH_PORT)
 //
 // Builds the web export (EXPO_BASE_URL=/app, EXPO_PUBLIC_API_BASE=engine, MERA_RP_ID=localhost) into a temp
 // dir unless --no-build with E2E_WEB_DIST=<dir>. Evidence: devices/evidence/stage-a/<run>/web/ (a screenshot
@@ -21,11 +22,15 @@ import { phoneFlows } from "./e2e-web/flows-watch.mjs";
 import { followFlows } from "./e2e-web/flows-follow.mjs";
 import { exitFlows } from "./e2e-web/flows-exit.mjs";
 import { startSite } from "./e2e-web/share-card.mjs";
+import { alertsFlows } from "./e2e-web/flows-alerts.mjs";
+import { startPushSink, subscriptionKeys, vapidKeys } from "./e2e-web/push-sink.mjs";
 
 const ENGINE_PORT = Number(process.env.E2E_ENGINE_PORT ?? 8807);
 const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 8818);
 // The website (web/, next dev) that renders the share cards; the app's share sheet points at it.
 const SITE_PORT = Number(process.env.E2E_SITE_PORT ?? 8819);
+// Stand-in push service: the engine's Web Push requests go here (PUSH_WEBPUSH_ENDPOINT_OVERRIDE).
+const PUSH_PORT = Number(process.env.E2E_PUSH_PORT ?? 8817);
 const API = `http://127.0.0.1:${ENGINE_PORT}`;
 const WEB = `http://localhost:${WEB_PORT}/app`;
 const RUN = process.env.E2E_RUN ?? new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -87,11 +92,13 @@ function serve(dist) {
 }
 
 // One engine handle the flows can stop and restart (the "Can't reach Mirror" check).
+const VAPID = vapidKeys();
+const PUSH_ENV = { VAPID_PUBLIC_KEY: VAPID.publicKey, VAPID_PRIVATE_KEY: VAPID.privateKey, VAPID_SUBJECT: "https://mirror.0xo.in", PUSH_WEBPUSH_ENDPOINT_OVERRIDE: `http://127.0.0.1:${PUSH_PORT}/push` };
 const engineCtl = {
   handle: null,
   dbPath: join(OUT, "engine.db"),
   async start() {
-    this.handle = await startEngine({ port: ENGINE_PORT, dbPath: this.dbPath, logFile: join(OUT, `engine-${Date.now()}.log`) });
+    this.handle = await startEngine({ port: ENGINE_PORT, dbPath: this.dbPath, logFile: join(OUT, `engine-${Date.now()}.log`), extraEnv: PUSH_ENV });
   },
   async stop() { if (this.handle) await this.handle.stop(); this.handle = null; },
 };
@@ -102,6 +109,11 @@ try {
   const dist = await buildWeb();
   const server = await serve(dist);
   cleanups.push(() => new Promise((r) => server.close(r)));
+  const sink = await startPushSink({ port: PUSH_PORT });
+  cleanups.push(() => sink.stop());
+  const sub = subscriptionKeys();
+  const push = { sink, sub: { endpoint: `https://fcm.googleapis.com/fcm/send/mirror-e2e-${RUN}`, keys: sub.keys } };
+  sink.subs.set(push.sub.endpoint, sub);
   await engineCtl.start();
   const api = apiClient(API);
   const site = await startSite({ port: SITE_PORT, api: API, logFile: join(OUT, "site.log") }).catch((e) => { console.log(`website did not start: ${e.message}`); return null; });
@@ -113,13 +125,16 @@ try {
   });
   await R.check("team-run demo follower set up through the relay API (as e2e-api)", null, async () => setupDemoFollower(api));
 
-  browser = await chromium.launch({ headless: process.env.HEADED !== "1" });
+  // Full Chromium in new headless mode: the old headless shell reports Notification.permission "denied" even after
+  // the permission is granted, so the alerts opt-in could not be tested there.
+  browser = await chromium.launch({ headless: process.env.HEADED !== "1", channel: process.env.E2E_CHROMIUM_CHANNEL ?? "chromium" });
   cleanups.push(() => browser.close());
-  const dev = await openDevice(browser, PHONE);
+  // Service workers on: the web app's sw.js receives the encrypted alerts.
+  const dev = await openDevice(browser, PHONE, { serviceWorkers: "allow" });
   R.pageErrors = () => dev.consoleLog.filter((l) => l.startsWith("pageerror"));
-  const ctx = { R, api, WEB, API, env, engineCtl, browser, dev, page: dev.page, state: R.state, site };
+  const ctx = { R, api, WEB, API, env, engineCtl, browser, dev, page: dev.page, state: R.state, site, push };
   const only = process.env.E2E_FLOWS ? process.env.E2E_FLOWS.split(",") : null;
-  for (const flows of [phoneFlows, followFlows, exitFlows]) {
+  for (const flows of [phoneFlows, followFlows, alertsFlows, exitFlows]) {
     if (only && !only.includes(flows.name)) continue;
     try { await flows(ctx); } catch (e) { if (e.bail) break; await R.check(`${flows.name} completed`, dev.page, async () => { throw e; }); }
   }

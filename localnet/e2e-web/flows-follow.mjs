@@ -3,6 +3,7 @@
 import { env, faucet, leaderTrade, position, sleep } from "./chain.mjs";
 import { click, findCard, isVisible, text, tid, until, visible } from "./browser.mjs";
 import { feeNumber, readBlocked, readProof, takerBuilder } from "./flows-watch.mjs";
+import { optInAfterFirstFollow } from "./flows-alerts.mjs";
 
 const LEADER = env.teamRun.demoLeaderAccountId;
 const LEADER_SHORT = env.teamRun.demoLeaderAddress.slice(0, 6).toLowerCase();
@@ -86,6 +87,9 @@ export async function followFlows(ctx) {
     const p = ua.raw.policy ?? {};
     return { ok: status !== "Failed" && prompts === 1 && p.maxEntryDeviationBps === 100 && ua.raw.netDepositsCNS === "20000000", status, prompts, steps, account: ua.address, maxEntryDeviationBps: p.maxEntryDeviationBps, netDepositsCNS: ua.raw.netDepositsCNS, error: await text(page, "follow.error", 500).catch(() => undefined) };
   }, { needs: ["followSheet", "promptsBeforeFollow", "address"] });
+
+  // Alerts are offered on this result screen only after the first follow (the permission is asked on the tap).
+  if (ctx.push && state.userAccount) await optInAfterFirstFollow(ctx);
 
   await R.check("leader trade (anvil key) copied into the user: feed row with fee, latency, deviation", page, async () => {
     if (await isVisible(page, "follow.done")) await click(page, "follow.done");

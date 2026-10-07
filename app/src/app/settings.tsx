@@ -8,7 +8,7 @@ import { addressUrl } from "../lib/chain";
 import { dateShort, shortAddr } from "../lib/format";
 import { fingerprint } from "../lib/notifyKey";
 import { NS_NOTIFY_LABEL } from "../lib/prfNamespaces";
-import { registerForPush } from "../lib/push";
+import { registerForPush, type PushRegistration } from "../lib/push";
 import { devPasskeyActive, describeError, exportRecoveryPhrase, loadNotifyKey, RP_ID } from "../lib/wallet";
 import { useConfig, useTotals } from "../state/data";
 import { useSession } from "../state/session";
@@ -54,6 +54,13 @@ function SetRow({ icon, title, sub, right, onPress, testID }: { icon: IconName; 
   );
 }
 
+function channelLabel(r: PushRegistration): string {
+  if (!r.registered) return "Not registered yet";
+  if (r.channel === "webpush") return "Registered · Web Push";
+  if (r.channel === "expo") return "Registered · Android push";
+  return "Registered · in-app delivery while open";
+}
+
 export default function Settings() {
   const c = useColors();
   const qc = useQueryClient();
@@ -71,8 +78,11 @@ export default function Settings() {
 
   useEffect(() => {
     loadNotifyKey().then((k) => setFp(k ? fingerprint(k.publicKey) : null));
-    if (account) registerForPush(account.address).then((r) => setRegistered(r.registered ? (r.token.startsWith("unavailable") ? "Registered · in-app delivery" : "Registered for encrypted push") : "Not registered yet"));
+    if (account) registerForPush(account.address).then((r) => setRegistered(channelLabel(r)));
   }, [account?.address]);
+  useEffect(() => {
+    if (alerts.registration) setRegistered(channelLabel(alerts.registration));
+  }, [alerts.registration]);
 
   if (!account) return null;
   const ext = <Icon name="ext" size={16} color={c.mu} />;
@@ -157,8 +167,19 @@ export default function Settings() {
             sub={alerts.on ? (alerts.permission === "denied" ? "On in Mirror · blocked in system settings" : "On · copies, blocked trades, stops") : "Off · asked only when you turn alerts on"}
             right={<Switch on={alerts.on} onChange={(v) => (v ? alerts.turnOn() : alerts.turnOff())} testID="settings.alerts.toggle" />}
           />
-          <SetRow icon="clock" title="Notification history" sub="Decrypted on this device only" onPress={() => router.push("/notifications")} right={<Icon name="chev" size={18} color={c.mu} />} testID="settings.notifications" />
+          <SetRow icon="lock" title="Alerts received" sub="Decrypted on this device only" onPress={() => router.push("/alerts")} right={<Icon name="chev" size={18} color={c.mu} />} testID="settings.alerts.list" />
+          <SetRow icon="clock" title="Notification history" sub="Copies, blocked trades and account events" onPress={() => router.push("/notifications")} right={<Icon name="chev" size={18} color={c.mu} />} testID="settings.notifications" />
         </Card>
+        <View testID="settings.alerts.privacy" style={{ gap: 4, paddingHorizontal: 4 }}>
+          <T size={12} color="mu">
+            {`Alerts are end-to-end encrypted to your notification key (passkey PRF namespace "${NS_NOTIFY_LABEL}"). Mirror's server only holds its public half and relays ciphertext; the push service sees only "Mirror: new activity".`}
+          </T>
+          <T size={12} color="mu" testID="settings.alerts.channel">
+            {Platform.OS === "web"
+              ? `${registered}. The browser shows "Mirror: new activity" because its service worker can't read the key; the details are decrypted when you open Mirror.`
+              : `${registered}. Android shows "Mirror: new activity"; the details are decrypted on this phone.`}
+          </T>
+        </View>
 
         <Lbl style={{ marginTop: 8 }}>About</Lbl>
         <Card list>

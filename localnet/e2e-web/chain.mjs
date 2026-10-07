@@ -52,7 +52,7 @@ const demoOwner = acct(env.testKeys.demoFollowerOwner);
 export const demoAccountP = pub.readContract({ address: env.mirror.factory, abi: F, functionName: "predictAccount", args: [demoOwner.address, zeroHash] });
 
 /** Starts the engine (same env as e2e-api.mjs plus PUBLIC_RPC_URL and CORS). Returns { stop, log }. */
-export async function startEngine({ port, dbPath, logFile, publicRpcUrl = env.rpcUrl }) {
+export async function startEngine({ port, dbPath, logFile, publicRpcUrl = env.rpcUrl, extraEnv = {} }) {
   const demoAccount = await demoAccountP;
   const engineEnv = {
     ...process.env,
@@ -61,6 +61,7 @@ export async function startEngine({ port, dbPath, logFile, publicRpcUrl = env.rp
     KEEPER_PRIVATE_KEYS: env.testKeys.ops, RELAYER_PRIVATE_KEY: env.testKeys.ops, DEMO_LEADER_PRIVATE_KEY: env.testKeys.demoLeader,
     DEMO_FOLLOWER_ACCOUNT: demoAccount, DEMO_HOLD_MS: "5000", DEMO_IP_HOURLY: "50", DEMO_DAILY_CAP: "500",
     STOP_EXECUTOR_ENABLED: "0", DB_PATH: dbPath,
+    ...extraEnv,
   };
   const chunks = [];
   const child = spawn("npx", ["tsx", "src/index.ts"], { cwd: join(ROOT, "engine"), env: engineEnv, stdio: ["ignore", "pipe", "pipe"], detached: true });
@@ -134,6 +135,18 @@ export async function position(perpId, accountId) {
 let orderSeq = 1n;
 /** An IOC order on Perpl from a leader's own key (orderType 0 open long, 1 open short, 2 close long, 3 close short). */
 export async function leaderTrade(key, perpId, orderType, lots, lev = 200n) {
+  // The makers re-quote every 4 s on 0.4 s blocks, so an IOC that simulated fine can still revert when mined.
+  // A reverted order changed nothing; try once more at the fresh mark.
+  try {
+    return await leaderTradeOnce(key, perpId, orderType, lots, lev);
+  } catch (e) {
+    if (!/leader order reverted/.test(String(e.message))) throw e;
+    await sleep(1500);
+    return leaderTradeOnce(key, perpId, orderType, lots, lev);
+  }
+}
+
+async function leaderTradeOnce(key, perpId, orderType, lots, lev) {
   const a = acct(key);
   const { mark } = await position(perpId, 0);
   const bid = orderType === 0 || orderType === 3;

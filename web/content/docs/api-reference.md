@@ -57,4 +57,8 @@ One cycle runs at a time globally, with a per-IP hourly limit and a global daily
 
 | Method | Path | Body |
 |---|---|---|
-| POST | `/v1/push/register` | `{owner, expoPushToken, notifyPublicKey}`. Payloads are encrypted to `notifyPublicKey`, derived on the device from a separate Mera PRF namespace, so the server only relays ciphertext. |
+| GET | `/v1/push/config` | Which alert channels the server delivers on: `{webPush: {vapidPublicKey} or null, expo, sse}`. |
+| POST | `/v1/push/register` | `{owner, notifyPublicKey, expoPushToken?, webPush?}`. Alerts are sealed to `notifyPublicKey`, an X25519 key the device derives from its passkey's second PRF namespace (`mirror.prf.ns.notify.v1`), so the server and the push service only relay ciphertext. `webPush` is the browser's push subscription (Web Push with VAPID, no Firebase). |
+| POST | `/v1/push/unregister` | `{owner, target}`: stop sending to a Web Push endpoint or Expo token. |
+
+Alerts cover copies (with the Mirror fee), blocked copies (the rule and its numbers), stops (which stop, and who triggered it), a leader's loss stop, low equity, deposits and withdrawals, for your own accounts only. The notification itself always reads "Mirror: new activity"; the app decrypts the details on your device. In a browser the details are decrypted when you open Mirror, because the service worker can't read the key.

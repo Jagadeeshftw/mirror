@@ -19,6 +19,7 @@ import { DemoService } from './services/demo.js';
 import { LeaderService } from './services/leaders.js';
 import { Views } from './services/views.js';
 import { PushService } from './services/push.js';
+import { webPushSender } from './services/webpush.js';
 import { RateLimiter } from './services/ratelimit.js';
 import { createNansenSignal, type NansenSignal } from './nansen/client.js';
 import { StopExecutor } from './services/stops.js';
@@ -182,7 +183,21 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
   // Every copy, deposit, withdrawal and close-all records the account's equity right away.
   if (registry) registry.onAccountActivity = (account, kind) => void equity.snapshot(account, kind, true);
   const views = new Views(db, reads, market, fallbackRegistry, relayer, cfg.explorerTx, equity);
-  const push = new PushService(db, fallbackRegistry, bus, { enabled: env.PUSH_ENABLED, accessToken: env.EXPO_ACCESS_TOKEN }, log.child({ mod: 'push' }));
+  // Endpoint override is a Stage-A test hook: refused outside the localnet.
+  if (env.PUSH_WEBPUSH_ENDPOINT_OVERRIDE && env.NETWORK !== 'localnet') throw new Error('PUSH_WEBPUSH_ENDPOINT_OVERRIDE is only allowed with NETWORK=localnet');
+  const push = new PushService(db, fallbackRegistry, bus, {
+    enabled: env.PUSH_ENABLED,
+    accessToken: env.EXPO_ACCESS_TOKEN,
+    webPush: webPushSender(env),
+    vapidPublicKey: env.VAPID_PUBLIC_KEY,
+    endpointOverride: env.PUSH_WEBPUSH_ENDPOINT_OVERRIDE,
+    ratePerMin: env.PUSH_RATE_PER_MIN,
+    maxAgeSec: env.PUSH_MAX_AGE_SEC,
+    lowEquityPct: env.PUSH_LOW_EQUITY_PCT,
+    markets: cfg.markets,
+    keepers: () => [...senders.keys()],
+  }, log.child({ mod: 'push' }));
+  equity.onRecord = (a, eq, net) => push.onEquity(a, eq, net);
 
   const balances = new Map<string, bigint>();
   let balanceTimer: NodeJS.Timeout | undefined;

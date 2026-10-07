@@ -1,0 +1,118 @@
+{
+  "run": "2026-10-07T15-16-04",
+  "network": "localnet",
+  "perpl": "PerplFoundation/dex-sdk@01b9910 (MIT), deployed as in perpl_sdk::testing::TestExchange",
+  "checks": [
+    {
+      "name": "engine up on the localnet",
+      "ok": true,
+      "chainId": 1337,
+      "keeper": "0x976EA74026E726554dB657fA54763abd0C3a0aa9"
+    },
+    {
+      "name": "relay created the demo follower's MirrorAccount at the predicted address",
+      "ok": true,
+      "tx": "0x4a19170b33d407e1c369daa63228371388c180739d4aa04be229f42babb06802"
+    },
+    {
+      "name": "relayed permit deposit (demo follower, 50 AUSD)",
+      "ok": true,
+      "tx": "0x2bb1be1c362d191cbe5e7a62b97df875921c6bfe8551cee7047235c2e8b3414d",
+      "gasUsed": "296562",
+      "gasLimit": "437193"
+    },
+    {
+      "name": "demo follower follows the demo leader (signed action, relayed)",
+      "ok": true,
+      "tx": "0x257804efb72a4998c8d59a20d3f83025f7a95ea383f16324cab1f3f4d9cdd068"
+    },
+    {
+      "name": "second leader opened a Perpl account",
+      "ok": true,
+      "leader2Id": 5
+    },
+    {
+      "name": "test user: account created and 60 AUSD deposited by permit",
+      "ok": true,
+      "account": "0xC4668F465E7BD81eba43D664EFb1a23d59a534Df",
+      "tx": "0xed421354c24635afa8c8eb54a14b2e1366613436114ffbd747cae5a2b4691431"
+    },
+    {
+      "name": "test user follows two leaders with separate budgets (30 and 2 AUSD)",
+      "ok": true,
+      "tx": "0xc23153e0ec63ad13c5de4755990c31b44fcbdde672d14ce9a6d4a94e21992366",
+      "budgets": [
+        "30000000",
+        "2000000"
+      ]
+    },
+    {
+      "name": "Run demo trade: leader trade copied into the test user and the demo follower",
+      "ok": true,
+      "userTx": "0xe63137dfcbf7553fb2e974daa28ef7c52b807d788c570a8e7b56754640b40d7d",
+      "demoTx": "0x12bc56884e2dbb5d8d01decec512b8ab991a868ef055effe04114ff26114f169",
+      "latencyMs": 403
+    },
+    {
+      "name": "price proof on the copy: leader fill, leader entry, your fill, deviation",
+      "ok": true,
+      "leaderFillPNS": "855428",
+      "leaderEntryPNS": "855428",
+      "fillPNS": "855428",
+      "entryDeviationBps": 0
+    },
+    {
+      "name": "demo leader's close is copied (down to the leader's target)",
+      "ok": true,
+      "tx": "0xb7c482828d2bbf6d0abf3c00471294d3477f9751a202c8d7efe71d990f0128ce"
+    },
+    {
+      "name": "builder fee: Perpl charged builder 26 at 0.02% on the copied open",
+      "ok": true,
+      "builderId": 26,
+      "builderFeeCNS": "172",
+      "proofBuilderFeeCNS": "172"
+    },
+    {
+      "name": "builder fee: the copied close carried no builder and paid none",
+      "ok": true,
+      "builderId": 0,
+      "builderFeeCNS": "0",
+      "lotLNS": "1",
+      "price": "854573"
+    },
+    {
+      "name": "Run blocked trade: 10x copy against a 5x rule is Blocked onchain with the numbers",
+      "ok": true,
+      "reason": "LeverageTooHigh",
+      "limit": "500",
+      "actual": "1000",
+      "tx": "0xcd3067567ff0b2c6722483a697ebd4c99a7b35691c3061eb3c7a5f06bcb66729",
+      "onchain": true
+    },
+    {
+      "name": "second leader's ETH trade copied; its margin is booked to it alone",
+      "ok": true,
+      "leaderTx": "0x8fe2f64ef2f01deba4996cde09eab0e0c1ab75b5abeea36b02baf4af2706d4cd",
+      "copyTx": "0xc5c6b17d7e97ac73ca9158ba75edb63eefff35a73f6b9d2e7d9935306e4659d3",
+      "leader2MarginCNS": "1352090",
+      "demoLeaderMarginCNS": "0"
+    },
+    {
+      "name": "run completed",
+      "ok": false,
+      "error": "leader order reverted 0xf7bda6680253724445cca145b5174401a54c803df404d2ca18c71a0d72b1c4da"
+    }
+  ],
+  "txs": {
+    "demoTrade": {
+      "cycleId": "3822bd48-404a-4446-886d-6dd5506e0fa7",
+      "kind": "trade",
+      "status": "started",
+      "stream": "/v1/stream?account=demo",
+      "holdMs": 5000
+    }
+  },
+  "passed": 14,
+  "failed": 1
+}

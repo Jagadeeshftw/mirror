@@ -163,8 +163,21 @@ const EnvSchema = z.object({
   NANSEN_DAILY_BUDGET: int(1_000_000),
   NANSEN_CACHE_HOURS: int(24),
 
+  /** Expo push (Android): off unless set; EXPO_ACCESS_TOKEN when the Expo project enforces push security. */
   PUSH_ENABLED: bool,
   EXPO_ACCESS_TOKEN: z.string().optional(),
+  /** Web Push (VAPID). On when both keys are set; generate them with `pnpm gen:vapid`. Never commit the private key. */
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().default('https://mirror.0xo.in'),
+  /** Test hook (localnet only): send every Web Push request to this URL instead of the subscription's endpoint. */
+  PUSH_WEBPUSH_ENDPOINT_OVERRIDE: z.string().url().optional(),
+  /** Alerts per owner per minute; the rest are dropped (the feed still has them). */
+  PUSH_RATE_PER_MIN: int(20),
+  /** Events older than this (block time) are not alerted, so a backfill never sends history. */
+  PUSH_MAX_AGE_SEC: int(900),
+  /** Low-equity alert when equity falls under this percentage of net deposits (0 turns it off). */
+  PUSH_LOW_EQUITY_PCT: int(50),
 });
 
 const MarketSchema = z.object({

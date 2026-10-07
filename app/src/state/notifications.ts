@@ -18,12 +18,14 @@ async function load(): Promise<PushPayload[]> {
   return cache!;
 }
 
-export async function addNotification(p: PushPayload) {
+/** Adds a decrypted alert; false when it was already there (the same alert arrives over SSE and push). */
+export async function addNotification(p: PushPayload): Promise<boolean> {
   const list = await load();
-  if (p.eventId && list.some((x) => x.eventId === p.eventId)) return;
-  cache = [p, ...list].slice(0, 200);
+  if (p.eventId && list.some((x) => x.eventId === p.eventId && x.account === p.account)) return false;
+  cache = [p, ...list].sort((a, b) => b.timestamp - a.timestamp).slice(0, 200);
   await AsyncStorage.setItem(KEY, JSON.stringify(cache)).catch(() => {});
   subs.forEach((s) => s(cache!));
+  return true;
 }
 
 export function useNotificationHistory(): PushPayload[] {

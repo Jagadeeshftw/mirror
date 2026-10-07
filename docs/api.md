@@ -177,4 +177,32 @@ Limits: one cycle at a time globally, at most N per IP per hour, global daily ca
 
 | Method | Path | Body |
 |---|---|---|
-| POST | `/v1/push/register` | `{owner, expoPushToken, notifyPublicKey}`; payloads are encrypted to `notifyPublicKey` (derived on device from a separate Mera PRF namespace) so the server only relays ciphertext |
+| GET | `/v1/push/config` | `{webPush: {vapidPublicKey} \| null, expo: bool, sse: true}`: which channels this server delivers on (`webPush` is null without VAPID keys) |
+| POST | `/v1/push/register` | `{owner, notifyPublicKey, expoPushToken?, webPush?: {endpoint, keys: {p256dh, auth}}}` → `{ok, owner, channels}`. `notifyPublicKey` is the device's X25519 public key (32 bytes, base64 or hex), derived on the device from the passkey's second PRF namespace `mirror.prf.ns.notify.v1`; the server never holds the private half. `webPush` is a browser `PushSubscription.toJSON()`; its endpoint must be a known browser push service (FCM, Mozilla, Apple, Windows). An `expoPushToken` that isn't `ExponentPushToken[…]` (e.g. `unavailable:no-fcm-config`) is ignored and the device keeps in-app delivery. At most 10 targets per owner; 30 calls per IP per hour |
+| POST | `/v1/push/unregister` | `{owner, target}` (a Web Push endpoint or Expo token) → `{ok, removed}` |
+
+**What is alerted** (owner's own MirrorAccounts only; team-run accounts and the `demo` channel never alert):
+`Mirrored` open (copy with size, notional and the Mirror fee) and close (realised PnL when known); `Blocked` (the rule
+and its numbers, e.g. "leader 10.0x, your max 5.0x"); a `Blocked` for `DailyLossStop` / `DrawdownStop` /
+`LeaderLossStop` (stop hit, with equity and floor); `EngineSkipped` (thin book); `StopTriggered` (which stop, and
+who triggered it: you, Mirror's keeper, or another address); `LeaderStopped`; `Deposited` / `Withdrawn`; low equity
+(equity under `PUSH_LOW_EQUITY_PCT`% of net deposits, once per account per UTC day). Events older than
+`PUSH_MAX_AGE_SEC` (900) are never alerted, so a backfill sends no history. Each event is alerted once (deduped by
+account + feed id) and at most `PUSH_RATE_PER_MIN` (20) alerts per owner per minute.
+
+**Payload.** The alert JSON `{v: 1, kind, title, body, account, eventId, txHash, timestamp}` (`kind`: `copied`,
+`closed`, `blocked`, `stop`, `leader_stop`, `low_equity`, `deposit`, `withdraw`) is sealed to each registered
+`notifyPublicKey` as envelope v1 `{v: 1, epk, nonce, ct}` (standard base64): ephemeral X25519 → HKDF-SHA256(salt =
+`epk || recipientPub`, info `mirror.v1.push.chacha20poly1305`) → ChaCha20-Poly1305 (AAD `mirror.v1`, tag appended).
+Test vector shared by the engine and app tests: `shared/test-vectors/push-envelope-v1.json`.
+
+**Delivery** (every channel relays the same ciphertext; the visible text is always generic):
+
+| Channel | How | Visible text |
+|---|---|---|
+| In-app (SSE) | `event: push` on `/v1/stream?account=<account>`, one envelope per registered device key; a device skips envelopes it can't open | none (the app adds the decrypted alert to Alerts) |
+| Web Push | VAPID (RFC 8292) + aes128gcm (RFC 8291) via the `web-push` package, body `{"mirror": envelope}`, TTL 3600, urgency high. 404/410 removes the subscription; 20 failures in a row remove it too. On when `VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` are set (`pnpm gen:vapid` in `engine/`; `VAPID_SUBJECT` defaults to `https://mirror.0xo.in`) | the service worker shows "Mirror / New activity" |
+| Expo (Android) | `https://exp.host/--/api/v2/push/send`, `{to, title: "Mirror", body: "New activity", data: {mirror: "<envelope JSON>"}, channelId: "copies"}`. `DeviceNotRegistered` removes the token. On with `PUSH_ENABLED=1` (+ `EXPO_ACCESS_TOKEN` if the Expo project enforces push security) | "Mirror / New activity" |
+
+`PUSH_WEBPUSH_ENDPOINT_OVERRIDE` (Stage-A test hook, refused unless `NETWORK=localnet`) sends every Web Push request
+to one URL instead of the subscription endpoint, with the original endpoint in `x-mirror-endpoint`.

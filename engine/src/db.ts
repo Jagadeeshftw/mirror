@@ -221,6 +221,24 @@ CREATE TABLE IF NOT EXISTS push_tokens (
   PRIMARY KEY (owner, token)
 );
 
+-- Alert delivery targets. channel: 'app' (in-app SSE only), 'webpush' (target = endpoint, p256dh/auth from the
+-- browser subscription) or 'expo' (target = Expo push token). Every row carries the device's notification public key;
+-- alerts are sealed to it, so every channel relays ciphertext only.
+CREATE TABLE IF NOT EXISTS push_subs (
+  id TEXT PRIMARY KEY,
+  owner TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  target TEXT NOT NULL,
+  p256dh TEXT,
+  auth TEXT,
+  notify_public_key TEXT NOT NULL,
+  created_ms INTEGER NOT NULL,
+  updated_ms INTEGER NOT NULL,
+  last_sent_ms INTEGER,
+  failures INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS push_subs_owner ON push_subs (owner);
+
 CREATE TABLE IF NOT EXISTS nansen_cache (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,

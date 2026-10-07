@@ -24,6 +24,8 @@ const nowSec = () => Math.floor(Date.now() / 1000);
 export class EquityService {
   private timer?: NodeJS.Timeout;
   private lastPrune = 0;
+  /** Called after every snapshot (low-equity alerts). */
+  onRecord?: (account: string, equity: bigint, netDepositsCNS: bigint) => void;
 
   constructor(
     private readonly db: Db,
@@ -46,6 +48,7 @@ export class EquityService {
 
   record(account: string, equity: bigint, reason: string, ts = nowSec(), netDeposits = this.netDeposits(account)) {
     this.db.run('INSERT INTO equity_snapshots (account, ts, equity_cns, net_deposits_cns, reason) VALUES (?, ?, ?, ?, ?)', account.toLowerCase(), ts, equity.toString(), netDeposits, reason);
+    this.onRecord?.(account, equity, BigInt(netDeposits || '0'));
     if (ts - this.lastPrune > 3_600) {
       this.lastPrune = ts;
       this.db.run('DELETE FROM equity_snapshots WHERE ts < ?', ts - (this.opts.keepDays ?? 35) * 86_400);

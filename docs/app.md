@@ -52,25 +52,50 @@ Two variants:
 
 ## One passkey, many keys: the notification key
 
-Mera 0.2 returns one PRF output per WebAuthn ceremony (the `first` evaluation for one salt).
-A second PRF salt would need a second ceremony, which would mean a second biometric prompt
-at account creation. To keep create to one prompt, namespaced keys come from the single PRF
-output with HKDF-SHA256 and distinct `info` strings. Mera uses the same domain-separation
-pattern for its own secret vaults (`mera.v1.encrypt.secret`).
+The passkey is evaluated with two PRF salts in the same prompt: the account namespace (Mera's
+`mera.prf.salt.v1`, which derives the owner key) and the notification namespace `sha256("mirror.prf.ns.notify.v1")`
+as `prf.eval.second` (`prfNamespaces.ts` / `.web.ts`). A provider that ignores `second` costs one more prompt for the
+notification namespace alone; it is never derived from the account output.
 
-- Notification key = X25519 private key `HKDF-SHA256(ikm = PRF, salt = "", info = "mirror.v1.notify.x25519")`.
-  It never signs transactions and is independent of the owner key (different derivation path).
-- Registered with `POST /v1/push/register {owner, expoPushToken, notifyPublicKey}` (base64 public key).
-- Push envelope `{v: 1, epk, nonce, ct}` (base64): ephemeral X25519 → shared secret →
+- Notification key = X25519 private key `HKDF-SHA256(ikm = notify-namespace PRF output, salt = "", info = "mirror.v1.notify.x25519")`.
+  It never signs transactions. Stored on the device only (SecureStore on Android; on the web, localStorage sealed
+  under a non-extractable IndexedDB key, `webStore.ts`).
+- Registered with `POST /v1/push/register {owner, notifyPublicKey, expoPushToken?, webPush?}` (base64 public key).
+  The server holds the public half only.
+- Alert envelope v1 `{v: 1, epk, nonce, ct}` (base64): ephemeral X25519 → shared secret →
   `HKDF-SHA256(shared, salt = epk || recipientPub, info = "mirror.v1.push.chacha20poly1305")` →
-  ChaCha20-Poly1305, AAD `mirror.v1`. The plaintext is a JSON `PushPayload`
-  (`{kind, title, body, account?, eventId?, timestamp}`). The server and the push provider only see ciphertext.
-- Delivery: an FCM/Expo data message with `data.mirror = "<envelope JSON>"` (handled in the
-  foreground listener and a background task), or the SSE stream's `event: push` while the app is
-  open. The device decrypts and shows a local notification on channel `copies`.
-- Private follow notes are sealed to the user's own key with info
-  `mirror.v1.note.chacha20poly1305` before upload.
-- Settings shows "Notification encryption key — derived from your passkey" with its fingerprint.
+  ChaCha20-Poly1305, AAD `mirror.v1`. Plaintext: `PushPayload` `{v, kind, title, body, account, eventId, txHash, timestamp}`.
+  Engine and app are tested against the same vector (`shared/test-vectors/push-envelope-v1.json`).
+- Private follow notes are sealed to the user's own key with info `mirror.v1.note.chacha20poly1305` before upload.
+- Settings shows "Notification encryption key — derived from your passkey" with its fingerprint, and under Alerts
+  the namespace, that the server only relays ciphertext, and the delivery channel.
+
+## Alerts
+
+Turned on from "Get alerts for this follow?" after the first follow (`follow.alerts.enable`) or the Settings switch.
+The OS / browser permission is asked only then, never at sign-up. The Alerts screen (`/alerts`, also from Settings →
+"Alerts received" and Notifications) lists the decrypted alerts; they never leave the device.
+
+| Platform | Remote delivery | What the user sees | Where it is decrypted |
+|---|---|---|---|
+| Web | Web Push with VAPID through `public/sw.js` (no Firebase) | "Mirror / New activity" from the service worker | In the app when it opens or regains focus: the worker can't read the key (it sits in the app's encrypted storage) and has no X25519/ChaCha20 code, so it only queues the envelope in IndexedDB `mirror-inbox` and pings open tabs. Settings says so |
+| Android | Expo push (FCM), data `mirror` = envelope | Foreground: the decrypted text as a local notification (the generic banner is suppressed). Background: "Mirror / New activity"; the background task decrypts into Alerts | On the phone |
+| Both, app open | SSE `event: push` | Alerts list | On the device |
+
+### Android push: what the owner provides
+
+Android remote push needs Firebase; everything else (web alerts, in-app alerts on Android) works without it.
+
+1. Firebase console → a project → add an Android app with package `com.zeroxo.mirror` → download
+   `google-services.json` and put it at `app/google-services.json` (gitignored). `app.config.ts` picks it up
+   automatically (`android.googleServicesFile`) on the next `expo prebuild` / `scripts/build-apk.sh`.
+2. Expo push also needs an Expo project id and the FCM V1 service-account key: `eas init` (or set
+   `EXPO_PUBLIC_EAS_PROJECT_ID` at build time), then upload the Firebase service-account JSON in the Expo dashboard
+   (Credentials → Android → FCM V1). On the engine set `PUSH_ENABLED=1` (and `EXPO_ACCESS_TOKEN` if push security
+   is on in the Expo project).
+
+Without these the app registers the in-app channel only (`expoPushToken` is not sent) and Settings shows
+"Registered · in-app delivery while open".
 
 ## What the app signs
 
@@ -116,7 +141,7 @@ The app accepts these shapes; `app/src/lib/types.ts` is the full reference and
 - `GET /v1/config`: `{chainId, rpc, explorerTx, explorerAddress, contracts: {factory, implementation, keeperRegistry, perplExchange, collateral}, depositCapCNS, minAccountOpenCNS, markets: [{perpId, symbol, lotDecimals, priceDecimals, markPNS, maxLeverage}], teamRun}`.
 - `GET /v1/owners/:owner/accounts`: `{owner, walletBalanceCNS, accounts: MirrorAccount[]}` (a bare array also works; the engine's `walletCNS` maps to `walletBalanceCNS`). Each account carries `salt`, `actionNonce`, `equityHistory` (engine `{t (s), equityCNS}` maps to `{t (ms), v}`), `leader` and `pnl.byLeader`; the engine's `todayPnlCNS` maps to `pnl.todayCNS` and `dailyLossHit` / `drawdownHit` to `stops`.
 - Feed events: `{id, kind, account, txHash, block, timestamp, commitState, latencyMs, leaderAccountId, leaderAddress, perpId, orderType, lotLNS, pricePNS, leverageHdths, notionalCNS, realisedPnlCNS, matchNow, blocked: {reason, reasonCode, limit, actual, rule}}`. `leaderLotLNS` / `leaderLeverageHdths` let the Blocked sheet show the leader's own order.
-- SSE `/v1/stream?account=…`: `event: feed` (FeedEvent), `event: commit` (`{id, txHash, commitState}`), `event: push` (encrypted envelope), `event: demo` (DemoCycle with steps, latency and tx hashes), `event: hello`.
+- SSE `/v1/stream?account=…`: `event: feed` (FeedEvent), `event: commit` (`{id, txHash, commitState}`), `event: push` (alert envelope sealed to a device key), `event: demo` (DemoCycle with steps, latency and tx hashes), `event: hello`.
 - `POST /v1/quote/follow` body adds `policy.allocationCNS` so the quote can flag orders that don't fit the margin. Response: `{rows, orders, ordersEncoded}`.
 - Errors: `{error, message, retryAfterSec?, revertReason?}` with HTTP 429 for rate limits (also `Retry-After`) and 409 when a demo cycle is already running.
 - Proposed addition: `PUT /v1/notes {owner, account, note: envelope}`, `GET /v1/notes/:owner` for encrypted private follow notes.
@@ -133,8 +158,8 @@ and custom switch and slider without animated values. Charts are static SVG.
 - Real passkeys on device need a Google account on the phone and
   `https://mirror.0xo.in/.well-known/assetlinks.json` listing `com.zeroxo.mirror` with the SHA-256
   of the release certificate.
-- Remote push needs FCM credentials (`google-services.json`) or an Expo project id; without
-  them the app registers `expoPushToken: "unavailable:no-fcm-config"` and receives encrypted
-  payloads over SSE while open.
+- Android remote push needs `app/google-services.json` and an Expo project id with the FCM V1 key (see "Android
+  push: what the owner provides"); without them Android receives encrypted alerts over SSE while open. Web alerts
+  use Web Push with VAPID and need only the engine's VAPID keys.
 - Contract addresses (`factory`, `implementation`) come from `/v1/config`; `shared/config.json`
   still has them as null.

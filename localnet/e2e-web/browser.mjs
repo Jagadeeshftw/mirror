@@ -44,8 +44,8 @@ const WEBAUTHN_LOG = () => {
 };
 
 /** A new context + page at `viewport` with its own virtual authenticator. */
-export async function openDevice(browser, viewport, { credential } = {}) {
-  const context = await browser.newContext({ viewport, deviceScaleFactor: 1, colorScheme: "light", serviceWorkers: "block" });
+export async function openDevice(browser, viewport, { credential, serviceWorkers = "block" } = {}) {
+  const context = await browser.newContext({ viewport, deviceScaleFactor: 1, colorScheme: "light", serviceWorkers });
   await context.addInitScript(WEBAUTHN_LOG);
   const page = await context.newPage();
   const consoleLog = [];

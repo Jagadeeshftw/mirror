@@ -141,6 +141,11 @@ export default function Notifications() {
             </T>
           </Card>
         ) : null}
+        <Press onPress={() => router.push("/alerts")} testID="notifications.alerts" style={{ alignSelf: "center", padding: 6 }}>
+          <T size={13} w={600} color="ac">
+            Encrypted alerts received
+          </T>
+        </Press>
         <T size={12} color="mu" center style={{ paddingHorizontal: 24 }}>
           Push payloads are end-to-end encrypted to a key derived from your passkey. Change what you get in Settings.
         </T>

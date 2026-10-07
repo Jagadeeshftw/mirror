@@ -19,7 +19,9 @@ import type {
   MirrorAccount,
   OwnerAccounts,
   Policy,
+  PushConfig,
   PushEnvelope,
+  WebPushSubscriptionJSON,
   RelayResult,
 } from "./types";
 import { normalizeConfig } from "./config";
@@ -198,8 +200,10 @@ export const api = {
   demoTrade: () => request<{ cycleId: string }>("POST", "/v1/demo/trade", {}),
   demoBlocked: () => request<{ cycleId: string }>("POST", "/v1/demo/blocked", {}),
 
-  pushRegister: (body: { owner: Address; expoPushToken: string; notifyPublicKey: string }) =>
-    request<{ ok: boolean }>("POST", "/v1/push/register", body),
+  pushConfig: () => request<PushConfig>("GET", "/v1/push/config"),
+  pushRegister: (body: { owner: Address; notifyPublicKey: string; expoPushToken?: string; webPush?: WebPushSubscriptionJSON }) =>
+    request<{ ok: boolean; channels?: string[] }>("POST", "/v1/push/register", body),
+  pushUnregister: (body: { owner: Address; target: string }) => request<{ ok: boolean }>("POST", "/v1/push/unregister", body),
 
   // App-side extension (documented in docs/app.md): private follow notes, sealed on device.
   putNote: (body: { owner: Address; account: Address; note: PushEnvelope }) => request<{ ok: boolean }>("PUT", "/v1/notes", body),

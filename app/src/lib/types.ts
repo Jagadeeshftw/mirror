@@ -408,11 +408,27 @@ export interface PushEnvelope {
   ct: string;
 }
 
+/** Decrypted alert (engine: engine/src/services/alerts.ts AlertPayload). */
 export interface PushPayload {
-  kind: "copied" | "blocked" | "closed" | "stop" | "expiry" | "deposit" | "withdraw" | "demo";
+  v?: 1;
+  kind: "copied" | "blocked" | "closed" | "stop" | "leader_stop" | "low_equity" | "expiry" | "deposit" | "withdraw" | "demo";
   title: string;
   body: string;
   account?: Address;
   eventId?: string;
+  txHash?: string | null;
   timestamp: number;
+}
+
+/** A browser Web Push subscription as PushSubscription.toJSON() returns it. */
+export interface WebPushSubscriptionJSON {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}
+
+/** GET /v1/push/config: which channels the server can deliver on. */
+export interface PushConfig {
+  webPush: { vapidPublicKey: string } | null;
+  expo: boolean;
+  sse: boolean;
 }

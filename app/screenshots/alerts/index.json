@@ -1,0 +1,122 @@
+[
+ {
+  "file": "follow-alerts-card-mobile-light.png",
+  "state": "follow-alerts-card",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "follow-alerts-card-mobile-dark.png",
+  "state": "follow-alerts-card",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "follow-alerts-card-desktop-light.png",
+  "state": "follow-alerts-card",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "follow-alerts-card-desktop-dark.png",
+  "state": "follow-alerts-card",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "follow-alerts-on-mobile-light.png",
+  "state": "follow-alerts-on",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "follow-alerts-on-mobile-dark.png",
+  "state": "follow-alerts-on",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "follow-alerts-on-desktop-light.png",
+  "state": "follow-alerts-on",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "follow-alerts-on-desktop-dark.png",
+  "state": "follow-alerts-on",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "settings-alerts-mobile-light.png",
+  "state": "settings-alerts",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "settings-alerts-mobile-dark.png",
+  "state": "settings-alerts",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "settings-alerts-desktop-light.png",
+  "state": "settings-alerts",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "settings-alerts-desktop-dark.png",
+  "state": "settings-alerts",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "alerts-list-mobile-light.png",
+  "state": "alerts-list",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "alerts-list-mobile-dark.png",
+  "state": "alerts-list",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "alerts-list-desktop-light.png",
+  "state": "alerts-list",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "alerts-list-desktop-dark.png",
+  "state": "alerts-list",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "alerts-empty-mobile-light.png",
+  "state": "alerts-empty",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "alerts-empty-mobile-dark.png",
+  "state": "alerts-empty",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "alerts-empty-desktop-light.png",
+  "state": "alerts-empty",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "alerts-empty-desktop-dark.png",
+  "state": "alerts-empty",
+  "size": "desktop",
+  "scheme": "dark"
+ }
+]

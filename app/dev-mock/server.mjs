@@ -1049,13 +1049,15 @@ const server = http.createServer(async (req, res) => {
       if (lim) return send(res, lim.status, lim.body, lim.body.retryAfterSec ? { "Retry-After": String(lim.body.retryAfterSec) } : {});
       return send(res, 200, { cycleId: runDemo(p.endsWith("trade") ? "trade" : "blocked") });
     }
+    if (req.method === "GET" && p === "/v1/push/config") return send(res, 200, { webPush: null, expo: false, sse: true });
     if (req.method === "POST" && p === "/v1/push/register") {
       const b = await readBody(req);
       const o = ownerState(b.owner);
       o.notifyPub = b.notifyPublicKey;
-      o.pushToken = b.expoPushToken;
-      return send(res, 200, { ok: true });
+      o.pushToken = b.expoPushToken ?? null;
+      return send(res, 200, { ok: true, owner: cs(b.owner), channels: ["sse"] });
     }
+    if (req.method === "POST" && p === "/v1/push/unregister") return send(res, 200, { ok: true, removed: 0 });
     if (req.method === "PUT" && p === "/v1/notes") {
       const b = await readBody(req);
       if (!notes.has(lc(b.owner))) notes.set(lc(b.owner), new Map());

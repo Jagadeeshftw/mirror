@@ -322,13 +322,15 @@ back to x402; with only a payer key it uses x402; with neither (or `NANSEN_ENABL
 score simply has no Nansen term. `/v1/leaders` reports the source as `nansenSource` (`api_key` | `x402` | `off`).
 Tested against a mock 402 server built from a real Nansen 402; no paid call has been made.
 
-### Push (`services/push.ts`)
+### Push (`services/push.ts`, `alerts.ts`, `pushcrypto.ts`, `webpush.ts`)
 
-`POST /v1/push/register` stores `{owner, expoPushToken, notifyPublicKey}`. On every feed event of an owner's
-account the payload is encrypted to the device: ephemeral X25519, then HKDF-SHA256 (salt = ephemeral public
-key, info `mirror-push-v1`), then AES-256-GCM. The result `{v, alg, epk, iv, ct}` (base64url; `ct` includes
-the 16-byte tag) is sent as `data.enc` to the Expo push API. The server never sees plaintext on the device
-side. `notifyPublicKey` is the raw 32-byte X25519 key as hex or base64url. Off unless `PUSH_ENABLED=1`.
+Encrypted alerts for an owner's accounts. `alerts.ts` picks the feed events that alert and writes their text;
+`pushcrypto.ts` seals each alert to every registered device's notification public key (envelope v1: X25519 →
+HKDF-SHA256 → ChaCha20-Poly1305, byte-identical to the app's `notifyKey.ts`, checked against
+`shared/test-vectors/push-envelope-v1.json`); `push.ts` dedupes, rate-limits and fans out over SSE (`event: push`),
+Web Push (VAPID, `webpush.ts`) and Expo push. Targets live in `push_subs` (rows of the older `push_tokens` table are
+copied in as Expo targets). The visible push text is always the generic "Mirror / New activity". Team-run accounts
+never alert. Triggers, payload, channels and env: [api.md, Push](api.md#push).
 
 ### Stats
 

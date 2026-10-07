@@ -1,9 +1,7 @@
-import { createDecipheriv, createPublicKey, diffieHellman, generateKeyPairSync, hkdfSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { encodeAbiParameters, encodeEventTopics, type Hex } from 'viem';
 import { perplExchangeAbi } from '../src/abi/PerplExchange.js';
 import { decodePositionEvent } from '../src/services/watcher.js';
-import { encryptForDevice, EXPO_TOKEN } from '../src/services/push.js';
 import { aggregate, maxDrawdownPct, score } from '../src/services/leaders.js';
 import { nansenAdjust } from '../src/nansen/client.js';
 import { encodeCloseMarket, encodeFollowData, encodeLevels, encodeOrders } from '../src/domain/encode.js';
@@ -30,26 +28,6 @@ describe('Perpl position event decoding', () => {
   it('PositionLiquidated uses posAccountId', () => {
     const ev = decodePositionEvent(eventLog('PositionLiquidated', { perpId: 1n, posAccountId: 77n, positionType: 0, posLotLNS: 10n, liqLotLNS: 10n, deltaPnlCNS: -100n, fundingCNS: 0n, posAmountCNS: 0n, accAmountCNS: 0n, onOrderBook: false }));
     expect(ev).toMatchObject({ kind: 'liquidate', accountId: 77, lotsAfter: 0n });
-  });
-});
-
-describe('push payload encryption', () => {
-  it('round-trips with the device private key', () => {
-    const device = generateKeyPairSync('x25519');
-    const pub = (device.publicKey.export({ format: 'der', type: 'spki' }) as Buffer).subarray(-32).toString('base64url');
-    const enc = encryptForDevice({ kind: 'Blocked', reason: 'LeverageTooHigh' }, pub);
-    const epk = Buffer.from(enc.epk, 'base64url');
-    const shared = diffieHellman({ privateKey: device.privateKey, publicKey: createPublicKey({ key: Buffer.concat([Buffer.from('302a300506032b656e032100', 'hex'), epk]), format: 'der', type: 'spki' }) });
-    const key = Buffer.from(hkdfSync('sha256', shared, epk, Buffer.from('mirror-push-v1'), 32));
-    const blob = Buffer.from(enc.ct, 'base64url');
-    const d = createDecipheriv('aes-256-gcm', key, Buffer.from(enc.iv, 'base64url'));
-    d.setAuthTag(blob.subarray(-16));
-    const out = JSON.parse(Buffer.concat([d.update(blob.subarray(0, -16)), d.final()]).toString());
-    expect(out).toEqual({ kind: 'Blocked', reason: 'LeverageTooHigh' });
-  });
-  it('validates Expo tokens', () => {
-    expect(EXPO_TOKEN.test('ExponentPushToken[abcDEF123]')).toBe(true);
-    expect(EXPO_TOKEN.test('nope')).toBe(false);
   });
 });
 

@@ -127,7 +127,17 @@ try {
     return { lots: p.lotLNS, side: p.positionType, entry: p.pricePNS, mark };
   };
   let orderId = 1n;
+  // A mined revert (makers re-quoting between simulation and inclusion) changed nothing: one retry at the fresh mark.
   async function leaderTrade(key, perpId, orderType, lots, lev = 200n) {
+    try {
+      return await leaderTradeOnce(key, perpId, orderType, lots, lev);
+    } catch (e) {
+      if (!/leader order reverted/.test(String(e.message))) throw e;
+      await new Promise((r) => setTimeout(r, 1500));
+      return leaderTradeOnce(key, perpId, orderType, lots, lev);
+    }
+  }
+  async function leaderTradeOnce(key, perpId, orderType, lots, lev) {
     const a = acct(key);
     const { mark } = await position(perpId, 0);
     const bid = orderType === 0 || orderType === 3;

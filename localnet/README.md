@@ -15,6 +15,13 @@ Stage-A runs on a fresh localnet (each starts and stops its own chain): `./run-s
 `e2e-api.mjs`), `./run-stage-a.sh --web` (the web app with Playwright and a Chrome virtual authenticator with PRF,
 `e2e-web.mjs`: builds the export with `MERA_RP_ID=localhost`, engine on 8807, web on 8818), `--all` for both.
 Evidence goes to `devices/evidence/stage-a/<run>/` (`web/index.html` is the contact sheet, `web/report.json` the checks).
+The web run also checks encrypted alerts (`e2e-web/flows-alerts.mjs`): the engine gets fresh VAPID keys and
+`PUSH_WEBPUSH_ENDPOINT_OVERRIDE` pointing at a local push sink on 8817 (`e2e-web/push-sink.mjs`, `E2E_PUSH_PORT`)
+that stands in for FCM/Mozilla. Headless Chrome has no push service, so `PushManager.subscribe` is replaced by a
+subscription whose keys the sink holds; the sink removes the Web Push layer and checks that the Mirror envelope
+inside is still sealed, then the payload is delivered to the app's real service worker with CDP
+`ServiceWorker.deliverPushMessage` and the Alerts screen must show it decrypted. The browser is full Chromium in new
+headless mode (`E2E_CHROMIUM_CHANNEL`), since the old headless shell always reports notifications as denied.
 
 - Same anvil settings as the kit: 0.4 s blocks, 128 KiB code size limit, 200M block gas limit, 100 gwei base
   fee, FIFO ordering, chain id 1337. RPC on port 8546, faucet and test controls on 8547.

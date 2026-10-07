@@ -82,7 +82,7 @@ PENDING. Planned:
 
 ### Q1. Describe how your project meaningfully utilizes Mera in non-account work.
 <!--answer-->
-Verified on device, not yet in the live app. A second PRF namespace, separate from the account salt, derives an X25519 key that never signs transactions. Google Password Manager returns both PRF outputs in the same single passkey prompt, and the namespace key is identical when restored on a second device. In Mirror it encrypts the follower's push-notification payloads and private follow notes end to end, so the backend relays only ciphertext.
+In the app (Android and web) and tested end to end. A second PRF namespace of the same passkey, "mirror.prf.ns.notify.v1", separate from the account salt, derives an X25519 key that never signs transactions. Google Password Manager returns both PRF outputs in the same single passkey prompt (on the web, one navigator.credentials ceremony with prf.eval.first and .second), and the namespace key is identical when restored on a second device. Mirror uses it to encrypt alerts end to end: the engine seals each alert (copies with their fee, blocks with the rule and numbers, stops and who executed them) to the device's public key with X25519 + ChaCha20-Poly1305, the push provider only ever sees "Mirror: new activity", and the app decrypts the real text. The local end-to-end run checks that the pushed envelope stays sealed and that the app shows the decrypted alert.
 
 PENDING: the app currently derives this key with HKDF from the account PRF output; switching it to the separate PRF namespace verified here is the next app change.
 <!--/answer-->

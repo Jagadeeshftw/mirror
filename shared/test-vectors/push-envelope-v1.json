@@ -1,0 +1,18 @@
+{
+  "description": "Mirror alert envelope v1. X25519 (ephemeral) -> HKDF-SHA256(salt = epk || recipientPub, info) -> ChaCha20-Poly1305 (aad 'mirror.v1', tag appended). Base64 is standard with padding. Shared by engine/test/push.test.ts and app/__tests__/pushEnvelope.test.ts. Test keys only.",
+  "notifyPrfHex": "101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f",
+  "notifyKeyInfo": "mirror.v1.notify.x25519",
+  "recipientPrivateKey": "DRF0cb+VZdkt01wprtyStYSMn4xZ0LCZErKEH2CiGhs=",
+  "recipientPublicKey": "Cbq7BcaY8FY8zrpgqA75WihEY7LLBYBDsHv7SlEmFwY=",
+  "ephemeralPrivateKey": "QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl8=",
+  "nonce": "oKGio6Slpqeoqaqr",
+  "info": "mirror.v1.push.chacha20poly1305",
+  "aad": "mirror.v1",
+  "plaintext": "{\"v\":1,\"kind\":\"copied\",\"title\":\"Copied BTC long\",\"body\":\"0.0100 BTC at 100,000.0 · 1,000.00 AUSD · Mirror fee 0.20 AUSD · leader #4638\",\"account\":\"0x00000000000000000000000000000000000000a1\",\"eventId\":\"42\",\"timestamp\":1760000000000}",
+  "envelope": {
+    "v": 1,
+    "epk": "eaYx7t4b+cmPEgMs3q3Q56B5OY/HhriMyEbsia+FpRo=",
+    "nonce": "oKGio6Slpqeoqaqr",
+    "ct": "+p85As5zUJG41cjIyvIrGMLpUepYg5N60guG4273X8ZJhO5bJ1CTBpksKAa4dgzfrroDDwBRUaE/ImdQsGZFG7s6nvAURBeoNYfjQlBaqdXz+3Z+72LJEF4JRy45r56r4pLzJlBLDoLYGah0IWHbVKqj4eRVlWms0Z9WAZtLDROtoGOTmENaSg14XVRHXCx4Vl3g/gRyR7GC1u/VdmHfxJf2cd1t/i9cbyGkysvAhw9YFQU2TKvKpzw8WVe8KjP6Wxjs/yIj0/Wq5QQBegrubc4NR2AWkZJkYkcjv/QtUlkoKqh8bwychFA8oHc1bKJszqPbV1rFkeBvaDU="
+  }
+}

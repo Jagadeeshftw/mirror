@@ -1,5 +1,11 @@
 import type { ExpoConfig } from "expo/config";
 
+// Evaluated by Node (expo config); the app tsconfig has no Node types.
+declare const require: (m: string) => any;
+declare const __dirname: string;
+const { existsSync } = require("fs") as { existsSync(p: string): boolean };
+const { join } = require("path") as { join(...p: string[]): string };
+
 // Single replaceable product-name token.
 const BRAND = "Mirror";
 const rpId = process.env.MERA_RP_ID ?? "mirror.0xo.in";
@@ -9,6 +15,10 @@ const devTools = process.env.EXPO_PUBLIC_MIRROR_DEV_TOOLS === "1";
 // Stage-A emulator builds (scripts/build-apk.sh --stage-a): release app, cleartext only to the emulator's
 // host loopback (10.0.2.2) / localhost, where the localnet engine runs. Never set for normal release builds.
 const localCleartext = devTools || process.env.MIRROR_LOCAL_CLEARTEXT === "1";
+// Android remote push (FCM through Expo): the owner's Firebase config. Gitignored; picked up when present.
+const googleServicesFile = existsSync(join(__dirname, "google-services.json")) ? "./google-services.json" : undefined;
+// Expo project id (EAS) for getExpoPushTokenAsync; optional until Android push is set up.
+const easProjectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID || undefined;
 
 const config: ExpoConfig = {
   name: BRAND,
@@ -22,6 +32,7 @@ const config: ExpoConfig = {
   android: {
     package: applicationId,
     versionCode: 100,
+    ...(googleServicesFile ? { googleServicesFile } : {}),
     adaptiveIcon: {
       backgroundColor: "#4B3BFF",
       foregroundImage: "./assets/adaptive-foreground.png",
@@ -103,6 +114,7 @@ const config: ExpoConfig = {
     rpId,
     brand: BRAND,
     apiBase,
+    ...(easProjectId ? { eas: { projectId: easProjectId } } : {}),
   },
 };
 
