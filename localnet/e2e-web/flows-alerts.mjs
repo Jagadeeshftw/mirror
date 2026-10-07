@@ -51,7 +51,18 @@ export async function optInAfterFirstFollow(ctx) {
     const after = await page.evaluate(() => Notification.permission);
     // The registration is owner-signed: exactly one passkey prompt for the opt-in.
     const optInPrompts = (await dev.webauthnLog()).length - p0;
-    return { ok: !!swScope && after === "granted" && optInPrompts === 1, permissionBefore: before, permissionAfter: after, swScope, note: await text(page, "follow.alerts.on.done"), optInPrompts };
+    // What matters: the engine holds an owner-signed Web Push registration for this owner, and the opt-in cost at most
+    // one passkey prompt (none if this browser's registration was already signed).
+    const signed = await until("signed registration", async () => {
+      const { DatabaseSync } = await import("node:sqlite");
+      const db = new DatabaseSync(ctx.engineCtl.dbPath, { readOnly: true });
+      try {
+        return db.prepare("SELECT count(*) AS n FROM push_subs WHERE lower(owner) = lower(?) AND channel = 'webpush' AND signed_ms IS NOT NULL").get(state.address).n > 0;
+      } finally {
+        db.close();
+      }
+    }, 20_000).catch(() => false);
+    return { ok: !!swScope && after === "granted" && optInPrompts <= 1 && signed, permissionBefore: before, permissionAfter: after, swScope, signedRegistration: signed, screenText: await text(page, "follow.alerts.on.done"), optInPrompts };
   });
 
   await R.check("push registration needs the owner's signature: unsigned and forged registrations for this owner are refused", null, async () => {

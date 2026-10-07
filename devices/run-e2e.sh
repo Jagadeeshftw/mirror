@@ -3,7 +3,7 @@
 #
 #   devices/run-e2e.sh <apk> [flow] [options]
 #
-#   flow            default: devices/e2e/flows/mirror-full.flow
+#   flow            default: devices/e2e/flows/mirror-full.flow; several flows: a,b (run in one session)
 #   --avd NAME      primary AVD (default mirror-a -> emulator-5554)
 #   --avd-b NAME    secondary AVD for restore steps (default mirror-b -> emulator-5556)
 #   --wipe          FULL wipe: cold-boot the primary AVD with -wipe-data, then re-provision
@@ -43,7 +43,8 @@ done
 
 port_for() { case "$1" in mirror-a) echo 5554;; mirror-b) echo 5556;; *) echo "${PORT_OVERRIDE:-5558}";; esac; }
 SER_A="emulator-$(port_for "$AVD_A")"; SER_B="emulator-$(port_for "$AVD_B")"
-RUN_ID="${RUN_ID:-$(basename "$FLOW" .flow)-$(date +%Y%m%d-%H%M%S)}"
+IFS=, read -r -a FLOWS <<< "$FLOW"
+RUN_ID="${RUN_ID:-$(basename "${FLOWS[0]}" .flow)-$(date +%Y%m%d-%H%M%S)}"
 EVID="$HERE/evidence/$RUN_ID"; mkdir -p "$EVID"
 echo "run $RUN_ID  apk=$APK  flow=$FLOW  a=$AVD_A($SER_A) b=$AVD_B($SER_B)  wipe=$WIPE" | tee "$EVID/run.log"
 
@@ -73,7 +74,7 @@ else
   running "$SER_A" || boot "$AVD_A" "$SER_A"
 fi
 # Second device only if the flow uses it.
-if grep -Eq '^[[:space:]]*device[[:space:]]+b\b' "$FLOW"; then running "$SER_B" || boot "$AVD_B" "$SER_B"; fi
+if grep -Eqh '^[[:space:]]*device[[:space:]]+b\b' "${FLOWS[@]}"; then running "$SER_B" || boot "$AVD_B" "$SER_B"; fi
 
 PKG="$("$ANDROID_HOME"/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort | tail -1)/aapt2 dump badging "$APK" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
 for s in "$SER_A" "$SER_B"; do running "$s" && "$ADB" -s "$s" uninstall "$PKG" >/dev/null 2>&1 || true; done
@@ -85,7 +86,7 @@ done
 "$ADB" -s "$SER_A" logcat -c || true
 
 set +e
-python3 "$HERE/e2e/flow.py" "$FLOW" --apk "$APK" --evidence "$EVID" --device "a=$SER_A" --device "b=$SER_B"
+python3 "$HERE/e2e/flow.py" "${FLOWS[@]}" --apk "$APK" --evidence "$EVID" --device "a=$SER_A" --device "b=$SER_B"
 rc=$?
 set -e
 for s in "$SER_A" "$SER_B"; do  # bounded: a hung emulator must not stall the run

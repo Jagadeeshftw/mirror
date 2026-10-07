@@ -157,8 +157,20 @@ devices/run-stage-a-android.sh --build    # force a rebuild first
   keystore so assetlinks matches, no dev tools / simulator) with API base `http://10.0.2.2:8828`. `MIRROR_LOCAL_CLEARTEXT=1`
   adds `withLocalCleartext` (cleartext only to 10.0.2.2 / localhost / 127.0.0.1); normal release builds never set it.
 - The script starts the localnet (anvil :8546, faucet :8547), the engine on :8828 (`E2E_ENGINE_PORT`; must match the APK)
-  with `PUBLIC_RPC_URL=http://10.0.2.2:8546`, and the team-run demo follower; runs `e2e/flows/stage-a.flow`; then stops
+  with `PUBLIC_RPC_URL=http://10.0.2.2:8546`, the team-run demo follower and the website; runs `e2e/flows/stage-a.flow` and `stage-a-g2.flow`; then stops
   the engine, the localnet and mirror-a / mirror-b. It waits while the 1-minute load is above 20.
+- Group 2 (`e2e/flows/stage-a-g2.flow`, run after `stage-a.flow` in the same session, `${addr}` carries over):
+  alerts on in Settings (one prompt, owner-signed FCM registration), the share card of a Blocked detail (card PNG and
+  landing page fetched from the website, the Android share target carries the link), a deposit and resume (Close all
+  pauses the follow), FCM with the app in the background (only "Mirror · New activity" in the shade, read with
+  `dumpsys notification --noredact`; the Alerts screen decrypts it), take-profit set / triggered by a stranger / halt
+  lifted, Pause vs "Stop following, keep my positions" and Follow again, a second leader with a budget split, and a
+  friend's take-profit suggestion (direct POST) accepted in the app. Hooks: `localnet/stage-a-hook-g2.mjs` (`${HOOK2}`).
+- FCM: the engine reads the Firebase service account from `FCM_SERVICE_ACCOUNT_PATH` (default
+  `keys/firebase-adminsdk.json`, a secret: never copied, printed or committed); the APK needs `app/google-services.json`
+  at build time. The website (`web/`, `next dev`) runs on :8819 (`STAGEA_SITE_PORT`); the APK's share base is
+  `http://10.0.2.2:8819`. The script stops only mirror-a / mirror-b and writes email addresses in text evidence as
+  `<google-account>`.
 - Chain actions inside the flow (faucet funding of the app's address, demo leader trades with anvil test keys, mark
   moves) go through `localnet/stage-a-hook.mjs` via the flow's `shell ${HOOK} ...` lines.
 - Evidence: `evidence/stage-a-android-<timestamp>/` with `report.json` (pass/fail per step and values read),

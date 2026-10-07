@@ -1,0 +1,204 @@
+# Stage-A end-to-end of the native app, Group 2, on mirror-a against Perpl's exchange on the localnet.
+# Runs after stage-a.flow in the same session (devices/run-stage-a-android.sh runs both; ${addr} comes from Group 1).
+# Mirrors the web Stage-A checks (localnet/e2e-web/flows-alerts / share-card / flows-stops / flows-budgets /
+# flows-share). Chain and engine actions go through ${HOOK2} = localnet/stage-a-hook-g2.mjs; the share cards and
+# /p/<id> come from the website (next dev on the host, http://10.0.2.2:8819 from the emulator).
+
+# ---------- 11. alerts on: one passkey prompt signs the FCM registration ----------
+step 19 alerts on in Settings (one passkey prompt, owner-signed FCM registration)
+device a
+open /settings
+scrollTo id:settings.alerts.toggle
+tap id:settings.alerts.toggle
+passkey 90
+scrollTo id:settings.alerts.channel
+expectResult id:settings.alerts.channel "Registered · Android push" 60
+shell ${HOOK2} push-check ${addr}
+
+# ---------- 12. shareable card ----------
+step 20 share card: Blocked detail -> share sheet; card PNG and landing page from the site; Android share target
+shell ${HOOK2} card ${addr}
+open /feed
+scrollTo "idtext:activity\.item\.\d+~${cardTx}"
+tap "idtext:activity\.item\.\d+~${cardTx}"
+waitFor id:blocked.detail 15
+tap id:blocked.share
+waitFor id:share.sheet 15
+expectResult id:share.title "Blocked by my rule" 10
+expectResult id:share.url "^10\.0\.2\.2:8819/c/blocked/${cardTxHead}" 10
+waitFor id:share.preview.image 45
+waitGone id:share.preview.unavailable 5
+tap id:share.share
+expectResult "text~:10\.0\.2\.2:8819/c/blocked/0x" "(?i)http://10\.0\.2\.2:8819/${cardLandingRx}$" 20
+back
+sleep 1
+tapIfPresent id:share.close
+tapIfPresent id:blocked.done
+
+# ---------- 13. deposit again (Group 1 withdrew everything) ----------
+step 21 deposit into the follow account again (Add funds, one passkey prompt); resume the follow Close all paused
+open /funds?step=1
+waitFor id:funds.confirm 30
+setText id:funds.amount.input 20.00
+expectResult id:funds.amount.input "^20\.00$" 10
+tap id:funds.confirm
+passkey 90
+expectResult id:funds.status "Deposited" 120
+tap id:funds.done
+# Close all (step 16) also paused the follow: resume it on the leader profile (one passkey prompt).
+open /leader/3
+expectResult id:follow.status "^Paused$" 30
+tap id:leader.pause
+passkey 90
+shell ${HOOK2} paused ${addr} 0
+expectResult id:follow.status "^Following$" 30
+
+# ---------- 14. alerts through FCM with the app in the background ----------
+step 22 FCM: demo trade with the app in the background -> generic notification; Alerts shows it decrypted
+shell ${HOOK2} notif-mark emulator-5554 com.zeroxo.mirror
+home
+sleep 2
+shell ${HOOK2} demo-push ${addr}
+shell ${HOOK2} notif emulator-5554 com.zeroxo.mirror 90
+shade fcm-notification-shade
+open /alerts
+waitFor id:alerts.screen 30
+expectResult id:alerts.item.0.title "^(Copied|Closed|Blocked by your rule|Not copied)" 60
+
+# ---------- 15. stop-loss / take-profit ----------
+step 23 leader opens (anvil key) -> the user holds a BTC copy
+shell ${HOOK2} trade ${addr} demo 1 0 20 copied
+shell ${HOOK2} account ${addr}
+
+step 24 take-profit +1% on the BTC position (one passkey prompt, ACTION_SET_LEVELS)
+open "/position?account=${userAccount}&perp=1&side=long"
+waitFor id:position.detail 30
+tap id:position.editLevels
+waitFor id:levels.sheet 15
+tap id:levels.mode.pct
+input id:levels.tp.input 1
+readText id:levels.tp.input.derived tpDerived "." 10
+tap id:levels.save
+passkey 90
+shell ${HOOK2} level ${addr} 1
+scrollTo id:position.levels.tp.value
+expectResult id:position.levels.tp.value "${tpText}" 60
+
+step 25 mark past the take-profit; a STRANGER triggers it -> who executed it and the halt notice
+shell ${HOOK2} trigger ${addr} 1
+open /feed
+expectResult "idtext:activity\.item\.\d+~Take-profit executed" "(?i)${strangerShort}" 60
+open "/position?account=${userAccount}&perp=1&side=long"
+waitFor id:position.closed 30
+expectResult id:copy.closedBy.title "(?i)${strangerShort}" 30
+scrollTo id:position.halted
+waitFor id:position.halted.resume 10
+
+step 26 Save limits again (one passkey prompt) lifts the halt; the leader re-opens -> copied
+shell ${HOOK2} mark-reset 1
+tap id:position.halted.resume
+passkey 90
+shell ${HOOK2} halted ${addr} 1 0
+shell ${HOOK2} trade ${addr} demo 1 0 20 copied
+
+# ---------- 16. pause vs detach ----------
+step 27 Pause (one passkey prompt): the leader's close is still copied while paused; resume (one prompt)
+open /leader/3
+expectResult id:follow.status "^Following$" 30
+tap id:leader.pause
+passkey 90
+shell ${HOOK2} paused ${addr} 1
+expectResult id:follow.status "^Paused$" 30
+shell ${HOOK2} trade ${addr} demo 1 2 10 close
+tap id:leader.pause
+passkey 90
+shell ${HOOK2} paused ${addr} 0
+expectResult id:follow.status "^Following$" 30
+
+step 28 Stop following, keep my positions (one passkey prompt): detached + paused; the leader's close is not copied
+tap id:leader.stopFollow
+waitFor id:stop.sheet 15
+tap id:stop.option.keep
+expectResult id:stop.option.keep.body "." 5
+tap id:stop.confirm
+passkey 90
+shell ${HOOK2} paused ${addr} 1 1
+expectResult id:follow.status "^Stopped$" 30
+waitFor id:leader.detached 10
+shell ${HOOK2} trade ${addr} demo 1 2 10 none
+
+step 29 Follow again (one passkey prompt) and the next leader open is copied
+tap id:leader.followAgain
+passkey 90
+shell ${HOOK2} paused ${addr} 0 0
+expectResult id:follow.status "^Following$" 30
+shell ${HOOK2} trade ${addr} demo 1 0 20 copied
+
+# ---------- 17. several leaders ----------
+step 30 second leader with a budget split (one passkey prompt): both leaders onchain
+shell ${HOOK2} leader2
+open /follow/${l2Id}
+waitFor id:follow.mode.split 30
+tap id:follow.mode.split
+scrollTo id:follow.split.ownership.text
+expectResult id:follow.split.ownership.text "BTC is held by" 10
+scrollTo id:follow.split.budget.${l2Id}.input
+setText id:follow.split.budget.${l2Id}.input 2.00
+tapIfPresent id:follow.topUp.fill
+scrollTo id:follow.ratio.slider
+tapAt id:follow.ratio.slider 0.99 0.5
+expectResult id:follow.ratio.value "^10%$" 10
+# Markets are account-wide: allow ETH (only BTC so far) for the second leader's ETH trades.
+scrollTo id:follow.market.ETH
+tap id:follow.market.ETH
+scrollTo id:follow.seeWhatIf
+tap id:follow.seeWhatIf
+waitFor id:follow.whatif 20
+tap id:follow.review
+expectResult id:follow.review.split "2\.00" 20
+scrollTo id:follow.review.fee
+expectResult id:follow.review.fee "builder 26" 20
+tap id:follow.confirm
+passkey 90
+expectResult id:follow.status "^(Following|Matched|Saved)$" 120
+shell ${HOOK2} leaders ${addr} ${l2Id}
+tapIfPresent id:follow.done
+
+step 31 second leader's ETH trade is copied and booked to it alone
+shell ${HOOK2} book ${addr} 3 demoMarginBefore
+shell ${HOOK2} trade ${addr} l2 20 0 10 copied
+assertVar itemLeader "^${l2Id}$"
+shell ${HOOK2} book ${addr} ${l2Id} l2Margin
+shell ${HOOK2} book ${addr} 3 demoMarginAfter
+assertVar demoMarginAfter "^${demoMarginBefore}$"
+open /home
+scrollTo id:home.leader.${l2Id}.margin
+expectResult id:home.leader.${l2Id}.margin "${l2Margin}" 45
+expectResult id:home.leader.${l2Id}.status "Copying" 10
+
+step 32 second leader trades BTC (held by the demo leader) -> Blocked: market held by
+shell ${HOOK2} trade ${addr} l2 1 0 10 blocked:MarketHeldByOtherLeader
+open /feed
+expectResult "idtext:activity\.item\.\d+~${itemTx}" "(?i)market held by" 45
+
+# ---------- 18. friend suggestion ----------
+step 33 share the BTC position (one passkey signature) -> /p/<id> link
+open "/position?account=${userAccount}&perp=1&side=long"
+waitFor id:position.detail 30
+tap id:position.share
+passkey 90
+waitFor id:shareLink.sheet 30
+readText id:shareLink.url urlId "/p/([A-Za-z0-9_-]{43})" 30
+tap id:shareLink.close
+
+step 34 the friend suggests a take-profit (direct POST); the owner accepts (one passkey prompt); the level is onchain
+shell ${HOOK2} suggest ${urlId}
+retry 4 5 open "/position?account=${userAccount}&perp=1&side=long" ;; scrollTo id:position.suggestions.title ;; expectResult id:position.suggestions.title "Suggestions · 1 new" 20
+tap "idtext:position\.suggestions\.item\..+~."
+waitFor id:suggest.sheet 15
+expectResult id:suggest.tp.new "${shareTpText}" 10
+tap id:suggest.accept
+passkey 90
+shell ${HOOK2} level-is ${addr} 1 ${shareTpPNS}
+scrollTo id:position.levels.onchain
+expectResult id:position.levels.onchain "accepted by you" 60

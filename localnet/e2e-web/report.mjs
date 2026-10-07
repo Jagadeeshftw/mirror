@@ -53,18 +53,19 @@ export function createReport(outDir, meta) {
   }
 
   function note(name, info) {
-    report.checks.push({ name, ok: true, note: true, ...info });
+    report.checks.push({ name, ok: true, ...info, isNote: true });
     console.log(`NOTE  ${name}  ${JSON.stringify(info).slice(0, 200)}`);
   }
 
   function finish(extra = {}) {
     Object.assign(report, extra, { finishedAt: new Date().toISOString() });
-    const real = report.checks.filter((c) => !c.note);
+    // Informational notes carry isNote: true; a check's own data may contain any other key (even `note`).
+    const real = report.checks.filter((c) => c.isNote !== true);
     report.passed = real.filter((c) => c.ok).length;
     report.failed = real.filter((c) => !c.ok && !c.optional).length;
     writeFileSync(join(outDir, "report.json"), J(report));
     const rows = report.checks
-      .map((c) => `<tr class="${c.note ? "note" : c.ok ? "ok" : "bad"}"><td>${c.note ? "NOTE" : c.ok ? "PASS" : "FAIL"}</td><td>${esc(c.name)}</td><td><code>${esc(JSON.stringify(Object.fromEntries(Object.entries(c).filter(([k]) => !["name", "ok", "screenshot", "optional", "note"].includes(k))), (_, v) => (typeof v === "bigint" ? v.toString() : v)).slice(0, 400))}</code></td><td>${c.screenshot ? `<a href="${c.screenshot}">shot</a>` : ""}</td></tr>`)
+      .map((c) => `<tr class="${c.isNote ? "note" : c.ok ? "ok" : "bad"}"><td>${c.isNote ? "NOTE" : c.ok ? "PASS" : "FAIL"}</td><td>${esc(c.name)}</td><td><code>${esc(JSON.stringify(Object.fromEntries(Object.entries(c).filter(([k]) => !["name", "ok", "screenshot", "optional", "isNote"].includes(k))), (_, v) => (typeof v === "bigint" ? v.toString() : v)).slice(0, 400))}</code></td><td>${c.screenshot ? `<a href="${c.screenshot}">shot</a>` : ""}</td></tr>`)
       .join("\n");
     const tiles = report.shots
       .filter((s) => s.file)

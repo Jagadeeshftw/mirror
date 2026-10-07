@@ -35,7 +35,8 @@ export default function AddFunds() {
   const wallet = totals?.wallet ?? 0n;
   const maxDep = wallet < room ? wallet : room;
   const [amount, setAmount] = useState<string>("");
-  const amt = parseUnits(amount || ausd(maxDep), 6) ?? 0n;
+  // The prefilled amount is maxDep itself, not its 2-decimal text (rounding up could exceed the wallet).
+  const amt = amount ? (parseUnits(amount, 6) ?? 0n) : maxDep;
   const [status, setStatus] = useState<"idle" | "busy" | "done" | "error">("idle");
   const [result, setResult] = useState<RelayResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +181,7 @@ export default function AddFunds() {
                 </T>
               </Field>
               <Row gap={6}>
-                <Chip label={`Max · wallet ${ausd(wallet)}`} on={amt === maxDep} onPress={() => setAmount(ausd(maxDep))} />
+                <Chip label={`Max · wallet ${ausd(wallet)}`} on={amt === maxDep} onPress={() => setAmount("")} />
                 <Chip label={`Cap room ${ausd(room)}`} onPress={() => setAmount(ausd(room))} />
               </Row>
             </View>
@@ -216,7 +217,7 @@ export default function AddFunds() {
                   Beta deposit limit
                 </T>
                 <T size={13} mono style={{ flex: 1, textAlign: "right" }}>
-                  {ausd(toBig(acct?.netDepositsCNS) + amt)} / 25.00 AUSD
+                  {ausd(toBig(acct?.netDepositsCNS) + amt)} / {ausd(BETA_CAP_CNS)} AUSD
                 </T>
               </Row>
               <Meter
@@ -236,7 +237,7 @@ export default function AddFunds() {
                 </T>
               </Row>
               <T size={12} color="mu">
-                The contracts are unaudited, so each follow's account can hold at most 25 AUSD during beta.
+                The contracts are unaudited, so each follow's account can hold at most {ausd(BETA_CAP_CNS, 0)} AUSD during beta.
               </T>
             </Card>
             <View>
@@ -244,7 +245,7 @@ export default function AddFunds() {
               <KV k="Approval transaction" v="Not needed" vMono={false} />
               <KV k="Network fee" v={<T size={13}><T size={13} w={600} color="posI">Free</T> · sponsored</T>} last />
             </View>
-            {amt > room ? <Hint warn>Over the 25 AUSD beta limit for this follow.</Hint> : amt > wallet ? <Hint warn>More than your wallet balance.</Hint> : null}
+            {amt > room ? <Hint warn>{`Over the ${ausd(BETA_CAP_CNS, 0)} AUSD beta limit for this follow.`}</Hint> : amt > wallet ? <Hint warn>More than your wallet balance.</Hint> : null}
             {error ? <Note tone="neg" icon="warn">{error}</Note> : null}
             <View style={{ flex: 1 }} />
             <Button title={status === "busy" ? "Waiting for your passkey" : "Deposit with passkey"} icon="fp" onPress={doDeposit} disabled={status === "busy" || amt === 0n || amt > room || amt > wallet} testID="funds.confirm" />

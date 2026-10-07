@@ -6,7 +6,7 @@
 # 1. Builds app/dist/mirror-<ver>-stagea.apk (scripts/build-apk.sh --stage-a) when missing or with --build.
 # 2. Starts the localnet (anvil :8546, faucet :8547) and the engine on :8828 (E2E_ENGINE_PORT; the APK bakes
 #    in http://10.0.2.2:<port>) with PUBLIC_RPC_URL=http://10.0.2.2:8546, plus the team-run demo follower.
-# 3. Runs devices/e2e/flows/stage-a.flow through run-e2e.sh (boots mirror-a / mirror-b if needed).
+# 3. Runs devices/e2e/flows/stage-a.flow (Group 1) then stage-a-g2.flow (Group 2) through run-e2e.sh (boots mirror-a / mirror-b if needed).
 # 4. Stops the engine, the localnet and the mirror emulators (unless --keep-emulators).
 # Evidence: devices/evidence/stage-a-android-<timestamp>/ (report.json, index.html, screenshots, logs).
 # Refuses to start a heavy step while the 1-minute load is above 20. Localnet only, anvil test keys.
@@ -14,7 +14,10 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$HERE")"
 export E2E_ENGINE_PORT="${E2E_ENGINE_PORT:-8828}"
-BUILD=0; KEEP=0; FLOW="$HERE/e2e/flows/stage-a.flow"
+BUILD=0; KEEP=0; FLOW="$HERE/e2e/flows/stage-a.flow,$HERE/e2e/flows/stage-a-g2.flow"
+export STAGEA_SITE_PORT="${STAGEA_SITE_PORT:-8819}"
+# Android alerts through FCM HTTP v1: the engine reads the service account (a secret) from this path; never logged.
+[[ -z "${FCM_SERVICE_ACCOUNT_PATH:-}" && -f "$ROOT/keys/firebase-adminsdk.json" ]] && export FCM_SERVICE_ACCOUNT_PATH="$ROOT/keys/firebase-adminsdk.json"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --build) BUILD=1; shift;;
@@ -37,12 +40,22 @@ wait_load() { # label
   echo "load stayed above 20: not starting $1"; return 1
 }
 
+adb_() { "${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}/platform-tools/adb" "$@"; }
 NET=""; ENG=""
 cleanup() {
   [[ -n "$ENG" ]] && kill "$ENG" 2>/dev/null && sleep 3
   [[ -n "$NET" ]] && kill "$NET" 2>/dev/null
   pkill -f "anvil --port 8546" 2>/dev/null
-  [[ $KEEP == 1 ]] || "$HERE/stop-mirror-emulators.sh"
+  if [[ $KEEP != 1 ]]; then  # only mirror-a / mirror-b
+    for d in $(adb_ devices | awk '/^emulator/{print $1}'); do
+      n=$(adb_ -s "$d" emu avd name 2>/dev/null | head -1 | tr -d '\r')
+      case "$n" in mirror-a|mirror-b) adb_ -s "$d" emu kill >/dev/null && echo "stopped $n ($d)";; esac
+    done
+  fi
+  # The passkey sheets show the Google account: redact email addresses in text evidence.
+  for f in "$EVID"/*.log "$EVID"/*.txt "$EVID"/*.json "$EVID"/*.xml; do
+    [[ -f "$f" ]] && sed -E -i '' 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<google-account>/g' "$f"
+  done
   echo "stopped engine + localnet${KEEP:+}; evidence: $EVID"
 }
 trap cleanup EXIT
@@ -51,10 +64,10 @@ trap 'exit 130' INT TERM
 if [[ $BUILD == 1 || ! -f "$APK" ]]; then
   wait_load "the Gradle build" || exit 2
   echo "building $APK (log: $HERE/logs/build-stagea.log)"
-  STAGEA_ENGINE_PORT=$E2E_ENGINE_PORT "$ROOT/app/scripts/build-apk.sh" --stage-a > "$HERE/logs/build-stagea.log" 2>&1 || { tail -20 "$HERE/logs/build-stagea.log"; exit 1; }
+  STAGEA_ENGINE_PORT=$E2E_ENGINE_PORT STAGEA_SITE_PORT=$STAGEA_SITE_PORT "$ROOT/app/scripts/build-apk.sh" --stage-a > "$HERE/logs/build-stagea.log" 2>&1 || { tail -20 "$HERE/logs/build-stagea.log"; exit 1; }
 fi
 
-for p in 8546 8547 "$E2E_ENGINE_PORT"; do
+for p in 8546 8547 "$E2E_ENGINE_PORT" "$STAGEA_SITE_PORT"; do
   lsof -ti tcp:"$p" -sTCP:LISTEN >/dev/null && { echo "port $p busy: stop whatever runs there first"; exit 2; }
 done
 wait_load "the localnet" || exit 2
@@ -66,10 +79,10 @@ grep -q "localnet fully up" "$EVID/localnet.log" || { echo "localnet failed"; ta
 ENG=$!
 for _ in $(seq 1 150); do grep -qE "stage-a engine ready|failed" "$EVID/engine-runner.log" && break; sleep 1; done
 grep -q "stage-a engine ready" "$EVID/engine-runner.log" || { echo "engine failed"; tail -20 "$EVID/engine-runner.log"; exit 1; }
-grep "engine up" "$EVID/engine-runner.log"
+grep -E "engine up|website" "$EVID/engine-runner.log"
 
 wait_load "the emulators" || exit 2
-export HOOK="node $ROOT/localnet/stage-a-hook.mjs"
+export HOOK="node $ROOT/localnet/stage-a-hook.mjs" HOOK2="node $ROOT/localnet/stage-a-hook-g2.mjs" STAGEA_EVID="$EVID"
 "$HERE/run-e2e.sh" "$APK" "$FLOW" --run-id "$RUN_ID"
 rc=$?
 echo "flow exit $rc"

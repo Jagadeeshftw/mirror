@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tiny line-based flow runner for Mirror device tests (adb + uiautomator).
 
-usage: flow.py <flow-file> --apk APK --evidence DIR [--device a=emulator-5554] [--device b=emulator-5556]
+usage: flow.py <flow-file> [<flow-file> ...] --apk APK --evidence DIR [--device a=emulator-5554] [--device b=emulator-5556]
 
 Flow syntax (one command per line, '#' comments, blank lines ignored):
   device <alias|serial>         switch the active device (aliases from --device)
@@ -12,7 +12,7 @@ Flow syntax (one command per line, '#' comments, blank lines ignored):
   waitFor <sel> [secs]          wait until visible (default 30s)
   waitGone <sel> [secs]
   assertText <sel> <regex>      node text must match regex
-  input <sel> <text...>         tap a field and type text
+  input <sel> <text...>         tap a field and type text (then close the soft keyboard)
   scrollTo <sel> [up]           swipe (500 px) until visible inside the content area (max 14 swipes)
   passkey [secs] [choose-regex] approve the system passkey sheet (tap Continue/..., emu finger touch);
                                 with choose-regex, first tap the matching entry in the account picker
@@ -29,6 +29,11 @@ Flow syntax (one command per line, '#' comments, blank lines ignored):
   tapAt <sel> <fx> <fy>         tap a point inside the node's bounds (fractions 0..1, e.g. a slider end)
   swipeUp                       one upward swipe (scroll)
   retry <n> <pause> <cmd> ;; <cmd> ...  run the commands; on a failure wait <pause> s and start over (n tries)
+  setText <sel> <text...>       tap a field, select all (ctrl+a) and type text over it (prefilled inputs)
+  shade <name>                  pull down the notification shade, screenshot it as <name>, close it
+
+Several flow files run one after another in the same session (variables carry over); the first failure stops the run.
+Email addresses (the Google account on passkey sheets) are written as <google-account> in run.log.
 
 ${name} is replaced in every line before it is parsed (environment variables work too).
 Every step saves a screenshot to the evidence dir; at the end report.json and index.html are written.
@@ -62,6 +67,9 @@ def apk_package(apk: str) -> str:
     return re.search(r"package: name='([^']+)'", out).group(1)
 
 
+EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+
+
 class Runner:
     def __init__(self, apk, evidence, devices):
         self.apk = apk
@@ -77,7 +85,7 @@ class Runner:
         self.log_f = open(os.path.join(evidence, "run.log"), "a")
 
     def log(self, msg):
-        line = f"{time.strftime('%H:%M:%S')} {msg}"
+        line = EMAIL.sub("<google-account>", f"{time.strftime('%H:%M:%S')} {msg}")
         print(line, flush=True)
         self.log_f.write(line + "\n")
         self.log_f.flush()
@@ -90,6 +98,11 @@ class Runner:
             dev.unlock()
             self.devs[serial] = dev
         self.d = self.devs[serial]
+
+    def hide_ime(self, d):
+        """Close the soft keyboard (one BACK only while it is shown) so the next tap does not land on a key."""
+        if "mInputShown=true" in d.sh("dumpsys input_method"):
+            d.key("KEYCODE_BACK"); time.sleep(0.8)
 
     def subst(self, raw):
         def rep(m):
@@ -156,7 +169,7 @@ class Runner:
             self.log(f"  {sel} = {txt!r}")
             d.screenshot(f"s{n}-{cmd}")
         elif cmd == "input":
-            d.tap(args[0]); d.type_text(" ".join(args[1:])); time.sleep(0.5)
+            d.tap(args[0]); d.type_text(" ".join(args[1:])); time.sleep(0.5); self.hide_ime(d)
         elif cmd == "scrollTo":
             up = len(args) > 1 and args[1] == "up"  # scrollTo <sel> [up]: content moves down (back to the top)
             for _ in range(14):
@@ -233,6 +246,14 @@ class Runner:
             x1, y1, x2, y2 = node.bounds
             x = int(x1 + (x2 - x1) * float(args[1])); y = int(y1 + (y2 - y1) * float(args[2]))
             d.tap_xy(x, y); self.log(f"  tapAt {args[0]} @({x},{y})"); time.sleep(0.6)
+        elif cmd == "setText":
+            d.tap(args[0]); time.sleep(0.4)
+            d.sh("input keycombination KEYCODE_CTRL_LEFT KEYCODE_A"); time.sleep(0.3)
+            d.type_text(" ".join(args[1:])); time.sleep(0.6); self.hide_ime(d)
+        elif cmd == "shade":
+            d.sh("cmd statusbar expand-notifications"); time.sleep(2.5)
+            d.screenshot(args[0] if args else f"s{n}-shade"); d.save_ui(f"s{n}-shade")
+            d.sh("cmd statusbar collapse"); time.sleep(1)
         elif cmd == "swipeUp":
             d.sh("input swipe 540 1700 540 900 350"); time.sleep(0.8)
         elif cmd == "retry":
@@ -257,10 +278,14 @@ class Runner:
         else:
             raise ValueError(f"unknown command: {cmd}")
 
-    def run(self, flow):
-        lines = [l.rstrip() for l in open(flow)]
+    def run(self, flows):
+        # Several flow files: line numbers continue across them (file k starts at 1000*k + 1).
+        lines = []
+        for k, flow in enumerate(flows):
+            lines += [(1000 * k + i, l.rstrip()) for i, l in enumerate(open(flow), 1)]
+        flow = ",".join(flows)
         ok = True
-        for i, raw in enumerate(lines, 1):
+        for i, raw in lines:
             s = raw.strip()
             if not s or s.startswith("#"):
                 continue
@@ -306,7 +331,7 @@ class Runner:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("flow")
+    ap.add_argument("flow", nargs="+")
     ap.add_argument("--apk")
     ap.add_argument("--evidence", required=True)
     ap.add_argument("--device", action="append", default=[], help="alias=serial")

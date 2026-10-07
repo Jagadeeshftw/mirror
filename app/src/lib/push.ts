@@ -8,7 +8,7 @@
 // Web build: push.web.ts.
 import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import { api } from "./api";
 import { openJson, publicKeyB64 } from "./notifyKey";
 import { envelopeFrom } from "./pushEnvelope";
@@ -52,12 +52,16 @@ export async function decryptEnvelope(env: PushEnvelope): Promise<PushPayload | 
   }
 }
 
-/** Decrypts into the Alerts list; with `show`, also presents it as a local notification. */
+/**
+ * Decrypts into the Alerts list; with `show`, also presents it as a local notification, but only while the app is in
+ * the foreground. In the background the JS runtime can still be alive (SSE, the received listener), and there the OS
+ * already shows the generic "Mirror / New activity": the decrypted text stays inside the app.
+ */
 export async function presentEncrypted(env: PushEnvelope, show = true): Promise<PushPayload | null> {
   const p = await decryptEnvelope(env);
   if (!p) return null;
   const isNew = await addNotification(p);
-  if (show && isNew) {
+  if (show && isNew && AppState.currentState === "active") {
     await Notifications.scheduleNotificationAsync({
       content: { title: p.title, body: p.body, data: { eventId: p.eventId, account: p.account, kind: p.kind, url: "/alerts" } },
       trigger: Platform.OS === "android" ? { channelId: CHANNEL_ID } : null,
