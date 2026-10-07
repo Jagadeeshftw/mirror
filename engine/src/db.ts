@@ -157,6 +157,30 @@ CREATE TABLE IF NOT EXISTS perpl_events (
 CREATE INDEX IF NOT EXISTS perpl_events_account ON perpl_events(account_id, block);
 CREATE INDEX IF NOT EXISTS perpl_events_block ON perpl_events(block);
 
+-- Engine-side thin-book guard decisions (no transaction): opening copies shrunk or skipped before sending.
+CREATE TABLE IF NOT EXISTS guard_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account TEXT,                       -- lowercase; null for a quote on an account not deployed yet
+  source TEXT NOT NULL,               -- keeper | quote
+  leader_id INTEGER NOT NULL,
+  leader_ref TEXT,
+  perp_id INTEGER NOT NULL,
+  order_type INTEGER NOT NULL,
+  decision TEXT NOT NULL,             -- shrunk | skipped
+  reason TEXT NOT NULL,               -- thin_book | book_unavailable
+  requested_lots TEXT NOT NULL,
+  final_lots TEXT NOT NULL,
+  depth_lots TEXT,
+  required_lots TEXT NOT NULL,
+  multiple_bps INTEGER NOT NULL,
+  limit_pns TEXT NOT NULL,
+  book_source TEXT NOT NULL,
+  book_age_ms INTEGER,
+  created_ms INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS guard_events_account ON guard_events(account, id);
+CREATE INDEX IF NOT EXISTS guard_events_leader ON guard_events(leader_id, id);
+
 CREATE TABLE IF NOT EXISTS demo_cycles (
   id TEXT PRIMARY KEY,
   kind TEXT NOT NULL,

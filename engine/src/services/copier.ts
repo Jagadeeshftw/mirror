@@ -13,12 +13,15 @@ import type { MarketData } from '../perpl/market.js';
 import type { Bus } from './bus.js';
 import type { FollowerInfo, Registry } from './registry.js';
 import type { LeaderChange } from './watcher.js';
+import type { ThinBookGuard } from './guard.js';
 
 export interface CopierOptions {
   safetyBps: number;
   maxMatches: number;
   blockedSubmitReasons: Set<string>;
   demoFollower: string | undefined;
+  /** Thin-book guard for opening copies that would execute (blocked copies do not trade and are not guarded). */
+  guard?: ThinBookGuard;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -143,7 +146,8 @@ export class Copier {
   }
 
   /** Returns false when later orders of the same plan should not run. */
-  private async execute(f: FollowerInfo, c: LeaderChange, o: PlannedOrder, follower: PerplPosition): Promise<boolean> {
+  private async execute(f: FollowerInfo, c: LeaderChange, planned: PlannedOrder, follower: PerplPosition): Promise<boolean> {
+    let o = planned;
     const dedupe = `${f.address.toLowerCase()}:${c.leaderRef}:${o.perpId}:${o.orderType}`;
     const now = Date.now();
     const ins = this.db.run(
@@ -156,7 +160,7 @@ export class Copier {
     metrics.copiesPlanned.inc({ kind: o.kind });
 
     const sender = this.keepers.pick();
-    const data = encodeFunctionData({ abi: mirrorAccountAbi, functionName: 'mirror', args: [toOrderStruct(o)] });
+    let data = encodeFunctionData({ abi: mirrorAccountAbi, functionName: 'mirror', args: [toOrderStruct(o)] });
     const sim = await simulateCall(this.reads.client, sender.address, f.address, data);
     if (!sim.ok) {
       this.db.run(`UPDATE copies SET status = 'skipped', error = ? WHERE id = ?`, sim.revert?.message ?? 'reverted', copyId);
@@ -175,6 +179,30 @@ export class Copier {
         this.db.run(`UPDATE copies SET status = 'skipped' WHERE id = ?`, copyId);
         metrics.copiesBlocked.inc({ reason: blocked.reason, submitted: 'no' });
         return false;
+      }
+    }
+
+    // Thin-book guard: an executing opening copy needs multiple x its lots on the book within its limit.
+    if (!blocked && isOpen(o.orderType) && this.opts.guard?.enabled) {
+      const g = await this.opts.guard.check(o.perpId, o.orderType, o.lotLNS, o.pricePNS);
+      if (g.decision !== 'ok') {
+        this.opts.guard.record({ account: f.address, source: 'keeper', leaderId: c.leaderId, leaderRef: c.leaderRef, perpId: o.perpId, orderType: o.orderType, limitPNS: o.pricePNS, block: c.block }, g);
+        metrics.copiesBlocked.inc({ reason: g.decision === 'shrunk' ? 'EngineShrunk' : 'EngineSkipped', submitted: g.decision === 'shrunk' ? 'yes' : 'no' });
+        const info = { decision: g.decision, reason: g.reason, requestedLots: g.requestedLots.toString(), finalLots: g.finalLots.toString(), depthLots: g.depthLots?.toString() ?? null, requiredLots: g.requiredLots.toString(), bookSource: g.bookSource };
+        this.log.info({ account: f.address, leader: c.leaderId, perpId: o.perpId, ...info }, 'thin-book guard');
+        if (g.decision === 'skipped') {
+          this.db.run(`UPDATE copies SET status = 'skipped', error = ? WHERE id = ?`, `engine guard: ${g.reason}`, copyId);
+          this.emit(f, { stage: 'skipped', leaderRef: c.leaderRef, perpId: o.perpId, orderType: o.orderType, guard: info });
+          return false;
+        }
+        o = { ...o, lotLNS: g.finalLots };
+        data = encodeFunctionData({ abi: mirrorAccountAbi, functionName: 'mirror', args: [toOrderStruct(o)] });
+        const resim = await simulateCall(this.reads.client, sender.address, f.address, data);
+        if (!resim.ok || decodeBool(resim.returnData, 'mirror') !== true) {
+          this.db.run(`UPDATE copies SET status = 'skipped', error = ? WHERE id = ?`, 'engine guard: shrunk order did not simulate', copyId);
+          return false;
+        }
+        this.db.run(`UPDATE copies SET lots = ?, error = ? WHERE id = ?`, o.lotLNS.toString(), `engine guard: shrunk from ${g.requestedLots}`, copyId);
       }
     }
 

@@ -10,6 +10,9 @@ import { QuoteBody } from '../services/quote.js';
 import { DemoError } from '../services/demo.js';
 import { RateLimitError } from '../services/ratelimit.js';
 import { CircuitOpenError, SimulationError, SendError } from '../chain/sender.js';
+import { BacktestBody } from '../services/backtest.js';
+import { decodePolicyLeaders } from '../domain/encode.js';
+import { ACTION } from '../domain/types.js';
 
 const json = (v: unknown) => JSON.stringify(v, (_k, x) => (typeof x === 'bigint' ? x.toString() : x));
 
@@ -93,13 +96,30 @@ export function buildServer(e: Engine, log: Logger) {
 
   app.get('/v1/leaders', async (req) => {
     const q = z.object({ window: z.enum(['7d', '30d', '90d']).default('30d'), sort: z.enum(['score', 'pnl', 'drawdown']).default('score'), market: z.string().optional(), limit: z.coerce.number().int().min(1).max(200).default(50) }).parse(req.query);
-    return e.leaders.list(q.window, q.sort, q.market, q.limit);
+    const res = await e.leaders.list(q.window, q.sort, q.market, q.limit);
+    return { ...res, leaders: res.leaders.map((l) => ({ ...l, adversarial: e.adversarial.view(l.accountId) })) };
   });
 
   app.get('/v1/leaders/:accountId', async (req) => {
     const p = z.object({ accountId: z.coerce.number().int().positive() }).parse(req.params);
     const q = z.object({ window: z.enum(['7d', '30d', '90d']).default('30d') }).parse(req.query);
-    return e.leaders.profile(p.accountId, q.window);
+    const profile = await e.leaders.profile(p.accountId, q.window);
+    return { ...profile, adversarial: e.adversarial.view(p.accountId) };
+  });
+
+  const Period = z.object({ period: z.enum(['all', '7d', '30d']).default('all') });
+
+  app.get('/v1/leaders/:accountId/copy-quality', async (req) => {
+    const p = z.object({ accountId: z.coerce.number().int().positive() }).parse(req.params);
+    return e.quality.report(Period.parse(req.query).period, p.accountId);
+  });
+
+  app.get('/v1/stats/copy-quality', async (req) => e.quality.report(Period.parse(req.query).period));
+
+  app.post('/v1/leaders/:accountId/backtest', async (req) => {
+    limit(`backtest:${req.ip}`, e.cfg.env.QUOTE_IP_MINUTE, 60_000, 'backtest per-IP');
+    const p = z.object({ accountId: z.coerce.number().int().positive() }).parse(req.params);
+    return e.backtest.run(p.accountId, BacktestBody.parse(req.body));
   });
 
   app.get('/v1/owners/:owner/accounts', async (req) => e.views.ownerAccounts(addrParam((req.params as { owner: string }).owner)));
@@ -174,6 +194,17 @@ export function buildServer(e: Engine, log: Logger) {
   app.post('/v1/relay/execute', async (req) => {
     const b = ExecuteBody.parse(req.body);
     relayLimits(req, await ownerOfAccount(b.account), 'execute');
+    if (e.cfg.env.ADVERSARIAL_REFUSE_FOLLOWS && (b.action.kind === ACTION.FOLLOW || b.action.kind === ACTION.SET_POLICY)) {
+      let ids: number[] = [];
+      try {
+        ids = decodePolicyLeaders(b.action.kind, b.action.data);
+      } catch {
+        /* undecodable payload: the contract rejects it on simulation */
+      }
+      const current = e.registry?.get(b.account)?.leaders;
+      const flagged = ids.filter((id) => !current?.has(id) && e.adversarial.forLeader(id).flagged);
+      if (flagged.length) throw new RelayError(409, `new follows of leaders flagged as adversarial to followers are refused: ${flagged.join(', ')}`);
+    }
     return need(e.relayer, 'relayer').execute(b);
   });
 

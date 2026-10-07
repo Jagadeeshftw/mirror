@@ -8,6 +8,15 @@ import { encodeFollowData, encodeOrders, toOrderStruct, toPolicyStruct, ZERO_REF
 import { LONG, ORDER_TYPE_NAMES, openTypeFor, type MirrorOrder, type Policy, type Side } from '../domain/types.js';
 import type { MarketData } from '../perpl/market.js';
 import type { Relayer } from './relayer.js';
+import type { ThinBookGuard } from './guard.js';
+import type { AdversarialService } from './adversarial.js';
+
+export interface QuoteExtras {
+  guard?: ThinBookGuard;
+  adversarial?: AdversarialService;
+  /** Refuse quotes (new follows) for leaders flagged as adversarial. */
+  refuseFlagged?: boolean;
+}
 
 const u = z.union([z.string(), z.number()]).transform((v) => BigInt(v));
 
@@ -68,6 +77,10 @@ export interface QuoteLine {
   leaderEntryPNS: string;
   entryBoundPNS: string | null;
   wouldBlock: null | { reason: string; limit: string; actual: string };
+  /** Engine-side thin-book guard (not an onchain block): shrunk or skipped, with the numbers. */
+  thinBook: null | { decision: string; reason: string | null; requestedLots: string; finalLots: string; depthLots: string | null; requiredLots: string; bookSource: string };
+  /** Set when the engine leaves this line out of the match orders (e.g. 'ThinBook', 'BookUnavailable'). */
+  engineSkip: string | null;
 }
 
 /** Follow-sheet quote: the match-now orders that would bring a new follower to the leader's positions. */
@@ -79,11 +92,16 @@ export class QuoteService {
     private readonly relayer: Relayer,
     private readonly safetyBps: number,
     private readonly maxMatches: number,
+    private readonly extras: QuoteExtras = {},
   ) {}
 
   async quote(b: z.infer<typeof QuoteBody>) {
     const policy: Policy = b.policy;
     if (!policy.leaders.some((l) => l.accountId === b.leaderAccountId)) throw Object.assign(new Error('policy.leaders must include leaderAccountId'), { statusCode: 400 });
+    if (this.extras.refuseFlagged && this.extras.adversarial) {
+      const adv = this.extras.adversarial.forLeader(b.leaderAccountId);
+      if (adv.flagged) throw Object.assign(new Error(`leader ${b.leaderAccountId} is flagged as adversarial to followers (score ${adv.score}); new follows are refused`), { statusCode: 409 });
+    }
 
     let account = b.account;
     if (!account) {
@@ -96,6 +114,8 @@ export class QuoteService {
 
     const lines: QuoteLine[] = [];
     const orders: MirrorOrder[] = [];
+    /** lines index of each order (skipped lines have no order). */
+    const orderLine: number[] = [];
     const rule = policy.leaders.find((l) => l.accountId === b.leaderAccountId)!;
     const book = funded && account ? await this.reads.leaderBook(account, b.leaderAccountId) : { marginCNS: 0n, unrealizedCNS: 0n, realizedCNS: 0n, stopped: false };
     // follow() executes the match orders in sequence; each one adds to this leader's margin.
@@ -113,12 +133,24 @@ export class QuoteService {
       const marketLeader = funded && account && follower.lots > 0n ? await this.reads.marketLeader(account, m.perpId) : 0;
       const ownsMarket = follower.lots === 0n || marketLeader === b.leaderAccountId;
       const have = ownsMarket && follower.lots > 0n && follower.side === side ? follower.lots : 0n;
-      const lots = ownsMarket ? (target > have ? target - have : 0n) : target;
+      let lots = ownsMarket ? (target > have ? target - have : 0n) : target;
       if (lots === 0n) continue;
 
       const orderType = openTypeFor(side);
       const mark = leader.mark;
       const price = openPrice(orderType, mark, policy.maxSlippageBps, this.safetyBps, leader.entryPricePNS, policy.maxEntryDeviationBps);
+      let thinBook: QuoteLine['thinBook'] = null;
+      let engineSkip: string | null = null;
+      const guard = this.extras.guard;
+      if (guard?.enabled) {
+        const g = await guard.check(m.perpId, orderType, lots, price);
+        if (g.decision !== 'ok') {
+          guard.record({ account: deployed && account ? account : null, source: 'quote', leaderId: b.leaderAccountId, leaderRef: null, perpId: m.perpId, orderType, limitPNS: price, block: 0 }, g);
+          thinBook = { decision: g.decision, reason: g.reason, requestedLots: g.requestedLots.toString(), finalLots: g.finalLots.toString(), depthLots: g.depthLots?.toString() ?? null, requiredLots: g.requiredLots.toString(), bookSource: g.bookSource };
+          if (g.decision === 'shrunk') lots = g.finalLots;
+          else engineSkip = g.reason === 'book_unavailable' ? 'BookUnavailable' : 'ThinBook';
+        }
+      }
       const eb = entryBound(side, leader.entryPricePNS, policy.maxEntryDeviationBps);
       const leaderNotional = notionalCNS(leader.lots, mark, lotDecimals, priceDecimals);
       const leaderLev = leader.depositCNS > 0n ? Number(mulDiv(leaderNotional, 100n, leader.depositCNS)) : policy.maxLeverageHdths;
@@ -129,7 +161,10 @@ export class QuoteService {
       const perplMark = await this.market.mark(m.perpId).catch(() => undefined);
       const fill = await this.market.expectedFill(m.perpId, orderType, lots, price).catch(() => undefined);
       const order: MirrorOrder = { leaderAccountId: b.leaderAccountId, perpId: m.perpId, orderType, lotLNS: lots, pricePNS: price, leverageHdths: leverage, maxMatches: this.maxMatches, leaderRef: ZERO_REF, leaderFillPNS: 0n };
-      orders.push(order);
+      if (!engineSkip) {
+        orders.push(order);
+        orderLine.push(lines.length);
+      }
       lines.push({
         perpId: m.perpId,
         symbol: meta?.symbol,
@@ -152,7 +187,10 @@ export class QuoteService {
         leaderEntryPNS: leader.entryPricePNS.toString(),
         entryBoundPNS: eb?.toString() ?? null,
         wouldBlock: null,
+        thinBook,
+        engineSkip,
       });
+      if (engineSkip) continue;
 
       // Off-chain replay (used when the account is not funded yet, or to explain a simulated block).
       const mr = policy.markets.find((x) => x.perpId === m.perpId)!;
@@ -210,7 +248,7 @@ export class QuoteService {
         const executed = decodeBoolArray(sim.returnData, 'follow');
         let bi = 0;
         executed?.forEach((ok, i) => {
-          const line = lines[i]!;
+          const line = lines[orderLine[i]!]!;
           if (ok) line.wouldBlock = null;
           else {
             const b2 = sim.blocked[bi++];
@@ -221,7 +259,7 @@ export class QuoteService {
       }
     }
 
-    const passing = orders.filter((_, i) => !lines[i]!.wouldBlock);
+    const passing = orders.filter((_, i) => !lines[orderLine[i]!]!.wouldBlock);
     return {
       owner: b.owner,
       account: account ?? null,

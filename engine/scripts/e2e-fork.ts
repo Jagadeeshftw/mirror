@@ -369,6 +369,8 @@ async function main() {
     DEMO_HOLD_MS: process.env.DEMO_HOLD_MS ?? '10000',
     DEMO_IP_HOURLY: '10',
     NANSEN_ENABLED: '0',
+    // Perpl's live book is not the forked chain's book; the thin-book guard is unit-tested instead.
+    THIN_BOOK_GUARD_ENABLED: '0',
     LOG_LEVEL: 'info',
   });
   const stopStream = watchDemoStream();

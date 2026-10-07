@@ -23,6 +23,11 @@ import { RateLimiter } from './services/ratelimit.js';
 import { createNansenSignal, type NansenSignal } from './nansen/client.js';
 import { StopExecutor } from './services/stops.js';
 import { mirrorAccountFactoryAbi } from './abi/MirrorAccountFactory.js';
+import { ThinBookGuard } from './services/guard.js';
+import { IndexerClient } from './services/indexer.js';
+import { CopyQualityService } from './services/quality.js';
+import { AdversarialService } from './services/adversarial.js';
+import { BacktestService } from './services/backtest.js';
 
 export interface Engine {
   cfg: Config;
@@ -48,6 +53,10 @@ export interface Engine {
   push: PushService;
   nansen: NansenSignal;
   stops?: StopExecutor;
+  guard: ThinBookGuard;
+  quality: CopyQualityService;
+  adversarial: AdversarialService;
+  backtest: BacktestService;
   balances: Map<string, bigint>;
   depositCap?: bigint;
   startedMs: number;
@@ -108,8 +117,9 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     ? new Registry(db, client, streams, cfg.factory, cfg.deployBlock ?? Number(0), cfg.teamRun, cfg.explorerTx, bus, log.child({ mod: 'registry' }))
     : undefined;
   const relayer = relayerSender ? new Relayer(client, relayerSender, cfg.factory, cfg.collateral, log.child({ mod: 'relayer' })) : undefined;
+  const guard = new ThinBookGuard(db, market, bus, env.THIN_BOOK_GUARD_ENABLED, env.THIN_BOOK_DEPTH_MULTIPLE, cfg.explorerTx);
   const copier = registry && keepers
-    ? new Copier(db, reads, registry, keepers, market, bus, { safetyBps: env.SLIPPAGE_SAFETY_BPS, maxMatches: env.MAX_MATCHES, blockedSubmitReasons: env.BLOCKED_SUBMIT_REASONS, demoFollower }, log.child({ mod: 'copier' }))
+    ? new Copier(db, reads, registry, keepers, market, bus, { safetyBps: env.SLIPPAGE_SAFETY_BPS, maxMatches: env.MAX_MATCHES, blockedSubmitReasons: env.BLOCKED_SUBMIT_REASONS, demoFollower, guard }, log.child({ mod: 'copier' }))
     : undefined;
   // The watcher also runs without a factory: it stores Perpl position events for the leader ranking.
   const watcher = new LeaderWatcher(db, client, streams, cfg.exchange, (id) => registry?.leaderIds().has(id) ?? false, log.child({ mod: 'watcher' }));
@@ -120,7 +130,6 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     };
   }
   const tracker = new Tracker(db, streams, bus, fees, demoFollower, log.child({ mod: 'tracker' }));
-  const quote = relayer ? new QuoteService(client, reads, market, relayer, env.SLIPPAGE_SAFETY_BPS, env.MAX_MATCHES) : undefined;
   const demo = registry
     ? new DemoService(db, reads, demoLeader, cfg.exchange, registry, market, bus, limiter, {
         perpId: env.DEMO_PERP_ID,
@@ -151,6 +160,21 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     ? new StopExecutor(db, reads, () => registry.all(), () => stopSender ?? keepers!.pick(), bus, { intervalMs: env.STOP_CHECK_MS, retryMs: env.STOP_RETRY_MS }, log.child({ mod: 'stops' }), (res) => registry.handleReceipt(res))
     : undefined;
   const fallbackRegistry = registry ?? nullRegistry(cfg.teamRun);
+  const indexer = new IndexerClient(env.INDEXER_GRAPHQL_URL, log.child({ mod: 'indexer' }));
+  const isTeamRun = (account: string, owner: string | null, leaderId: number) =>
+    fallbackRegistry.isTeamRun(account) || (owner !== null && fallbackRegistry.isTeamRun(owner)) || (leaderId !== 0 && leaderId === (demo?.leaderAccountId ?? 0));
+  const quality = new CopyQualityService(db, indexer, isTeamRun);
+  const adversarial = new AdversarialService(db, {
+    exitBlocks: env.ADVERSARIAL_EXIT_BLOCKS,
+    moveBps: env.ADVERSARIAL_MOVE_BPS,
+    worseBps: env.ADVERSARIAL_WORSE_BPS,
+    flagScore: env.ADVERSARIAL_FLAG_SCORE,
+    minIncidents: env.ADVERSARIAL_MIN_INCIDENTS,
+  }, isTeamRun);
+  const backtest = new BacktestService(indexer, quality, { defaultSlippageBps: env.BACKTEST_DEFAULT_SLIPPAGE_BPS, takerFeeBps: env.BACKTEST_TAKER_FEE_BPS, safetyBps: env.SLIPPAGE_SAFETY_BPS, maxEvents: env.BACKTEST_MAX_EVENTS });
+  const quote = relayer
+    ? new QuoteService(client, reads, market, relayer, env.SLIPPAGE_SAFETY_BPS, env.MAX_MATCHES, { guard, adversarial, refuseFlagged: env.ADVERSARIAL_REFUSE_FOLLOWS })
+    : undefined;
   const leaders = new LeaderService(db, reads, market, fallbackRegistry, nansen, env.INDEXER_GRAPHQL_URL, () => demo?.leaderAccountId ?? 0, log.child({ mod: 'leaders' }));
   const views = new Views(db, reads, market, fallbackRegistry, relayer, cfg.explorerTx);
   const push = new PushService(db, fallbackRegistry, bus, { enabled: env.PUSH_ENABLED, accessToken: env.EXPO_ACCESS_TOKEN }, log.child({ mod: 'push' }));
@@ -171,7 +195,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
 
   const engine: Engine = {
     cfg, db, client, streams, reads, market, bus, limiter, fees, keepers, relayerSender, registry, watcher, copier, tracker, relayer, quote, demo,
-    leaders, views, push, nansen, stops, balances, startedMs: Date.now(),
+    leaders, views, push, nansen, stops, guard, quality, adversarial, backtest, balances, startedMs: Date.now(),
     async start() {
       const id = await client.getChainId();
       if (id !== cfg.chainId) throw new Error(`RPC chain id ${id} != configured ${cfg.chainId}`);

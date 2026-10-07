@@ -124,6 +124,27 @@ const EnvSchema = z.object({
   INDEXER_GRAPHQL_URL: z.string().url().optional(),
   LEADER_BACKFILL_BLOCKS: int(20_000),
 
+  /** Thin-book guard on opening copies (keeper copies and match-now quotes). 0 turns it off (e.g. anvil). */
+  THIN_BOOK_GUARD_ENABLED: z.string().default('1').transform((v) => v !== '0' && v !== 'false'),
+  /** Depth on the taking side within the limit must be at least this multiple of the order's lots. */
+  THIN_BOOK_DEPTH_MULTIPLE: z.coerce.number().min(1).default(2),
+  /** Adversarial leader flags: a leader exit within this many blocks of followers' fills counts. */
+  ADVERSARIAL_EXIT_BLOCKS: int(20),
+  /** Leader fill moved the last price by more than this (bps) ... */
+  ADVERSARIAL_MOVE_BPS: int(30),
+  /** ... and followers filled worse than the leader by more than this (bps). */
+  ADVERSARIAL_WORSE_BPS: int(20),
+  /** A leader is flagged when its score (0..100) reaches this and it has at least ADVERSARIAL_MIN_INCIDENTS. */
+  ADVERSARIAL_FLAG_SCORE: int(25),
+  ADVERSARIAL_MIN_INCIDENTS: int(2),
+  /** 1: quotes and relayed follow actions refuse new follows of flagged leaders. Default: only flag. */
+  ADVERSARIAL_REFUSE_FOLLOWS: z.string().default('0').transform((v) => v === '1' || v === 'true'),
+  /** Backtest: follower slippage when no copy-quality median is measured for the leader. */
+  BACKTEST_DEFAULT_SLIPPAGE_BPS: z.coerce.number().min(0).default(5),
+  /** Backtest: Perpl taker fee in bps. */
+  BACKTEST_TAKER_FEE_BPS: z.coerce.number().min(0).default(3.5),
+  BACKTEST_MAX_EVENTS: int(20_000),
+
   /** auto (default): on when NANSEN_API_KEY or NANSEN_PAYER_PRIVATE_KEY is set; 0 forces off; 1 forces on. */
   NANSEN_ENABLED: z.enum(['auto', '0', '1', 'true', 'false']).default('auto'),
   NANSEN_API_URL: z.string().default('https://api.nansen.ai'),

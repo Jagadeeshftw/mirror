@@ -1,4 +1,4 @@
-import { encodeAbiParameters, getAbiItem, type Hex } from 'viem';
+import { decodeAbiParameters, encodeAbiParameters, getAbiItem, type Hex } from 'viem';
 import { mirrorAccountAbi } from '../abi/MirrorAccount.js';
 import type { Level, MirrorOrder, Policy } from './types.js';
 
@@ -82,3 +82,10 @@ export function encodeCloseMarket(perpId: number, slippageBps: number): Hex {
 }
 
 export const ZERO_REF = `0x${'00'.repeat(32)}` as Hex;
+
+/** Leader account ids in an ACTION_FOLLOW (Policy, MirrorOrder[]) or ACTION_SET_POLICY (Policy) payload. */
+export function decodePolicyLeaders(kind: number, data: Hex): number[] {
+  const params = kind === 7 ? [policyParam, ordersParam] : [policyParam];
+  const [policy] = decodeAbiParameters(params, data) as unknown as [{ leaders: readonly { accountId: number }[] }];
+  return policy.leaders.map((l) => Number(l.accountId));
+}

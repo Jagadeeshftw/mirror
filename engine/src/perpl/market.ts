@@ -4,6 +4,7 @@ import type { MarketMeta } from '../config.js';
 import type { Logger } from '../log.js';
 import { metrics } from '../metrics.js';
 import { isBid } from '../domain/types.js';
+import { depthWithinLimit } from '../domain/thinbook.js';
 import { PerplRest, type ContextMarket, type L2Book, type MarketState, type PerplContext } from './rest.js';
 import { PerplWs, type Trade } from './ws.js';
 
@@ -201,6 +202,21 @@ export class MarketData {
     const levels = isBid(orderType) ? book.asks : book.bids;
     if (!levels.length) return undefined;
     return { ...walkBook(levels, orderType, lots, limitPNS), source: book.source };
+  }
+
+  /**
+   * Lots on the taking side of `orderType` within `limitPNS`, for the thin-book guard. Source order: the WS
+   * L2 book while fresh, then Perpl's REST book (the same book, polled). The Exchange contract only exposes
+   * best prices without sizes, so there is no onchain depth fallback: with neither book, depth is null.
+   */
+  async depth(perpId: number, orderType: number, limitPNS: bigint): Promise<{ depthLots: bigint | null; source: Source; ageMs: number | null }> {
+    const ws = this.ws?.books.get(perpId);
+    const wsAge = ws ? Date.now() - ws.updatedMs : null;
+    const book = await this.book(perpId).catch(() => undefined);
+    if (!book || book.source === 'none') return { depthLots: null, source: 'none', ageMs: wsAge };
+    const levels = isBid(orderType) ? book.asks : book.bids;
+    if (!levels.length) return { depthLots: null, source: book.source, ageMs: book.source === 'ws' ? wsAge : null };
+    return { depthLots: depthWithinLimit(book, orderType, limitPNS), source: book.source, ageMs: book.source === 'ws' ? wsAge : null };
   }
 
   recentTrades(perpId: number): Trade[] {

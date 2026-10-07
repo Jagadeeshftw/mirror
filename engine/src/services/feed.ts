@@ -30,12 +30,16 @@ export interface FeedRow {
 
 export function feedJson(r: FeedRow, explorerTx: string) {
   const data = r.data ? (JSON.parse(r.data) as Record<string, unknown>) : null;
+  // Engine-side events (thin-book guard) have no transaction; they are never onchain Blocked events.
+  const engine = r.kind.startsWith('Engine');
   return {
     id: r.id,
     account: r.account,
     kind: r.kind,
-    txHash: r.tx_hash,
-    txUrl: explorerTx + r.tx_hash,
+    onchain: !engine,
+    label: engine ? ((data?.label as string | undefined) ?? r.kind) : null,
+    txHash: engine ? null : r.tx_hash,
+    txUrl: engine ? null : explorerTx + r.tx_hash,
     logIndex: r.log_index,
     block: r.block,
     timestamp: r.ts,
