@@ -88,6 +88,12 @@ export class DemoService {
     if (!follower || !follower.leaders.has(this.leaderAccountId) || !follower.markets.has(this.opts.perpId)) {
       throw new DemoError(503, 'demo follower is not following the demo leader in this market yet');
     }
+    // A market belongs to the leader whose copy opened it; if another leader holds it, the demo copy would be
+    // blocked with MarketHeldByOtherLeader instead of showing the intended outcome.
+    const pos = await this.reads.position(this.opts.perpId, follower.perplAccountId);
+    const holder = pos.lots > 0n ? await this.reads.marketLeader(follower.address, this.opts.perpId) : 0;
+    if (holder !== 0 && holder !== this.leaderAccountId) throw new DemoError(409, `demo follower's market is held by leader ${holder}; close it first`);
+    if (follower.halted.has(this.opts.perpId)) throw new DemoError(409, "demo follower's market is halted by a level; set the policy again first");
     if (this.current) throw new DemoError(409, `a demo cycle is already running (${this.current})`);
     if (this.dailyCount() >= this.opts.dailyCap) throw new DemoError(429, 'demo daily cap reached');
     const lim = this.limiter.hit(`demo:${ip}`, this.opts.ipHourly, 3600_000);
@@ -139,7 +145,7 @@ export class DemoService {
         },
       ],
     });
-    const res = await this.leader!.send({ to: this.exchange, data, label: `demo:order${orderType}` });
+    const res = await this.leader!.send({ to: this.exchange, data, label: `demo:order${orderType}`, gasProfile: 'book' });
     if (res.status !== 'success') throw new Error(`leader order reverted: ${res.revert?.message ?? ''}`);
     this.log.info({ orderType, lots: lots.toString(), pricePNS: price.toString(), chainMark: pos.mark.toString(), perplMark: perpl?.markPNS.toString(), perplSource: perpl?.source, tx: res.hash }, 'demo leader order');
     return res.hash;
@@ -244,7 +250,7 @@ export class DemoService {
         teamRun: true,
         perplAccountId: follower?.perplAccountId ?? null,
         maxLeverageHdths: follower?.maxLeverageHdths ?? null,
-        following: follower ? [...follower.leaders].map(([accountId, ratioBps]) => ({ accountId, ratioBps })) : [],
+        following: follower ? [...follower.leaders].map(([accountId, l]) => ({ accountId, ratioBps: l.ratioBps, budgetCNS: l.budgetCNS.toString(), lossStopBps: l.lossStopBps, stopped: l.stopped })) : [],
         position: followerPos ? { side: followerPos.side, lotLNS: followerPos.lots.toString() } : null,
       },
       cycles,

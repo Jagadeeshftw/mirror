@@ -86,15 +86,25 @@ const EnvSchema = z.object({
   SLIPPAGE_SAFETY_BPS: int(5),
   MAX_MATCHES: int(100),
   PRIORITY_FEE_GWEI: z.coerce.number().default(2),
-  GAS_LIMIT_MULTIPLIER: z.coerce.number().default(1.2),
+  /** Headroom over Monad's eth_estimateGas for ordinary calls. Monad charges the full limit; never below 1. */
+  GAS_LIMIT_MULTIPLIER: z.coerce.number().min(1).default(1.2),
+  /** Headroom for book- and price-dependent calls (keeper copies, stop triggers, match now, demo orders). */
+  BOOK_GAS_LIMIT_MULTIPLIER: z.coerce.number().min(1).default(1.3),
   TX_TIMEOUT_MS: int(20_000),
   /** Block reasons for which a blocked opening copy is still submitted so the rule hit is recorded onchain. */
   BLOCKED_SUBMIT_REASONS: z
     .string()
     .default(
-      'LeverageTooHigh,LeverageTooLow,SlippageTooHigh,ExceedsMaxNotional,ExceedsLeaderTarget,DailyLossStop,DrawdownStop,StaleMark',
+      'LeverageTooHigh,LeverageTooLow,SlippageTooHigh,ExceedsMaxNotional,ExceedsLeaderTarget,DailyLossStop,DrawdownStop,StaleMark,EntryTooFar,MarketHeldByOtherLeader,LeaderBudgetExceeded,LeaderLossStop',
     )
     .transform((v) => new Set(v.split(',').map((s) => s.trim()).filter(Boolean))),
+  /** Stop executor: sends triggerLevel / triggerAccountStop / triggerLeaderStop once true onchain and simulated. */
+  STOP_EXECUTOR_ENABLED: z.string().default('1').transform((v) => v !== '0' && v !== 'false'),
+  /** Signer for stop triggers (anyone may trigger); defaults to the keeper pool. */
+  STOP_EXECUTOR_PRIVATE_KEY: privateKey.optional(),
+  STOP_CHECK_MS: int(3_000),
+  /** After a trigger was sent or its simulation reverted, wait this long before trying the same stop again. */
+  STOP_RETRY_MS: int(15_000),
   CIRCUIT_FAILURES: int(5),
   CIRCUIT_COOLDOWN_MS: int(30_000),
 
@@ -114,7 +124,8 @@ const EnvSchema = z.object({
   INDEXER_GRAPHQL_URL: z.string().url().optional(),
   LEADER_BACKFILL_BLOCKS: int(20_000),
 
-  NANSEN_ENABLED: bool,
+  /** auto (default): on when NANSEN_API_KEY or NANSEN_PAYER_PRIVATE_KEY is set; 0 forces off; 1 forces on. */
+  NANSEN_ENABLED: z.enum(['auto', '0', '1', 'true', 'false']).default('auto'),
   NANSEN_API_URL: z.string().default('https://api.nansen.ai'),
   NANSEN_API_KEY: z.string().optional(),
   NANSEN_PAYER_PRIVATE_KEY: privateKey.optional(),

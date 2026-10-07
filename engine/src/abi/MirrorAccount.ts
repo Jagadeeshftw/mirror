@@ -46,6 +46,19 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "function",
+    "name": "ACTION_CLOSE_MARKET",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "ACTION_EXCHANGE_CALL",
     "inputs": [],
     "outputs": [
@@ -73,6 +86,19 @@ export const mirrorAccountAbi = [
   {
     "type": "function",
     "name": "ACTION_MATCH_NOW",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "ACTION_SET_LEVELS",
     "inputs": [],
     "outputs": [
       {
@@ -241,6 +267,19 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "function",
+    "name": "MAX_ENTRY_DEVIATION_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MAX_LEADERS",
     "inputs": [],
     "outputs": [
@@ -268,6 +307,19 @@ export const mirrorAccountAbi = [
   {
     "type": "function",
     "name": "MAX_MARKETS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_MARK_ORACLE_GAP_BPS",
     "inputs": [],
     "outputs": [
       {
@@ -401,6 +453,24 @@ export const mirrorAccountAbi = [
     "type": "function",
     "name": "closeAll",
     "inputs": [
+      {
+        "name": "slippageBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "closeMarket",
+    "inputs": [
+      {
+        "name": "perpId",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
       {
         "name": "slippageBps",
         "type": "uint16",
@@ -674,6 +744,19 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "function",
+    "name": "flattenOnStop",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "follow",
     "inputs": [
       {
@@ -707,6 +790,21 @@ export const mirrorAccountAbi = [
             "internalType": "uint40"
           },
           {
+            "name": "maxEntryDeviationBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "stopSlippageBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "flattenOnStop",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
             "name": "leaders",
             "type": "tuple[]",
             "internalType": "struct MirrorAccount.LeaderRule[]",
@@ -720,6 +818,16 @@ export const mirrorAccountAbi = [
                 "name": "ratioBps",
                 "type": "uint32",
                 "internalType": "uint32"
+              },
+              {
+                "name": "budgetCNS",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "lossStopBps",
+                "type": "uint16",
+                "internalType": "uint16"
               }
             ]
           },
@@ -786,6 +894,11 @@ export const mirrorAccountAbi = [
             "name": "leaderRef",
             "type": "bytes32",
             "internalType": "bytes32"
+          },
+          {
+            "name": "leaderFillPNS",
+            "type": "uint64",
+            "internalType": "uint64"
           }
         ]
       }
@@ -798,6 +911,25 @@ export const mirrorAccountAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "frontRunPermitUsed",
+    "inputs": [
+      {
+        "name": "permitDigest",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -827,6 +959,78 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "function",
+    "name": "leaderBook",
+    "inputs": [
+      {
+        "name": "leaderAccountId",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "marginCNS",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "unrealizedCNS",
+        "type": "int256",
+        "internalType": "int256"
+      },
+      {
+        "name": "realizedCNS",
+        "type": "int256",
+        "internalType": "int256"
+      },
+      {
+        "name": "stopped",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "leaderRealizedCNS",
+    "inputs": [
+      {
+        "name": "leaderAccountId",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "leaderStopped",
+    "inputs": [
+      {
+        "name": "leaderAccountId",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "leaders",
     "inputs": [],
     "outputs": [
@@ -844,6 +1048,62 @@ export const mirrorAccountAbi = [
             "name": "ratioBps",
             "type": "uint32",
             "internalType": "uint32"
+          },
+          {
+            "name": "budgetCNS",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "lossStopBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "level",
+    "inputs": [
+      {
+        "name": "perpId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct MirrorAccount.Level",
+        "components": [
+          {
+            "name": "perpId",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "side",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "stopLossPNS",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "takeProfitPNS",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "slippageBps",
+            "type": "uint16",
+            "internalType": "uint16"
           }
         ]
       }
@@ -865,6 +1125,25 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "function",
+    "name": "marketLeader",
+    "inputs": [
+      {
+        "name": "perpId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "leaderAccountId",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "markets",
     "inputs": [
       {
@@ -876,6 +1155,11 @@ export const mirrorAccountAbi = [
     "outputs": [
       {
         "name": "allowed",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "halted",
         "type": "bool",
         "internalType": "bool"
       },
@@ -945,6 +1229,11 @@ export const mirrorAccountAbi = [
             "name": "leaderRef",
             "type": "bytes32",
             "internalType": "bytes32"
+          },
+          {
+            "name": "leaderFillPNS",
+            "type": "uint64",
+            "internalType": "uint64"
           }
         ]
       }
@@ -957,6 +1246,19 @@ export const mirrorAccountAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "maxEntryDeviationBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1032,6 +1334,11 @@ export const mirrorAccountAbi = [
             "name": "leaderRef",
             "type": "bytes32",
             "internalType": "bytes32"
+          },
+          {
+            "name": "leaderFillPNS",
+            "type": "uint64",
+            "internalType": "uint64"
           }
         ]
       }
@@ -1125,6 +1432,46 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "function",
+    "name": "setLevels",
+    "inputs": [
+      {
+        "name": "levels",
+        "type": "tuple[]",
+        "internalType": "struct MirrorAccount.Level[]",
+        "components": [
+          {
+            "name": "perpId",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "side",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "stopLossPNS",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "takeProfitPNS",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "slippageBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setPaused",
     "inputs": [
       {
@@ -1171,6 +1518,21 @@ export const mirrorAccountAbi = [
             "internalType": "uint40"
           },
           {
+            "name": "maxEntryDeviationBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "stopSlippageBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "flattenOnStop",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
             "name": "leaders",
             "type": "tuple[]",
             "internalType": "struct MirrorAccount.LeaderRule[]",
@@ -1184,6 +1546,16 @@ export const mirrorAccountAbi = [
                 "name": "ratioBps",
                 "type": "uint32",
                 "internalType": "uint32"
+              },
+              {
+                "name": "budgetCNS",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "lossStopBps",
+                "type": "uint16",
+                "internalType": "uint16"
               }
             ]
           },
@@ -1212,6 +1584,19 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "function",
+    "name": "stopSlippageBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "sweep",
     "inputs": [
       {
@@ -1233,6 +1618,11 @@ export const mirrorAccountAbi = [
         "internalType": "uint256"
       },
       {
+        "name": "leaderAccountId",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
         "name": "side",
         "type": "uint8",
         "internalType": "uint8"
@@ -1246,6 +1636,57 @@ export const mirrorAccountAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "triggerAccountStop",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "closed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "triggerLeaderStop",
+    "inputs": [
+      {
+        "name": "leaderAccountId",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "closed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "triggerLevel",
+    "inputs": [
+      {
+        "name": "perpId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "lotsClosed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -1336,6 +1777,18 @@ export const mirrorAccountAbi = [
         "type": "bytes32",
         "indexed": false,
         "internalType": "bytes32"
+      },
+      {
+        "name": "leaderFillPNS",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "markPNS",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
       }
     ],
     "anonymous": false
@@ -1456,6 +1909,99 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "event",
+    "name": "LeaderStopped",
+    "inputs": [
+      {
+        "name": "leaderAccountId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "pnlCNS",
+        "type": "int256",
+        "indexed": false,
+        "internalType": "int256"
+      },
+      {
+        "name": "limitCNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "LevelSet",
+    "inputs": [
+      {
+        "name": "perpId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "side",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      },
+      {
+        "name": "stopLossPNS",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "takeProfitPNS",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "slippageBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MarketClosed",
+    "inputs": [
+      {
+        "name": "perpId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "slippageBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "lotsBefore",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "lotsAfter",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Mirrored",
     "inputs": [
       {
@@ -1517,6 +2063,39 @@ export const mirrorAccountAbi = [
         "type": "bytes32",
         "indexed": false,
         "internalType": "bytes32"
+      },
+      {
+        "name": "proof",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct MirrorAccount.CopyProof",
+        "components": [
+          {
+            "name": "leaderFillPNS",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "leaderEntryPNS",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "markPNS",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "fillPNS",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "entryDeviationBps",
+            "type": "int32",
+            "internalType": "int32"
+          }
+        ]
       }
     ],
     "anonymous": false
@@ -1582,6 +2161,24 @@ export const mirrorAccountAbi = [
         "internalType": "uint40"
       },
       {
+        "name": "maxEntryDeviationBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "stopSlippageBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "flattenOnStop",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
         "name": "leaders",
         "type": "tuple[]",
         "indexed": false,
@@ -1596,6 +2193,16 @@ export const mirrorAccountAbi = [
             "name": "ratioBps",
             "type": "uint32",
             "internalType": "uint32"
+          },
+          {
+            "name": "budgetCNS",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "lossStopBps",
+            "type": "uint16",
+            "internalType": "uint16"
           }
         ]
       },
@@ -1644,6 +2251,55 @@ export const mirrorAccountAbi = [
       },
       {
         "name": "equity",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "StopTriggered",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "kind",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "enum MirrorAccount.StopKind"
+      },
+      {
+        "name": "scope",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "limit",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "actual",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "oraclePNS",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "positionsClosed",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1760,8 +2416,24 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "error",
+    "name": "FlattenOff",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidInitialization",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidLevel",
+    "inputs": [
+      {
+        "name": "field",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
   },
   {
     "type": "error",
@@ -1858,6 +2530,11 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "error",
+    "name": "StopNotTriggered",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "StringTooLong",
     "inputs": [
       {
@@ -1880,6 +2557,27 @@ export const mirrorAccountAbi = [
         "name": "kind",
         "type": "uint8",
         "internalType": "uint8"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "UntrustedPrice",
+    "inputs": [
+      {
+        "name": "perpId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "markPNS",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "oraclePNS",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ]
   },

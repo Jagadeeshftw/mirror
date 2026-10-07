@@ -1,10 +1,15 @@
 /**
  * End-to-end test on a local anvil fork of Monad mainnet (no real funds, nothing sent to Monad):
- *   anvil fork -> forge deploy -> fund demo leader + follower owner with AUSD (impersonating the Perpl Exchange)
- *   -> demo leader opens its own Perpl account -> engine starts -> follower MirrorAccount created, funded with a
- *   permit and set to follow (signed ACTION_FOLLOW with match now) through the relayer routes -> /v1/demo/trade
- *   and /v1/demo/blocked -> assertions on Mirrored (with latency), Blocked (LeverageTooHigh), closed positions
- *   and team-run exclusion in /v1/stats.
+ *   anvil fork (--disable-code-size-limit: MirrorAccount is above EIP-170, which Monad accepts) -> forge deploy
+ *   -> fund demo leader, second leader and follower owner with AUSD (impersonating the Perpl Exchange) -> leaders
+ *   open their own Perpl accounts -> engine starts -> follower MirrorAccount created, funded with a permit and set
+ *   to follow three leaders through the relayer routes. Checks:
+ *   - entry guard: match now on a real mainnet leader whose entry is far from the mark is Blocked(EntryTooFar)
+ *   - /v1/demo/trade copied open and close, Mirrored carries the copy proof; /v1/demo/blocked LeverageTooHigh
+ *   - a second leader's copy into the demo leader's market is Blocked(MarketHeldByOtherLeader)
+ *   - a leader reduction is closed down to exactly that leader's target (engine == contract targetLots)
+ *   - an owner take-profit level is executed by a stranger (the stop executor) once the mark reaches it
+ *   - team-run exclusion in /v1/stats.
  *
  *   pnpm e2e:fork            (needs anvil + forge on PATH; uses port 8545 and E2E_API_PORT, default 8787)
  */
@@ -28,8 +33,9 @@ import { perplExchangeAbi } from '../src/abi/PerplExchange.js';
 import { mirrorAccountAbi } from '../src/abi/MirrorAccount.js';
 import { mirrorAccountFactoryAbi } from '../src/abi/MirrorAccountFactory.js';
 import { authTokenAbi } from '../src/abi/erc20.js';
-import { targetLots } from '../src/domain/planner.js';
-import { ACTION } from '../src/domain/types.js';
+import { contractSlippageBound, entryBound, targetLots } from '../src/domain/planner.js';
+import { encodeFollowData, encodeLevels, encodePolicy } from '../src/domain/encode.js';
+import { ACTION, CLOSE_LONG, OPEN_LONG, type MirrorOrder, type Policy } from '../src/domain/types.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const repo = join(root, '..');
@@ -52,6 +58,8 @@ const K = {
   leader: '0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a',
   follower: '0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba',
   user: '0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e',
+  leader2: '0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356',
+  stranger: '0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97',
 } as const satisfies Record<string, Hex>;
 const A = Object.fromEntries(Object.entries(K).map(([k, v]) => [k, privateKeyToAccount(v)])) as Record<keyof typeof K, ReturnType<typeof privateKeyToAccount>>;
 
@@ -113,7 +121,7 @@ function portBusy(port: number) {
 async function startAnvil() {
   if (portBusy(8545)) throw new Error('port 8545 is busy; stop the other anvil first');
   const log = createWriteStream(join(work, 'anvil.log'));
-  const p = spawn('anvil', ['--fork-url', process.env.FORK_URL ?? 'https://rpc.monad.xyz', '--chain-id', '143', '--port', '8545', '--block-time', '1', '--silent'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const p = spawn('anvil', ['--fork-url', process.env.FORK_URL ?? 'https://rpc.monad.xyz', '--chain-id', '143', '--port', '8545', '--block-time', '1', '--disable-code-size-limit', '--silent'], { stdio: ['ignore', 'pipe', 'pipe'] });
   p.stdout?.pipe(log);
   p.stderr?.pipe(log);
   children.push(p);
@@ -130,6 +138,17 @@ async function send(w: ReturnType<typeof wallet> | ReturnType<typeof impersonate
   return r;
 }
 
+/** The BTC mark the fork keeps pushing; tests move it to reach a level. */
+let forkMark = 0n;
+
+async function pushMark() {
+  try {
+    await send(impersonated(PRICE_ADMIN), { to: EXCHANGE, abi: perplExchangeAbi, functionName: 'updateMarkPricePNS', args: [BigInt(BTC), Number(forkMark)] });
+  } catch (err) {
+    say('mark push failed', (err as Error).message.slice(0, 120));
+  }
+}
+
 /** On the fork nobody updates Perpl marks, so they go stale after 60 s: ignore the oracle and re-push the mark. */
 async function keepMarksFresh() {
   await rpc('anvil_impersonateAccount', [PERPL_OWNER]);
@@ -138,15 +157,9 @@ async function keepMarksFresh() {
   await rpc('anvil_setBalance', [PRICE_ADMIN, '0x56BC75E2D63100000']);
   await send(impersonated(PERPL_OWNER), { to: EXCHANGE, abi: perplExchangeAbi, functionName: 'setIgnOracle', args: [BigInt(BTC), true] });
   const [, mark] = await pub.readContract({ address: EXCHANGE, abi: perplExchangeAbi, functionName: 'getPositionV2', args: [BigInt(BTC), 1n] });
-  const push = async () => {
-    try {
-      await send(impersonated(PRICE_ADMIN), { to: EXCHANGE, abi: perplExchangeAbi, functionName: 'updateMarkPricePNS', args: [BigInt(BTC), Number(mark)] });
-    } catch (err) {
-      say('mark push failed', (err as Error).message.slice(0, 120));
-    }
-  };
-  await push();
-  const timer = setInterval(() => void push(), 15_000);
+  forkMark = mark;
+  await pushMark();
+  const timer = setInterval(() => void pushMark(), 15_000);
   timer.unref();
   say('fork marks kept fresh at', mark.toString());
   return timer;
@@ -156,7 +169,7 @@ function deploy(): { factory: Address; keeperRegistry: Address; block: number } 
   if (existsSync(deploymentsFile)) deploymentsBackup = readFileSync(deploymentsFile, 'utf8');
   const out = execFileSync(
     'forge',
-    ['script', 'script/Deploy.s.sol', '--rpc-url', RPC, '--private-key', K.deployer, '--broadcast'],
+    ['script', 'script/Deploy.s.sol', '--rpc-url', RPC, '--private-key', K.deployer, '--broadcast', '--disable-code-size-limit'],
     {
       cwd: join(repo, 'contracts'),
       env: { ...process.env, WRITE_DEPLOYMENT: 'true', KEEPERS: `${A.keeperA.address},${A.keeperB.address}`, FOUNDRY_BROADCAST: join(work, 'broadcast') },
@@ -189,15 +202,21 @@ async function blockTime() {
   return Number((await pub.getBlock()).timestamp);
 }
 
-async function pickLiveLeader(exclude: number): Promise<{ id: number; lots: bigint }> {
+/** A live mainnet BTC position whose average entry is worse than the mark by more than `devBps` for a copier. */
+async function pickLiveLeader(exclude: number[], devBps: number): Promise<{ id: number; lots: bigint; side: 0 | 1; entry: bigint }> {
   const abi = parseAbi([
     'struct P { uint256 accountId; uint256 nextNodeId; uint256 prevNodeId; uint8 positionType; uint256 depositCNS; uint256 pricePNS; uint256 lotLNS; uint256 entryBlock; int256 pnlCNS; int256 deltaPnlCNS; int256 premiumPnlCNS; uint256 priceResiduePNSQ16; }',
     'function getPositionsV2(uint256 perpId, uint256 pageStartPositionId, uint256 positionsPerPage) view returns (P[] positions, uint256 numPositions, uint256 markPricePNS, bool markPriceValid)',
   ]);
-  const [ps] = await pub.readContract({ address: EXCHANGE, abi, functionName: 'getPositionsV2', args: [BigInt(BTC), 0n, 100n] });
-  const c = ps.find((p) => p.positionType === 0 && p.lotLNS >= 100n && p.lotLNS <= 30_000n && Number(p.accountId) !== exclude);
-  if (!c) throw new Error('no suitable live BTC long on the fork');
-  return { id: Number(c.accountId), lots: c.lotLNS };
+  const [ps, , mark] = await pub.readContract({ address: EXCHANGE, abi, functionName: 'getPositionsV2', args: [BigInt(BTC), 0n, 100n] });
+  const far = (p: (typeof ps)[number]) => {
+    const side = p.positionType === 0 ? 0 : 1;
+    const eb = entryBound(side, p.pricePNS, devBps)!;
+    return side === 0 ? mark > eb : mark < eb;
+  };
+  const c = ps.find((p) => p.lotLNS >= 100n && p.lotLNS <= 30_000n && !exclude.includes(Number(p.accountId)) && far(p));
+  if (!c) throw new Error('no suitable live BTC position on the fork');
+  return { id: Number(c.accountId), lots: c.lotLNS, side: c.positionType === 0 ? 0 : 1, entry: c.pricePNS };
 }
 
 async function startEngine(env: Record<string, string>) {
@@ -275,6 +294,40 @@ async function signAction(account: Address, kind: number, data: Hex) {
   return { action: { kind, data, nonce: nonce.toString(), deadline: deadline.toString() }, signature };
 }
 
+/** Opens or closes on the Exchange directly from a test leader EOA (IOC, 50 bps from the mark). */
+async function leaderTrade(key: Hex, orderType: number, lots: bigint, leverage: number) {
+  const [, mark] = await pub.readContract({ address: EXCHANGE, abi: perplExchangeAbi, functionName: 'getPositionV2', args: [BigInt(BTC), 1n] });
+  const args = [{ orderDescId: BigInt(Date.now()), perpId: BigInt(BTC), orderType, orderId: 0n, pricePNS: contractSlippageBound(orderType, mark, 50), lotLNS: lots, expiryBlock: 0n, postOnly: false, fillOrKill: false, immediateOrCancel: true, maxMatches: 100n, leverageHdths: BigInt(leverage), lastExecutionBlock: 0n, amountCNS: 0n, maxNegPnlCollatBPS: 1000n }] as const;
+  // Simulate first so a revert is reported with its decoded Perpl error.
+  await pub.simulateContract({ address: EXCHANGE, abi: perplExchangeAbi, functionName: 'execOrder', args, account: privateKeyToAccount(key) }).catch((err) => {
+    throw new Error(`leader order would revert: ${(err as Error).message.split('\n').slice(0, 4).join(' ')}`);
+  });
+  const r = await send(wallet(key), { to: EXCHANGE, abi: perplExchangeAbi, functionName: 'execOrder', args: args as never });
+  return r.transactionHash;
+}
+
+async function openPerplAccount(key: Hex) {
+  const a = privateKeyToAccount(key);
+  await fundAusd(a.address, 20_000_000n);
+  await send(wallet(key), { to: AUSD, abi: authTokenAbi, functionName: 'approve', args: [EXCHANGE, 15_000_000n] });
+  await send(wallet(key), { to: EXCHANGE, abi: perplExchangeAbi, functionName: 'createAccount', args: [15_000_000n] });
+  const info = await pub.readContract({ address: EXCHANGE, abi: perplExchangeAbi, functionName: 'getAccountByAddr', args: [a.address] });
+  return Number(info.accountId);
+}
+
+const position = async (accountId: number | bigint) => (await pub.readContract({ address: EXCHANGE, abi: perplExchangeAbi, functionName: 'getPositionV2', args: [BigInt(BTC), BigInt(accountId)] }))[0];
+
+/** Policy as the contract takes it (bigints) and as the API takes it (strings). */
+const apiPolicy = (p: Policy) => ({
+  ...p,
+  leaders: p.leaders.map((l) => ({ ...l, budgetCNS: l.budgetCNS.toString() })),
+  markets: p.markets.map((m) => ({ ...m, maxNotionalCNS: m.maxNotionalCNS.toString() })),
+});
+
+async function feedItem(account: Address, pred: (f: any) => boolean, what: string, timeoutMs = 60_000) {
+  return waitFor(what, async () => (await api('GET', `/v1/accounts/${account}/feed?limit=200`)).items.find(pred), timeoutMs, 500);
+}
+
 async function main() {
   rmSync(work, { recursive: true, force: true });
   mkdirSync(work, { recursive: true });
@@ -282,15 +335,14 @@ async function main() {
   const markTimer = await keepMarksFresh();
 
   const { factory, keeperRegistry, block } = deploy();
+  const code = await pub.getCode({ address: await pub.readContract({ address: factory, abi: mirrorAccountFactoryAbi, functionName: 'implementation' }) });
+  check('MirrorAccount implementation deployed above EIP-170 (anvil --disable-code-size-limit)', (code?.length ?? 0) / 2 - 1 > 24_576, { bytes: (code?.length ?? 0) / 2 - 1 });
 
-  // Demo leader: its own Perpl account, funded from the Exchange's AUSD on the fork.
-  await fundAusd(A.leader.address, 20_000_000n);
+  // Leaders with their own Perpl accounts, funded from the Exchange's AUSD on the fork.
+  const leaderId = await openPerplAccount(K.leader);
+  const leader2Id = await openPerplAccount(K.leader2);
   await fundAusd(A.follower.address, 20_000_000n);
-  await send(wallet(K.leader), { to: AUSD, abi: authTokenAbi, functionName: 'approve', args: [EXCHANGE, 15_000_000n] });
-  await send(wallet(K.leader), { to: EXCHANGE, abi: perplExchangeAbi, functionName: 'createAccount', args: [15_000_000n] });
-  const leaderAcct = await pub.readContract({ address: EXCHANGE, abi: perplExchangeAbi, functionName: 'getAccountByAddr', args: [A.leader.address] });
-  const leaderId = Number(leaderAcct.accountId);
-  check('demo leader Perpl account opened', leaderId > 0, { leaderId });
+  check('demo leader and second leader Perpl accounts opened', leaderId > 0 && leader2Id > 0, { leaderId, leader2Id });
 
   const salt = pad('0x0', { size: 32 });
   const predicted = await pub.readContract({ address: factory, abi: mirrorAccountFactoryAbi, functionName: 'predictAccount', args: [A.follower.address, salt] });
@@ -308,11 +360,15 @@ async function main() {
     DEMO_LEADER_PRIVATE_KEY: K.leader,
     DEMO_FOLLOWER_ACCOUNT: predicted,
     TEAM_RUN_ADDRESSES: A.follower.address,
+    STOP_EXECUTOR_PRIVATE_KEY: K.stranger,
+    STOP_CHECK_MS: '1000',
+    STOP_RETRY_MS: '5000',
     DB_PATH: join(work, 'engine.db'),
     PORT: String(API_PORT),
     LEADER_BACKFILL_BLOCKS: '0',
     DEMO_HOLD_MS: process.env.DEMO_HOLD_MS ?? '10000',
     DEMO_IP_HOURLY: '10',
+    NANSEN_ENABLED: '0',
     LOG_LEVEL: 'info',
   });
   const stopStream = watchDemoStream();
@@ -338,89 +394,140 @@ async function main() {
   const dep = await api('POST', '/v1/relay/deposit', { account, mode: 'permit', amount: amount.toString(), deadline: deadline.toString(), signature: permitSig });
   const perplId = await pub.readContract({ address: account, abi: mirrorAccountAbi, functionName: 'perplAccountId' });
   check('relay deposit (permit) opened the Perpl account', dep.status === 'success' && perplId > 0, { tx: dep.txHash, gasUsed: dep.gasUsed, gasLimit: dep.gasLimit, perplId });
-  check('gas limit = estimate x 1.2 headroom (used < limit)', BigInt(dep.gasUsed) < BigInt(dep.gasLimit), { gasUsed: dep.gasUsed, gasLimit: dep.gasLimit });
+  check('gas limit = Monad eth_estimateGas x headroom (used < limit)', BigInt(dep.gasUsed) < BigInt(dep.gasLimit), { gasUsed: dep.gasUsed, gasLimit: dep.gasLimit });
 
-  // 3. Follow: demo leader (100%) + a live mainnet BTC long (match now fills against the real forked book).
-  const live = await pickLiveLeader(leaderId);
+  // 3. Follow three leaders with a tight entry guard: the demo leader, a second test leader, and a live mainnet
+  //    BTC position whose entry is far from the mark. Match now on the live leader must be Blocked(EntryTooFar).
+  const live = await pickLiveLeader([leaderId, leader2Id], 5);
   const ratio = Math.max(1, Math.floor(20_000 / Number(live.lots)));
-  const policy = {
+  const policy: Policy = {
     maxLeverageHdths: 300,
     maxSlippageBps: 80,
     dailyLossBps: 500,
     drawdownBps: 1500,
     expiry: (await blockTime()) + 7 * 86_400,
+    maxEntryDeviationBps: 5,
+    stopSlippageBps: 200,
+    flattenOnStop: true,
     leaders: [
-      { accountId: leaderId, ratioBps: 10_000 },
-      { accountId: live.id, ratioBps: ratio },
+      { accountId: leaderId, ratioBps: 5_000, budgetCNS: 5_000_000n, lossStopBps: 5_000 },
+      { accountId: leader2Id, ratioBps: 10_000, budgetCNS: 5_000_000n, lossStopBps: 0 },
+      { accountId: live.id, ratioBps: ratio, budgetCNS: 5_000_000n, lossStopBps: 0 },
     ],
-    markets: [{ perpId: BTC, maxNotionalCNS: '50000000' }],
+    markets: [{ perpId: BTC, maxNotionalCNS: 50_000_000n }],
   };
-  const quote = await api('POST', '/v1/quote/follow', { owner: A.follower.address, leaderAccountId: live.id, policy });
+  const quote = await api('POST', '/v1/quote/follow', { owner: A.follower.address, leaderAccountId: live.id, policy: apiPolicy(policy) });
   const q0 = quote.quotes[0];
   say('quote', { live, ratio, simulation: quote.simulation, q0 });
-  check('quote returns a match-now order with Perpl book data and no block', quote.quotes.length === 1 && q0.wouldBlock === null && q0.lotLNS !== '0' && quote.matchOrders.length === 1, { lot: q0?.lotLNS, price: q0?.pricePNS, expectedFill: q0?.expectedFillPNS, bookSource: q0?.bookSource, perplMark: q0?.perplMarkPNS });
+  check('quote predicts EntryTooFar for the live leader, with the entry bound', q0?.wouldBlock?.reason === 'EntryTooFar' && q0.entryBoundPNS !== null && quote.matchOrders.length === 0, { wouldBlock: q0?.wouldBlock, leaderEntry: q0?.leaderEntryPNS, entryBound: q0?.entryBoundPNS, price: q0?.pricePNS, mark: q0?.markPNS });
 
-  const follow = await signAction(account, ACTION.FOLLOW, quote.followActionData);
+  // Send the predicted-blocked order anyway so the rule hit is recorded onchain.
+  const order: MirrorOrder = { leaderAccountId: live.id, perpId: BTC, orderType: q0.orderType, lotLNS: BigInt(q0.lotLNS), pricePNS: BigInt(q0.pricePNS), leverageHdths: q0.leverageHdths, maxMatches: 100, leaderRef: `0x${'00'.repeat(32)}`, leaderFillPNS: 0n };
+  const follow = await signAction(account, ACTION.FOLLOW, encodeFollowData(policy, [order]));
   const followRes = await api('POST', '/v1/relay/execute', { account, ...follow });
-  const afterMatch = (await pub.readContract({ address: EXCHANGE, abi: perplExchangeAbi, functionName: 'getPositionV2', args: [BigInt(BTC), BigInt(perplId)] }))[0];
-  check('relay execute(ACTION_FOLLOW) with match now filled', followRes.status === 'success' && afterMatch.lotLNS > 0n && afterMatch.lotLNS <= BigInt(q0.lotLNS), { tx: followRes.txHash, lots: afterMatch.lotLNS });
-  const liveTarget = BigInt(q0.lotLNS);
+  const entryBlocked = await feedItem(account, (f) => f.kind === 'Blocked' && f.txHash === followRes.txHash, 'EntryTooFar block in the feed');
+  const eb = entryBound(live.side, live.entry, 5)!;
+  check('entry guard: live leader copy Blocked(EntryTooFar), limit = entry bound, actual = mark', entryBlocked.reason === 'EntryTooFar' && BigInt(entryBlocked.limit) === eb && entryBlocked.data?.markPNS === entryBlocked.actual, { tx: followRes.txHash, limit: entryBlocked.limit, actual: entryBlocked.actual, mark: entryBlocked.data?.markPNS });
+  check('nothing was opened for the live leader', (await position(perplId)).lotLNS === 0n);
 
+  // Loosen the guard for the demo leg (ACTION_SET_POLICY).
+  policy.maxEntryDeviationBps = 300;
+  const setPolicy = await signAction(account, ACTION.SET_POLICY, encodePolicy(policy));
+  const spRes = await api('POST', '/v1/relay/execute', { account, ...setPolicy });
+  check('relay execute(ACTION_SET_POLICY) with the new policy fields', spRes.status === 'success', { tx: spRes.txHash });
   await waitFor('registry to index the policy', async () => {
     const a = await api('GET', `/v1/accounts/${account}`);
-    return a.policy?.leaders?.some((l: any) => l.accountId === leaderId) ? a : undefined;
+    return a.policy?.maxEntryDeviationBps === 300 && a.policy?.leaders?.length === 3 && a.policy.stopSlippageBps === 200 ? a : undefined;
   });
 
   // 4. Demo trade: leader opens 1 lot at 2x; the engine copies it; leader closes; the engine copies the close.
   const trade = await runCycle('trade');
-  const feed1 = (await api('GET', `/v1/accounts/${account}/feed?limit=100`)).items;
-  const copyOpen = feed1.find((f: any) => f.kind === 'Mirrored' && f.leaderRef === trade.open_tx);
-  const copyClose = feed1.find((f: any) => f.kind === 'Mirrored' && f.leaderRef === trade.close_tx);
-  check('Mirrored event for the copied open, latency recorded', Boolean(copyOpen) && copyOpen.orderTypeName === 'OpenLong' && copyOpen.latencyMs > 0, copyOpen && { tx: copyOpen.txHash, lots: copyOpen.lotLNS, lev: copyOpen.leverageHdths, latencyMs: copyOpen.latencyMs, commitState: copyOpen.commitState });
-  check('Mirrored event for the copied close', Boolean(copyClose) && copyClose.orderTypeName === 'CloseLong', copyClose && { tx: copyClose.txHash, lots: copyClose.lotLNS, latencyMs: copyClose.latencyMs });
+  const copyOpen = await feedItem(account, (f) => f.kind === 'Mirrored' && f.leaderRef === trade.open_tx, 'copied open');
+  const copyClose = await feedItem(account, (f) => f.kind === 'Mirrored' && f.leaderRef === trade.close_tx, 'copied close');
+  check('Mirrored event for the copied open, latency recorded', copyOpen.orderTypeName === 'OpenLong' && copyOpen.latencyMs > 0, { tx: copyOpen.txHash, lots: copyOpen.lotLNS, lev: copyOpen.leverageHdths, latencyMs: copyOpen.latencyMs, commitState: copyOpen.commitState });
+  const p = copyOpen.proof;
+  check('copy proof in Mirrored: leader fill, leader entry, mark, follower fill, deviation', p && p.leaderFillPNS !== '0' && p.leaderEntryPNS !== '0' && p.markPNS !== '0' && p.fillPNS !== '0' && typeof p.entryDeviationBps === 'number', p);
+  check('Mirrored event for the copied close', copyClose.orderTypeName === 'CloseLong' && copyClose.data.lotsAfter === '0', { tx: copyClose.txHash, lots: copyClose.lotLNS, latencyMs: copyClose.latencyMs, proof: copyClose.proof });
 
   // 5. Demo blocked: leader opens at 10x > follower max 3x; the copy is blocked onchain with its own tx.
   const blocked = await runCycle('blocked');
-  const feed2 = (await api('GET', `/v1/accounts/${account}/feed?limit=100`)).items;
-  const blockedEv = feed2.find((f: any) => f.kind === 'Blocked' && f.leaderRef === blocked.open_tx);
-  check('Blocked event LeverageTooHigh (limit 300, actual 1000)', Boolean(blockedEv) && blockedEv.reason === 'LeverageTooHigh' && blockedEv.limit === '300' && blockedEv.actual === '1000', blockedEv && { tx: blockedEv.txHash, reason: blockedEv.reason, limit: blockedEv.limit, actual: blockedEv.actual });
+  const blockedEv = await feedItem(account, (f) => f.kind === 'Blocked' && f.leaderRef === blocked.open_tx, 'LeverageTooHigh block');
+  check('Blocked event LeverageTooHigh (limit 300, actual 1000)', blockedEv.reason === 'LeverageTooHigh' && blockedEv.limit === '300' && blockedEv.actual === '1000', { tx: blockedEv.txHash, reason: blockedEv.reason, limit: blockedEv.limit, actual: blockedEv.actual });
   const receipt = await pub.getTransactionReceipt({ hash: blockedEv.txHash });
   check('blocked copy is its own successful keeper tx', receipt.status === 'success' && [A.keeperA.address, A.keeperB.address].includes(getAddress(receipt.from)), { from: receipt.from });
+  await waitFor('demo leader flat', async () => (await position(leaderId)).lotLNS === 0n);
 
-  // 6. Positions: leader flat, follower back within the live leader's share, contract target == engine target.
-  const leaderPos = (await pub.readContract({ address: EXCHANGE, abi: perplExchangeAbi, functionName: 'getPositionV2', args: [BigInt(BTC), BigInt(leaderId)] }))[0];
-  const followerPos = (await pub.readContract({ address: EXCHANGE, abi: perplExchangeAbi, functionName: 'getPositionV2', args: [BigInt(BTC), BigInt(perplId)] }))[0];
-  check('demo leader position closed', leaderPos.lotLNS === 0n, { lots: leaderPos.lotLNS });
-  check('follower demo exposure closed (back within live-leader target)', followerPos.lotLNS <= liveTarget, { lots: followerPos.lotLNS, liveTarget });
-  const onchainTarget = await pub.readContract({ address: account, abi: mirrorAccountAbi, functionName: 'targetLots', args: [BigInt(BTC), 0] });
-  const livePos = (await pub.readContract({ address: EXCHANGE, abi: perplExchangeAbi, functionName: 'getPositionV2', args: [BigInt(BTC), BigInt(live.id)] }))[0];
-  const engineTarget = targetLots([{ ratioBps: 10_000, side: 0, lots: leaderPos.lotLNS }, { ratioBps: ratio, side: livePos.positionType as 0 | 1, lots: livePos.lotLNS }], 0);
-  check('engine targetLots == contract targetLots', onchainTarget === engineTarget, { onchainTarget, engineTarget });
+  // 6. Multi-leader: the demo leader opens 4 lots (follower target ceil(4 x 50%) = 2), then the second leader
+  //    opens in the same market: its copy is Blocked(MarketHeldByOtherLeader).
+  const open4 = await leaderTrade(K.leader, OPEN_LONG, 4n, 200);
+  const copy4 = await feedItem(account, (f) => f.kind === 'Mirrored' && f.leaderRef === open4, 'copy of the 4-lot open');
+  check('demo leader 4 lots copied at 50% (2 lots), market held by the demo leader', copy4.data.lotsAfter === '2' && Number(await pub.readContract({ address: account, abi: mirrorAccountAbi, functionName: 'marketLeader', args: [BigInt(BTC)] })) === leaderId, { lotsAfter: copy4.data.lotsAfter });
+  const open2 = await leaderTrade(K.leader2, OPEN_LONG, 2n, 200);
+  const held = await feedItem(account, (f) => f.kind === 'Blocked' && f.leaderRef === open2, 'MarketHeldByOtherLeader block');
+  check('second leader blocked from the first leader market (MarketHeldByOtherLeader)', held.reason === 'MarketHeldByOtherLeader' && held.limit === String(leader2Id) && held.actual === String(leaderId), { tx: held.txHash, limit: held.limit, actual: held.actual });
 
+  // 7. Keeper close sized to target: the demo leader goes 4 -> 1 lot; target ceil(1 x 50%) = 1, so close 1 of 2.
+  const reduce = await leaderTrade(K.leader, CLOSE_LONG, 3n, 0);
+  const closeCopy = await feedItem(account, (f) => f.kind === 'Mirrored' && f.leaderRef === reduce, 'close copy of the reduction');
+  const onchainTarget = await pub.readContract({ address: account, abi: mirrorAccountAbi, functionName: 'targetLots', args: [BigInt(BTC), leaderId, 0] });
+  const lp = await position(leaderId);
+  const engineTarget = targetLots({ ratioBps: 5_000, side: lp.positionType === 1 ? 1 : 0, lots: lp.lotLNS }, 0);
+  const fpos = await position(perplId);
+  check('keeper close sized to the holder target (2 -> 1), never below', closeCopy.orderTypeName === 'CloseLong' && closeCopy.lotLNS === '1' && fpos.lotLNS === onchainTarget && onchainTarget === 1n, { lots: closeCopy.lotLNS, after: fpos.lotLNS, onchainTarget });
+  check('engine targetLots == contract targetLots (per leader)', onchainTarget === engineTarget, { onchainTarget, engineTarget });
+  const l2Target = await pub.readContract({ address: account, abi: mirrorAccountAbi, functionName: 'targetLots', args: [BigInt(BTC), leader2Id, 0] });
+  const l2 = await position(leader2Id);
+  check('engine targetLots == contract targetLots (second leader)', l2Target === targetLots({ ratioBps: 10_000, side: l2.positionType === 1 ? 1 : 0, lots: l2.lotLNS }, 0), { l2Target });
+
+  // 8. Take-profit level executed by a stranger: set TP 30 bps above the mark (not reached: nothing is sent),
+  //    then move the fork mark above it; the stop executor simulates and sends triggerLevel.
+  const startMark = forkMark;
+  const tp = (startMark * 10_030n) / 10_000n;
+  const lv = await signAction(account, ACTION.SET_LEVELS, encodeLevels([{ perpId: BTC, side: 0, stopLossPNS: 0n, takeProfitPNS: tp, slippageBps: 200 }]));
+  const lvRes = await api('POST', '/v1/relay/execute', { account, ...lv });
+  check('relay execute(ACTION_SET_LEVELS) take-profit', lvRes.status === 'success', { tx: lvRes.txHash, tp });
+  await waitFor('level indexed', async () => ((await api('GET', `/v1/accounts/${account}`)).levels?.length ? true : undefined));
+  await sleep(4_000);
+  const early = (await api('GET', `/v1/accounts/${account}/stops`)).items;
+  check('stop executor sends nothing while the level is not reached', early.length === 0 && (await position(perplId)).lotLNS === 1n, { attempts: early.length });
+  forkMark = (startMark * 10_040n) / 10_000n;
+  await pushMark();
+  const tpEv = await feedItem(account, (f) => f.kind === 'StopTriggered' && f.reason === 'TakeProfit', 'TakeProfit StopTriggered', 60_000);
+  const tpReceipt = await pub.getTransactionReceipt({ hash: tpEv.txHash });
+  const afterTp = await position(perplId);
+  check('take-profit triggered by a stranger via the stop executor; follower flat', getAddress(tpReceipt.from) === A.stranger.address && getAddress(tpEv.data.caller) === A.stranger.address && afterTp.lotLNS === 0n, { tx: tpEv.txHash, from: tpReceipt.from, level: tpEv.limit, mark: tpEv.actual, gasUsed: tpReceipt.gasUsed });
+  const attempts = (await api('GET', `/v1/accounts/${account}/stops`)).items;
+  check('stop executor recorded only simulated-then-mined triggers, with an estimated gas limit', attempts.length >= 1 && attempts.every((a: any) => a.status === 'mined' || a.status === 'simulation_reverted') && attempts.some((a: any) => a.status === 'mined' && BigInt(a.gasUsed) < BigInt(a.gasLimit)), attempts);
+  forkMark = startMark;
+  await pushMark();
+
+  // Leaders flatten (no follower position left for them), then closeAll via the relayer.
+  await leaderTrade(K.leader, CLOSE_LONG, (await position(leaderId)).lotLNS, 0);
+  await leaderTrade(K.leader2, CLOSE_LONG, (await position(leader2Id)).lotLNS, 0);
   const closeAll = await signAction(account, ACTION.CLOSE_ALL, pad('0x64', { size: 32 }));
   const closeRes = await api('POST', '/v1/relay/execute', { account, ...closeAll });
-  const finalPos = (await pub.readContract({ address: EXCHANGE, abi: perplExchangeAbi, functionName: 'getPositionV2', args: [BigInt(BTC), BigInt(perplId)] }))[0];
+  const finalPos = await position(perplId);
   check('closeAll via relayer leaves the follower flat', closeRes.status === 'success' && finalPos.lotLNS === 0n, { tx: closeRes.txHash });
 
-  // 7. Stats exclude team-run accounts; team-run listed separately.
+  // 9. Stats exclude team-run accounts; team-run listed separately.
   await sleep(2_000);
   const stats = await api('GET', '/v1/stats');
-  check('stats exclude team-run', stats.excludesTeamRun === true && stats.accountsCreated === 1 && stats.fundedAccounts === 0 && stats.copiesExecuted === 0 && stats.copiesBlocked === 0, { accountsCreated: stats.accountsCreated, copiesExecuted: stats.copiesExecuted });
-  check('team-run section lists demo copies', stats.teamRun.accounts.includes(account.toLowerCase()) && stats.teamRun.copiesExecuted >= 2 && stats.teamRun.copiesBlockedPerRule.LeverageTooHigh >= 1 && stats.teamRun.medianLatencyMs > 0, {
+  check('stats exclude team-run', stats.excludesTeamRun === true && stats.accountsCreated === 1 && stats.fundedAccounts === 0 && stats.copiesExecuted === 0 && stats.copiesBlocked === 0 && stats.stopsTriggered === 0, { accountsCreated: stats.accountsCreated, copiesExecuted: stats.copiesExecuted });
+  check('team-run section lists demo copies, blocks and stops', stats.teamRun.accounts.includes(account.toLowerCase()) && stats.teamRun.copiesExecuted >= 3 && stats.teamRun.copiesBlockedPerRule.LeverageTooHigh >= 1 && stats.teamRun.copiesBlockedPerRule.MarketHeldByOtherLeader >= 1 && stats.teamRun.copiesBlockedPerRule.EntryTooFar >= 1 && stats.teamRun.stopsTriggered >= 1 && stats.teamRun.medianLatencyMs > 0, {
     copiesExecuted: stats.teamRun.copiesExecuted,
     blocked: stats.teamRun.copiesBlockedPerRule,
+    stops: stats.teamRun.stopsTriggeredByKind,
     medianLatencyMs: stats.teamRun.medianLatencyMs,
-    matchNow: stats.teamRun.matchNowOrders,
   });
 
-  // 8. Ops surface.
+  // 10. Ops surface.
   const health = await api('GET', '/v1/health');
   const markets = await api('GET', '/v1/markets');
   const btc = markets.markets.find((m: any) => m.perpId === BTC);
   const metricsText = await (await fetch(`${API}/metrics`)).text();
-  check('health + metrics', health.ok && health.keeper?.address && /mirror_copies_submitted_total/.test(metricsText), { streams: health.streams, perpl: health.perpl, indexer: health.indexer });
+  check('health + metrics', health.ok && health.keeper?.address && health.stopExecutor?.enabled && /mirror_copies_submitted_total/.test(metricsText) && /mirror_stop_triggers_total/.test(metricsText), { streams: health.streams, perpl: health.perpl, nansen: health.nansen });
   say('markets[BTC]', { mark: btc?.markPNS, bid: btc?.bestBidPNS, ask: btc?.bestAskPNS, source: btc?.source, trades: btc?.recentTrades?.length });
-  const feedFinal = (await api('GET', `/v1/accounts/${account}/feed?limit=100`)).items;
+  const feedFinal = (await api('GET', `/v1/accounts/${account}/feed?limit=200`)).items;
   say('commit states', [...new Set(feedFinal.map((f: any) => f.commitState))]);
   stopStream();
   clearInterval(markTimer);

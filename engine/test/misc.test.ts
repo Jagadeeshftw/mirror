@@ -6,7 +6,10 @@ import { decodePositionEvent } from '../src/services/watcher.js';
 import { encryptForDevice, EXPO_TOKEN } from '../src/services/push.js';
 import { aggregate, maxDrawdownPct, score } from '../src/services/leaders.js';
 import { nansenAdjust } from '../src/nansen/client.js';
-import { encodeFollowData, encodeOrders } from '../src/domain/encode.js';
+import { encodeCloseMarket, encodeFollowData, encodeLevels, encodeOrders } from '../src/domain/encode.js';
+import { mirrorAccountAbi } from '../src/abi/MirrorAccount.js';
+import { decodeAbiParameters, decodeEventLog, encodeEventTopics as topicsOf, getAbiItem } from 'viem';
+import { BLOCK_REASONS, STOP_KINDS } from '../src/domain/types.js';
 
 function eventLog(name: string, values: Record<string, unknown>) {
   const item = perplExchangeAbi.find((e) => e.type === 'event' && e.name === name)! as { inputs: readonly { name: string; type: string }[] };
@@ -69,11 +72,42 @@ describe('leader ranking math', () => {
   });
 });
 
-describe('ABI encoding of match-now payloads', () => {
-  it('encodes MirrorOrder[] and (Policy, MirrorOrder[])', () => {
-    const o = { leaderAccountId: 1, perpId: 1, orderType: 0, lotLNS: 2n, pricePNS: 100n, leverageHdths: 300, maxMatches: 100, leaderRef: `0x${'00'.repeat(32)}` as Hex };
-    expect(encodeOrders([o]).length).toBe(2 + 64 * (2 + 8));
-    const data = encodeFollowData({ maxLeverageHdths: 300, maxSlippageBps: 80, dailyLossBps: 0, drawdownBps: 0, expiry: 1, leaders: [{ accountId: 1, ratioBps: 100 }], markets: [{ perpId: 1, maxNotionalCNS: 10n }] }, [o]);
-    expect(data.startsWith('0x')).toBe(true);
+describe('ABI encoding of owner action payloads', () => {
+  const o = { leaderAccountId: 1, perpId: 1, orderType: 0, lotLNS: 2n, pricePNS: 100n, leverageHdths: 300, maxMatches: 100, leaderRef: `0x${'00'.repeat(32)}` as Hex, leaderFillPNS: 99n };
+  const policy = {
+    maxLeverageHdths: 300, maxSlippageBps: 80, dailyLossBps: 0, drawdownBps: 0, expiry: 1, maxEntryDeviationBps: 50, stopSlippageBps: 150, flattenOnStop: true,
+    leaders: [{ accountId: 1, ratioBps: 100, budgetCNS: 5_000_000n, lossStopBps: 2_000 }], markets: [{ perpId: 1, maxNotionalCNS: 10n }],
+  };
+  it('encodes MirrorOrder[] with leaderFillPNS (9 words per order)', () => {
+    expect(encodeOrders([o]).length).toBe(2 + 64 * (2 + 9));
+  });
+  it('round-trips (Policy, MirrorOrder[]) with the new policy and leader fields', () => {
+    const item = getAbiItem({ abi: mirrorAccountAbi, name: 'follow' });
+    const [p, orders] = decodeAbiParameters(item.inputs, encodeFollowData(policy, [o]));
+    expect(p).toMatchObject({ maxEntryDeviationBps: 50, stopSlippageBps: 150, flattenOnStop: true, leaders: [{ accountId: 1, ratioBps: 100, budgetCNS: 5_000_000n, lossStopBps: 2_000 }] });
+    expect(orders[0]).toMatchObject({ leaderFillPNS: 99n });
+  });
+  it('encodes ACTION_SET_LEVELS and ACTION_CLOSE_MARKET payloads', () => {
+    const lv = { perpId: 1, side: 0 as const, stopLossPNS: 900n, takeProfitPNS: 1100n, slippageBps: 100 };
+    const [levels] = decodeAbiParameters(getAbiItem({ abi: mirrorAccountAbi, name: 'setLevels' }).inputs, encodeLevels([lv]));
+    expect(levels[0]).toMatchObject(lv);
+    expect(decodeAbiParameters([{ type: 'uint32' }, { type: 'uint16' }], encodeCloseMarket(16, 150))).toEqual([16, 150]);
+  });
+  it('enums match the contract (BlockReason appended to 20, StopKind)', () => {
+    expect(BLOCK_REASONS.length).toBe(21);
+    expect(BLOCK_REASONS.indexOf('EntryTooFar')).toBe(15);
+    expect(BLOCK_REASONS.indexOf('CloseBelowTarget')).toBe(20);
+    expect(STOP_KINDS).toEqual(['DailyLoss', 'Drawdown', 'LeaderLoss', 'StopLoss', 'TakeProfit']);
+  });
+  it('decodes Mirrored with its CopyProof', () => {
+    const item = getAbiItem({ abi: mirrorAccountAbi, name: 'Mirrored' });
+    const keeper = '0x0000000000000000000000000000000000000001';
+    const topics = topicsOf({ abi: mirrorAccountAbi, eventName: 'Mirrored', args: { keeper, leaderAccountId: 7, perpId: 1 } }) as Hex[];
+    const nonIndexed = item.inputs.filter((i) => !('indexed' in i && i.indexed));
+    const proof = { leaderFillPNS: 1n, leaderEntryPNS: 2n, markPNS: 3n, fillPNS: 4n, entryDeviationBps: -5 };
+    const data = encodeAbiParameters(nonIndexed, [0, 1n, 100n, 300, 0n, 1n, `0x${'ab'.repeat(32)}`, proof] as never);
+    const ev = decodeEventLog({ abi: mirrorAccountAbi, data, topics: topics as [Hex, ...Hex[]] });
+    expect(ev.eventName).toBe('Mirrored');
+    expect((ev.args as { proof: typeof proof }).proof).toEqual(proof);
   });
 });

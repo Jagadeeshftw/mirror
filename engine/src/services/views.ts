@@ -20,6 +20,9 @@ type AccountRow = {
   daily_loss_bps: number | null;
   drawdown_bps: number | null;
   expiry: number | null;
+  max_entry_deviation_bps: number | null;
+  stop_slippage_bps: number | null;
+  flatten_on_stop: number;
   paused: number;
   net_deposits: string;
   funded_block: number | null;
@@ -50,8 +53,9 @@ export class Views {
   async account(address: string) {
     const r = this.db.get<AccountRow>('SELECT * FROM accounts WHERE address = ?', address.toLowerCase());
     if (!r) return undefined;
-    const leaders = this.db.all<{ leader_id: number; ratio_bps: number }>('SELECT leader_id, ratio_bps FROM account_leaders WHERE account = ?', r.address);
-    const markets = this.db.all<{ perp_id: number; max_notional_cns: string }>('SELECT perp_id, max_notional_cns FROM account_markets WHERE account = ?', r.address);
+    const leaders = this.db.all<{ leader_id: number; ratio_bps: number; budget_cns: string; loss_stop_bps: number; stopped: number }>('SELECT * FROM account_leaders WHERE account = ?', r.address);
+    const markets = this.db.all<{ perp_id: number; max_notional_cns: string; halted: number }>('SELECT * FROM account_markets WHERE account = ?', r.address);
+    const levels = this.db.all<{ perp_id: number; side: number; stop_loss_pns: string; take_profit_pns: string; slippage_bps: number }>('SELECT * FROM account_levels WHERE account = ?', r.address);
     const addr = getAddress(r.address);
     let equity: bigint | null = null;
     let idle = 0n;
@@ -71,6 +75,7 @@ export class Views {
             markets.map(async (m) => {
               const p = await this.reads.position(m.perp_id, r.perpl_account_id!).catch(() => undefined);
               if (!p || p.lots === 0n) return undefined;
+              const holder = await this.reads.marketLeader(addr, m.perp_id).catch(() => null);
               return {
                 perpId: m.perp_id,
                 symbol: this.market.meta(m.perp_id)?.symbol ?? String(m.perp_id),
@@ -80,27 +85,27 @@ export class Views {
                 markPNS: p.mark.toString(),
                 depositCNS: p.depositCNS.toString(),
                 unrealizedPnlCNS: p.pnlCNS.toString(),
+                /** The leader whose copy opened this market (MirrorAccount.marketLeader). */
+                leaderAccountId: holder,
               };
             }),
           )
         ).filter((x): x is NonNullable<typeof x> => Boolean(x))
       : [];
 
-    // Attribute each open position's PnL to leaders by the net lots their copies added (Mirrored events).
-    const attribution = this.db.all<{ leader_id: number; perp_id: number; data: string }>(`SELECT leader_id, perp_id, data FROM feed WHERE account = ? AND kind = 'Mirrored'`, r.address);
-    const net = new Map<string, bigint>();
-    for (const a of attribution) {
-      const d = JSON.parse(a.data) as { lotsBefore: string; lotsAfter: string };
-      const k = `${a.perp_id}:${a.leader_id}`;
-      net.set(k, (net.get(k) ?? 0n) + BigInt(d.lotsAfter) - BigInt(d.lotsBefore));
-    }
-    const pnlByLeader = new Map<number, bigint>();
-    for (const p of positions) {
-      const shares = leaders.map((l) => ({ id: l.leader_id, lots: (net.get(`${p.perpId}:${l.leader_id}`) ?? 0n) > 0n ? net.get(`${p.perpId}:${l.leader_id}`)! : 0n }));
-      const total = shares.reduce((s, x) => s + x.lots, 0n);
-      if (total === 0n) continue;
-      for (const sh of shares) pnlByLeader.set(sh.id, (pnlByLeader.get(sh.id) ?? 0n) + (BigInt(p.unrealizedPnlCNS) * sh.lots) / total);
-    }
+    // Exact per-leader book from the contract: every market is attributed to one leader.
+    const pnlByLeader = r.perpl_account_id
+      ? (
+          await Promise.all(
+            leaders.map(async (l) => {
+              const b = await this.reads.leaderBook(addr, l.leader_id).catch(() => undefined);
+              return b
+                ? { leaderAccountId: l.leader_id, unrealizedPnlCNS: b.unrealizedCNS.toString(), realizedPnlCNS: b.realizedCNS.toString(), marginCNS: b.marginCNS.toString(), budgetCNS: l.budget_cns, stopped: b.stopped }
+                : undefined;
+            }),
+          )
+        ).filter((x): x is NonNullable<typeof x> => Boolean(x))
+      : [];
     const netDeposits = BigInt(r.net_deposits);
     return {
       address: addr,
@@ -125,12 +130,16 @@ export class Views {
             dailyLossBps: r.daily_loss_bps,
             drawdownBps: r.drawdown_bps,
             expiry: r.expiry,
-            leaders: leaders.map((l) => ({ accountId: l.leader_id, ratioBps: l.ratio_bps })),
-            markets: markets.map((m) => ({ perpId: m.perp_id, maxNotionalCNS: m.max_notional_cns })),
+            maxEntryDeviationBps: r.max_entry_deviation_bps ?? 0,
+            stopSlippageBps: r.stop_slippage_bps,
+            flattenOnStop: r.flatten_on_stop === 1,
+            leaders: leaders.map((l) => ({ accountId: l.leader_id, ratioBps: l.ratio_bps, budgetCNS: l.budget_cns, lossStopBps: l.loss_stop_bps, stopped: l.stopped === 1 })),
+            markets: markets.map((m) => ({ perpId: m.perp_id, maxNotionalCNS: m.max_notional_cns, halted: m.halted === 1 })),
           }
         : null,
+      levels: levels.map((v) => ({ perpId: v.perp_id, side: v.side === 0 ? 'long' : 'short', stopLossPNS: v.stop_loss_pns, takeProfitPNS: v.take_profit_pns, slippageBps: v.slippage_bps })),
       positions,
-      pnlByLeader: [...pnlByLeader].map(([leaderAccountId, pnl]) => ({ leaderAccountId, unrealizedPnlCNS: pnl.toString() })),
+      pnlByLeader,
     };
   }
 
@@ -163,6 +172,9 @@ export class Views {
       const copies = feed.filter((f) => f.kind === 'Mirrored' && f.leader_ref !== MATCH_NOW_REF);
       const matchNow = feed.filter((f) => f.kind === 'Mirrored' && f.leader_ref === MATCH_NOW_REF);
       const blocked = feed.filter((f) => f.kind === 'Blocked');
+      const stops = this.db.all<FeedRow>(`SELECT * FROM feed WHERE kind = 'StopTriggered'`).filter(inSet);
+      const stopsByKind: Record<string, number> = {};
+      for (const st of stops) stopsByKind[st.reason ?? 'Unknown'] = (stopsByKind[st.reason ?? 'Unknown'] ?? 0) + 1;
       const perRule: Record<string, number> = {};
       for (const b of blocked) perRule[b.reason ?? 'Unknown'] = (perRule[b.reason ?? 'Unknown'] ?? 0) + 1;
       const weekAgo = Math.floor(Date.now() / 1000) - 7 * 86_400;
@@ -176,6 +188,8 @@ export class Views {
         copiesBlocked: blocked.length,
         copiesBlockedPerRule: perRule,
         medianLatencyMs: median(copies.map((c) => c.latency_ms).filter((x): x is number => x !== null)),
+        stopsTriggered: stops.length,
+        stopsTriggeredByKind: stopsByKind,
         activeFollowers7d: active.length,
         executed: copies,
       };

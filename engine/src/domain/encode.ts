@@ -1,10 +1,11 @@
 import { encodeAbiParameters, getAbiItem, type Hex } from 'viem';
 import { mirrorAccountAbi } from '../abi/MirrorAccount.js';
-import type { MirrorOrder, Policy } from './types.js';
+import type { Level, MirrorOrder, Policy } from './types.js';
 
 const followItem = getAbiItem({ abi: mirrorAccountAbi, name: 'follow' });
 const policyParam = followItem.inputs[0];
 const ordersParam = followItem.inputs[1];
+const levelsParam = getAbiItem({ abi: mirrorAccountAbi, name: 'setLevels' }).inputs[0];
 
 export type PolicyStruct = {
   maxLeverageHdths: number;
@@ -12,7 +13,10 @@ export type PolicyStruct = {
   dailyLossBps: number;
   drawdownBps: number;
   expiry: number;
-  leaders: readonly { accountId: number; ratioBps: number }[];
+  maxEntryDeviationBps: number;
+  stopSlippageBps: number;
+  flattenOnStop: boolean;
+  leaders: readonly { accountId: number; ratioBps: number; budgetCNS: bigint; lossStopBps: number }[];
   markets: readonly { perpId: number; maxNotionalCNS: bigint }[];
 };
 
@@ -25,6 +29,7 @@ export type OrderStruct = {
   leverageHdths: number;
   maxMatches: number;
   leaderRef: Hex;
+  leaderFillPNS: bigint;
 };
 
 export const toPolicyStruct = (p: Policy): PolicyStruct => ({
@@ -33,7 +38,10 @@ export const toPolicyStruct = (p: Policy): PolicyStruct => ({
   dailyLossBps: p.dailyLossBps,
   drawdownBps: p.drawdownBps,
   expiry: p.expiry,
-  leaders: p.leaders.map((l) => ({ accountId: l.accountId, ratioBps: l.ratioBps })),
+  maxEntryDeviationBps: p.maxEntryDeviationBps,
+  stopSlippageBps: p.stopSlippageBps,
+  flattenOnStop: p.flattenOnStop,
+  leaders: p.leaders.map((l) => ({ accountId: l.accountId, ratioBps: l.ratioBps, budgetCNS: l.budgetCNS, lossStopBps: l.lossStopBps })),
   markets: p.markets.map((m) => ({ perpId: m.perpId, maxNotionalCNS: m.maxNotionalCNS })),
 });
 
@@ -46,6 +54,7 @@ export const toOrderStruct = (o: MirrorOrder): OrderStruct => ({
   leverageHdths: o.leverageHdths,
   maxMatches: o.maxMatches,
   leaderRef: o.leaderRef,
+  leaderFillPNS: o.leaderFillPNS,
 });
 
 /** abi.encode(MirrorOrder[]) — the ACTION_MATCH_NOW payload. */
@@ -60,6 +69,16 @@ export function encodeFollowData(p: Policy, orders: MirrorOrder[]): Hex {
 
 export function encodePolicy(p: Policy): Hex {
   return encodeAbiParameters([policyParam], [toPolicyStruct(p)]);
+}
+
+/** abi.encode(Level[]) — the ACTION_SET_LEVELS payload. A level with both prices zero clears that market. */
+export function encodeLevels(levels: Level[]): Hex {
+  return encodeAbiParameters([levelsParam], [levels.map((l) => ({ perpId: l.perpId, side: l.side, stopLossPNS: l.stopLossPNS, takeProfitPNS: l.takeProfitPNS, slippageBps: l.slippageBps }))]);
+}
+
+/** abi.encode(uint32 perpId, uint16 slippageBps) — the ACTION_CLOSE_MARKET payload. */
+export function encodeCloseMarket(perpId: number, slippageBps: number): Hex {
+  return encodeAbiParameters([{ type: 'uint32' }, { type: 'uint16' }], [perpId, slippageBps]);
 }
 
 export const ZERO_REF = `0x${'00'.repeat(32)}` as Hex;

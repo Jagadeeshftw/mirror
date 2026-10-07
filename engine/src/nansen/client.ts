@@ -46,15 +46,35 @@ export function nansenAdjust(p: NansenProfile | null): { bonus: number; flags: s
   return { bonus, flags };
 }
 
+/** How the client reaches Nansen: an API key, x402 pay-per-call, or not at all. */
+export type NansenMode = 'api_key' | 'x402' | 'off';
+
 /**
- * Nansen leader enrichment over x402 (USDC on Monad, eip155:143) with a per-call cap and a daily budget.
- * Labels need an API key (Nansen excludes the labels endpoint from x402) and are fetched only when one is set.
- * Results are cached; the ranking never waits on a paid call.
+ * The leader ranking's view of Nansen: a cached profile per address (null = no Nansen signal), never blocking.
+ * Ranking code depends only on this, so it works the same with an API key, with x402, or with neither.
  */
-export class NansenClient {
+export interface NansenSignal {
+  readonly mode: NansenMode;
+  get(address: string): NansenProfile | null;
+}
+
+/** No API key and no x402 payer: no Nansen signal, ranking unchanged. */
+export const noNansen: NansenSignal = { mode: 'off', get: () => null };
+
+/**
+ * Nansen leader enrichment. With NANSEN_API_KEY every call uses the key (and labels are fetched); if the key is
+ * refused (401/402/403) and an x402 payer is configured, that call falls back to x402 (USDC on Monad, eip155:143)
+ * under a per-call cap and a daily budget. Without a key, x402 only (labels are excluded from x402).
+ * Results are cached; the ranking never waits on a call.
+ */
+export class NansenClient implements NansenSignal {
   private inflight = new Set<string>();
 
   constructor(private readonly db: Db, private readonly o: NansenOptions, private readonly log: Logger) {}
+
+  get mode(): NansenMode {
+    return this.o.apiKey ? 'api_key' : this.o.payer ? 'x402' : 'off';
+  }
 
   cached(address: string): NansenProfile | null {
     const r = this.db.get<{ value: string; fetched_ms: number }>('SELECT value, fetched_ms FROM nansen_cache WHERE key = ?', `profile:${address.toLowerCase()}`);
@@ -89,11 +109,14 @@ export class NansenClient {
 
   private async post<T>(path: string, body: unknown): Promise<T | null> {
     const url = `${this.o.apiUrl}${path}`;
-    const init: RequestInit = { method: 'POST', headers: { 'content-type': 'application/json', ...(this.o.apiKey ? { apikey: this.o.apiKey } : {}) }, body: JSON.stringify(body) };
+    const init: RequestInit = { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
     if (this.o.apiKey) {
-      const res = await (this.o.fetchImpl ?? fetch)(url, init);
+      const res = await (this.o.fetchImpl ?? fetch)(url, { ...init, headers: { 'content-type': 'application/json', apikey: this.o.apiKey } });
       metrics.nansenCalls.inc({ path, outcome: String(res.status) });
-      return res.ok ? ((await res.json()) as T) : null;
+      if (res.ok) return (await res.json()) as T;
+      // A refused key (expired, out of credits) falls back to pay-per-call when a payer is configured.
+      if (!this.o.payer || ![401, 402, 403].includes(res.status)) return null;
+      this.log.warn({ path, status: res.status }, 'nansen API key refused; falling back to x402');
     }
     if (!this.o.payer) return null;
     const x: X402Options = {
@@ -143,4 +166,32 @@ export class NansenClient {
     );
     return profile;
   }
+}
+
+export interface NansenSignalConfig {
+  enabled: 'auto' | '0' | '1' | 'true' | 'false';
+  apiUrl: string;
+  apiKey?: string;
+  payer?: LocalAccount;
+  network: string;
+  maxPerCall: bigint;
+  dailyBudget: bigint;
+  cacheHours: number;
+  fetchImpl?: typeof fetch;
+}
+
+/**
+ * Picks the Nansen source from configuration: API key first (works as soon as NANSEN_API_KEY is set), x402 when
+ * a payer key is configured, otherwise no signal. NANSEN_ENABLED=0 forces it off.
+ */
+export function createNansenSignal(db: Db, c: NansenSignalConfig, log: Logger): NansenSignal {
+  const off = c.enabled === '0' || c.enabled === 'false';
+  const apiKey = c.apiKey?.trim() || undefined;
+  if (off || (!apiKey && !c.payer)) {
+    if (c.enabled === '1' || c.enabled === 'true') log.warn('NANSEN_ENABLED=1 but neither NANSEN_API_KEY nor NANSEN_PAYER_PRIVATE_KEY is set; no Nansen signal');
+    return noNansen;
+  }
+  const client = new NansenClient(db, { apiUrl: c.apiUrl, apiKey, payer: c.payer, network: c.network, maxPerCall: c.maxPerCall, dailyBudget: c.dailyBudget, cacheHours: c.cacheHours, fetchImpl: c.fetchImpl }, log);
+  log.info({ mode: client.mode, x402Fallback: Boolean(apiKey && c.payer) }, 'nansen enrichment on');
+  return client;
 }

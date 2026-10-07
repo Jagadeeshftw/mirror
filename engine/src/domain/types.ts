@@ -28,6 +28,12 @@ export const BLOCK_REASONS = [
   'DailyLossStop',
   'DrawdownStop',
   'LeverageTooLow',
+  'EntryTooFar',
+  'MarketHeldByOtherLeader',
+  'LeaderBudgetExceeded',
+  'LeaderLossStop',
+  'MarketHalted',
+  'CloseBelowTarget',
 ] as const;
 export type BlockReason = (typeof BLOCK_REASONS)[number];
 
@@ -40,7 +46,13 @@ export const ACTION = {
   SWEEP: 6,
   FOLLOW: 7,
   MATCH_NOW: 8,
+  SET_LEVELS: 9,
+  CLOSE_MARKET: 10,
 } as const;
+
+/** Mirrors MirrorAccount.StopKind (index = enum value). */
+export const STOP_KINDS = ['DailyLoss', 'Drawdown', 'LeaderLoss', 'StopLoss', 'TakeProfit'] as const;
+export type StopKind = (typeof STOP_KINDS)[number];
 
 export interface MirrorOrder {
   leaderAccountId: number;
@@ -51,11 +63,17 @@ export interface MirrorOrder {
   leverageHdths: number;
   maxMatches: number;
   leaderRef: Hex;
+  /** The leader's fill price as observed by the engine (0 if unknown); statistics only. */
+  leaderFillPNS: bigint;
 }
 
 export interface LeaderRule {
   accountId: number;
   ratioBps: number;
+  /** Margin budget for this leader's positions, collateral units (6 decimals); must be > 0. */
+  budgetCNS: bigint;
+  /** Leader loss stop as bps of the budget (0 = off). */
+  lossStopBps: number;
 }
 
 export interface MarketRule {
@@ -69,8 +87,23 @@ export interface Policy {
   dailyLossBps: number;
   drawdownBps: number;
   expiry: number;
+  /** Max distance of an opening copy's limit (and the mark) from the leader's average entry (0 = off). */
+  maxEntryDeviationBps: number;
+  /** Slippage bound for closes sent by triggered stops, 1..2000. */
+  stopSlippageBps: number;
+  /** Lets anyone flatten once an account or leader loss stop is hit. */
+  flattenOnStop: boolean;
   leaders: LeaderRule[];
   markets: MarketRule[];
+}
+
+/** Owner stop-loss / take-profit on the position in one market (MirrorAccount.Level). */
+export interface Level {
+  perpId: number;
+  side: Side;
+  stopLossPNS: bigint;
+  takeProfitPNS: bigint;
+  slippageBps: number;
 }
 
 export interface Position {

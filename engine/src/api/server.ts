@@ -67,6 +67,8 @@ export function buildServer(e: Engine, log: Logger) {
       perpl: { wsConnected: e.market.wsConnected, lastMarkAt: e.market.lastMarkAt, contextAgeMs: e.market.contextAgeMs() },
       indexer: { lagBlocks: e.registry?.lagBlocks() ?? null, cursor: e.registry?.cursor ?? null, accounts: e.registry?.all().length ?? 0, envio: await e.leaders.indexerStatus().catch(() => null) },
       copier: { busy: e.copier?.busy ?? 0 },
+      stopExecutor: { enabled: Boolean(e.stops) },
+      nansen: e.nansen.mode,
     };
   });
 
@@ -111,6 +113,13 @@ export function buildServer(e: Engine, log: Logger) {
     const account = addrParam((req.params as { account: string }).account);
     const q = z.object({ cursor: z.coerce.number().int().optional(), limit: z.coerce.number().int().min(1).max(200).default(50) }).parse(req.query);
     return e.views.feed(account, q.cursor, q.limit);
+  });
+
+  app.get('/v1/accounts/:account/stops', async (req) => {
+    const account = addrParam((req.params as { account: string }).account);
+    const q = z.object({ limit: z.coerce.number().int().min(1).max(200).default(50) }).parse(req.query);
+    const rows = e.db.all<Record<string, unknown>>('SELECT * FROM stop_triggers WHERE account = ? ORDER BY id DESC LIMIT ?', account.toLowerCase(), q.limit);
+    return { items: rows.map((r) => ({ kind: r.kind, scope: r.scope, status: r.status, txHash: r.tx_hash, sender: r.sender, error: r.error, gasUsed: r.gas_used, gasLimit: r.gas_limit, at: r.created_ms })) };
   });
 
   app.get('/v1/stats', async (req) => {

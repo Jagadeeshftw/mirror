@@ -2,7 +2,7 @@ import type { Db } from '../db.js';
 import type { Logger } from '../log.js';
 import type { Reads } from '../chain/reads.js';
 import type { MarketData } from '../perpl/market.js';
-import { nansenAdjust, type NansenClient, type NansenProfile } from '../nansen/client.js';
+import { nansenAdjust, type NansenProfile, type NansenSignal } from '../nansen/client.js';
 import type { RegistryLike } from './registry.js';
 
 export const WINDOWS: Record<string, number> = { '7d': 7 * 86_400, '30d': 30 * 86_400, '90d': 90 * 86_400 };
@@ -150,7 +150,8 @@ export function indexerScore(r: Pick<IndexerLeaderRow, 'pnlBps' | 'maxDrawdownBp
 /**
  * Leader ranking. With INDEXER_GRAPHQL_URL set, proxies to the Envio indexer; otherwise ranks on the fly from
  * Perpl position events the engine has stored (watcher live feed + LEADER_BACKFILL_BLOCKS of history), with
- * equity from the Exchange contract and Nansen enrichment when enabled.
+ * equity from the Exchange contract. Nansen enrichment comes through NansenSignal: API key, x402, or none (the
+ * score then has no Nansen term).
  */
 export class LeaderService {
   private addrCache = new Map<number, string | null>();
@@ -161,7 +162,7 @@ export class LeaderService {
     private readonly reads: Reads,
     private readonly market: MarketData,
     private readonly registry: RegistryLike,
-    private readonly nansen: NansenClient | undefined,
+    private readonly nansen: NansenSignal,
     private readonly indexerUrl: string | undefined,
     private readonly teamRunLeaderId: () => number,
     private readonly log: Logger,
@@ -202,7 +203,7 @@ export class LeaderService {
       const rows = lw
         .filter((r) => perpFilter === undefined || (r.leaderStats?.marketsTraded ?? []).map(Number).includes(perpFilter))
         .map((r) => {
-          const nansen = r.leaderStats?.address ? (this.nansen?.get(r.leaderStats.address) ?? null) : null;
+          const nansen = r.leaderStats?.address ? (this.nansen.get(r.leaderStats.address) ?? null) : null;
           const adj = nansenAdjust(nansen);
           return {
             accountId: Number(r.accountId),
@@ -223,7 +224,7 @@ export class LeaderService {
         })
         .sort((a, b) => (sort === 'pnl' ? b.pnlUsd - a.pnlUsd : sort === 'drawdown' ? a.maxDrawdownPct - b.maxDrawdownPct : b.score - a.score))
         .slice(0, limit);
-      return { source: 'indexer', window, sort, leaders: rows };
+      return { source: 'indexer', nansenSource: this.nansen.mode, window, sort, leaders: rows };
     }
 
     const since = Math.floor(Date.now() / 1000) - (WINDOWS[window] ?? WINDOWS['30d']!);
@@ -237,13 +238,13 @@ export class LeaderService {
     const candidates = stats.filter((s) => s.closes > 0 || s.trades >= 2).sort((a, b) => Number(b.pnlCNS - a.pnlCNS)).slice(0, Math.max(limit * 2, 50));
     const out = await Promise.all(candidates.map((s) => this.view(s)));
     const sorted = out.sort((a, b) => (sort === 'pnl' ? b.pnlUsd - a.pnlUsd : sort === 'drawdown' ? a.maxDrawdownPct - b.maxDrawdownPct : b.score - a.score));
-    return { source: 'engine', window, sort, eventsConsidered: rows.length, leaders: sorted.slice(0, limit) };
+    return { source: 'engine', nansenSource: this.nansen.mode, window, sort, eventsConsidered: rows.length, leaders: sorted.slice(0, limit) };
   }
 
   private async fromIndexerProfile(id: number, window: string, pa: IndexerProfile) {
     const st = pa.stats;
     const win = pa.windows?.find((w) => w.window === (INDEXER_WINDOW[window] ?? 'D30'));
-    const nansen = pa.address ? (this.nansen?.get(pa.address) ?? null) : null;
+    const nansen = pa.address ? (this.nansen.get(pa.address) ?? null) : null;
     const adj = nansenAdjust(nansen);
     const positions = await Promise.all(
       (pa.positions ?? []).map(async (p) => {
@@ -309,7 +310,7 @@ export class LeaderService {
     const pnlPct = Number((s.pnlCNS * 10_000n) / start) / 100;
     const dd = maxDrawdownPct(s.curve, start);
     const winRate = s.closes ? s.wins / s.closes : 0;
-    const nansen = address ? (this.nansen?.get(address) ?? null) : null;
+    const nansen = address ? (this.nansen.get(address) ?? null) : null;
     const adj = nansenAdjust(nansen);
     return {
       accountId: s.accountId,

@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS accounts (
   daily_loss_bps INTEGER,
   drawdown_bps INTEGER,
   expiry INTEGER,
+  max_entry_deviation_bps INTEGER,
+  stop_slippage_bps INTEGER,
+  flatten_on_stop INTEGER NOT NULL DEFAULT 0,
   paused INTEGER NOT NULL DEFAULT 0,
   net_deposits TEXT NOT NULL DEFAULT '0',
   funded_block INTEGER,
@@ -31,14 +34,41 @@ CREATE INDEX IF NOT EXISTS accounts_owner ON accounts(owner);
 
 CREATE TABLE IF NOT EXISTS account_leaders (
   account TEXT NOT NULL, leader_id INTEGER NOT NULL, ratio_bps INTEGER NOT NULL,
+  budget_cns TEXT NOT NULL DEFAULT '0',
+  loss_stop_bps INTEGER NOT NULL DEFAULT 0,
+  stopped INTEGER NOT NULL DEFAULT 0,  -- LeaderStopped seen since the last PolicyUpdated
   PRIMARY KEY (account, leader_id)
 );
 CREATE INDEX IF NOT EXISTS account_leaders_leader ON account_leaders(leader_id);
 
 CREATE TABLE IF NOT EXISTS account_markets (
   account TEXT NOT NULL, perp_id INTEGER NOT NULL, max_notional_cns TEXT NOT NULL,
+  halted INTEGER NOT NULL DEFAULT 0,   -- an owner level fired; cleared by the next PolicyUpdated
   PRIMARY KEY (account, perp_id)
 );
+
+-- Owner stop-loss / take-profit levels (LevelSet), watched by the stop executor.
+CREATE TABLE IF NOT EXISTS account_levels (
+  account TEXT NOT NULL, perp_id INTEGER NOT NULL, side INTEGER NOT NULL,
+  stop_loss_pns TEXT NOT NULL, take_profit_pns TEXT NOT NULL, slippage_bps INTEGER NOT NULL,
+  PRIMARY KEY (account, perp_id)
+);
+
+-- Stop executor attempts (simulated first; only a successful simulation is sent).
+CREATE TABLE IF NOT EXISTS stop_triggers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account TEXT NOT NULL,
+  kind TEXT NOT NULL,                 -- level | account | leader
+  scope INTEGER NOT NULL,             -- perpId, 0, or leader account id
+  status TEXT NOT NULL,               -- simulation_reverted | mined | reverted | failed
+  tx_hash TEXT,
+  sender TEXT,
+  error TEXT,
+  gas_used TEXT,
+  gas_limit TEXT,
+  created_ms INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS stop_triggers_account ON stop_triggers(account, id);
 
 CREATE TABLE IF NOT EXISTS feed (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,6 +109,7 @@ CREATE TABLE IF NOT EXISTS leader_fills (
   observed_ms INTEGER NOT NULL,
   lots_after TEXT,
   leverage INTEGER,
+  price TEXT,                         -- leader fill price from the Perpl event (copy proof leaderFillPNS)
   PRIMARY KEY (leader_ref, leader_id, perp_id)
 );
 
@@ -161,6 +192,18 @@ CREATE TABLE IF NOT EXISTS nansen_spend (
 );
 `;
 
+/** Columns added after the first schema; applied to existing databases on open (idempotent). */
+const COLUMN_MIGRATIONS: Array<[table: string, column: string, decl: string]> = [
+  ['accounts', 'max_entry_deviation_bps', 'INTEGER'],
+  ['accounts', 'stop_slippage_bps', 'INTEGER'],
+  ['accounts', 'flatten_on_stop', 'INTEGER NOT NULL DEFAULT 0'],
+  ['account_leaders', 'budget_cns', "TEXT NOT NULL DEFAULT '0'"],
+  ['account_leaders', 'loss_stop_bps', 'INTEGER NOT NULL DEFAULT 0'],
+  ['account_leaders', 'stopped', 'INTEGER NOT NULL DEFAULT 0'],
+  ['account_markets', 'halted', 'INTEGER NOT NULL DEFAULT 0'],
+  ['leader_fills', 'price', 'TEXT'],
+];
+
 export type Row = Record<string, SQLInputValue>;
 
 export class Db {
@@ -170,6 +213,14 @@ export class Db {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
     this.sql = new DatabaseSync(path);
     this.sql.exec(SCHEMA);
+    this.migrate();
+  }
+
+  private migrate() {
+    for (const [table, column, decl] of COLUMN_MIGRATIONS) {
+      const cols = this.all<{ name: string }>(`PRAGMA table_info(${table})`);
+      if (!cols.some((c) => c.name === column)) this.sql.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${decl}`);
+    }
   }
 
   all<T = Row>(query: string, ...params: SQLInputValue[]): T[] {

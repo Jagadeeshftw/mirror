@@ -17,9 +17,15 @@ export interface SendRequest {
   data: Hex;
   value?: bigint;
   label: string;
-  /** Skip estimation and use this limit (already including headroom). */
-  gas?: bigint;
+  /**
+   * Which headroom the estimate gets. 'book' is for calls whose gas depends on the Perpl book or on prices
+   * (keeper copies, stop triggers, match now), which can move between estimate and inclusion. There is
+   * deliberately no way to pass a gas limit: every limit is Monad's own eth_estimateGas x headroom.
+   */
+  gasProfile?: GasProfile;
 }
+
+export type GasProfile = 'standard' | 'book';
 
 export interface SendResult {
   hash: Hex;
@@ -51,7 +57,10 @@ export class SendError extends Error {
 export interface SenderOptions {
   chainId: number;
   priorityFeeWei: bigint;
+  /** Headroom over eth_estimateGas for ordinary calls (relays, demo orders). */
   gasMultiplier: number;
+  /** Headroom for book- and price-dependent calls (keeper copies, stop triggers). */
+  bookGasMultiplier: number;
   timeoutMs: number;
   circuitFailures: number;
   circuitCooldownMs: number;
@@ -76,8 +85,9 @@ export class FeeOracle {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Signs locally and submits one signer's transactions: pipelined nonces, explicit gas limits (Monad charges the
- * limit), EIP-1559 fees, eth_sendRawTransactionSync with a sendRawTransaction + receipt fallback, retries on
+ * Signs locally and submits one signer's transactions: pipelined nonces, gas limits from the configured
+ * Monad RPC's eth_estimateGas plus headroom and nothing else (Monad charges the full limit, so a limit priced
+ * anywhere else is either wasted MON or an out-of-gas revert), EIP-1559 fees, eth_sendRawTransactionSync with a sendRawTransaction + receipt fallback, retries on
  * nonce/fee/timeout errors and a circuit breaker after repeated failures.
  */
 export class TxSender {
@@ -108,10 +118,15 @@ export class TxSender {
     return Date.now() < this.openUntil;
   }
 
-  async estimate(req: SendRequest): Promise<bigint> {
+  multiplierFor(profile: GasProfile = 'standard'): number {
+    return profile === 'book' ? this.opts.bookGasMultiplier : this.opts.gasMultiplier;
+  }
+
+  /** Gas limit for `req`: the configured RPC's eth_estimateGas from this signer, times the profile's headroom. */
+  async estimate(req: Pick<SendRequest, 'to' | 'data' | 'value' | 'gasProfile'>): Promise<bigint> {
     try {
       const est = await this.client.estimateGas({ account: this.address, to: req.to, data: req.data, value: req.value });
-      return withHeadroom(est, this.opts.gasMultiplier);
+      return withHeadroom(est, this.multiplierFor(req.gasProfile));
     } catch (err) {
       throw new SimulationError(decodeRevert(err));
     }
@@ -119,7 +134,7 @@ export class TxSender {
 
   async send(req: SendRequest): Promise<SendResult> {
     if (this.circuitOpen) throw new CircuitOpenError(`${this.name} circuit open`);
-    const gas = req.gas ?? (await this.estimate(req));
+    const gas = await this.estimate(req);
     let nonce = await this.nonces.allocate();
     let bump = 100n;
     let lastHash: Hex | undefined;
@@ -262,15 +277,19 @@ export class TxSender {
     return this.client.waitForTransactionReceipt({ hash, timeout, pollingInterval: 200, retryCount: 0 });
   }
 
-  /** Burns a released nonce with a zero-value self transfer so later pipelined transactions are not stuck. */
+  /**
+   * Burns a released nonce with a zero-value self transfer so later pipelined transactions are not stuck. The
+   * limit is estimated like every other transaction.
+   */
   private async fillGap(nonce: number) {
     try {
+      const gas = await this.estimate({ to: this.address, data: '0x', value: 0n });
       const base = await this.fees.get();
       const raw = await this.account.signTransaction({
         chainId: this.opts.chainId,
         type: 'eip1559',
         nonce,
-        gas: 21_000n,
+        gas,
         maxFeePerGas: base * 2n + this.opts.priorityFeeWei,
         maxPriorityFeePerGas: this.opts.priorityFeeWei,
         to: this.address,
@@ -296,7 +315,9 @@ export class TxSender {
   }
 }
 
+/** estimate x multiplier, rounded up. Multipliers below 1 are refused: a limit under the estimate reverts. */
 export function withHeadroom(estimate: bigint, multiplier: number): bigint {
+  if (!(multiplier >= 1)) throw new Error(`gas multiplier must be >= 1 (got ${multiplier})`);
   const m = BigInt(Math.round(multiplier * 1000));
   return (estimate * m + 999n) / 1000n;
 }

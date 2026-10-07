@@ -91,6 +91,8 @@ export interface LeaderChange {
   increased: boolean;
   leverageHdths: number | undefined;
   expectedLotsAfter: bigint | undefined;
+  /** The leader's fill price from the event (open, increase, invert, close), recorded as leaderFillPNS. */
+  fillPNS: bigint | undefined;
 }
 
 /**
@@ -149,9 +151,11 @@ export class LeaderWatcher {
     if (!live || !this.isFollowed(ev.accountId)) return;
 
     metrics.leaderEvents.inc({ kind: ev.kind });
+    // Liquidation and deleverage prices are not the leader's own fill.
+    const fill = ev.kind === 'liquidate' || ev.kind === 'deleverage' ? undefined : ev.pricePNS;
     this.db.run(
-      'INSERT OR IGNORE INTO leader_fills (leader_ref, leader_id, perp_id, kind, block, observed_ms, lots_after, leverage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      l.transactionHash, ev.accountId, ev.perpId, ev.kind, l.blockNumber, l.observedMs, ev.lotsAfter?.toString() ?? null, ev.leverageHdths ?? null,
+      'INSERT OR IGNORE INTO leader_fills (leader_ref, leader_id, perp_id, kind, block, observed_ms, lots_after, leverage, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      l.transactionHash, ev.accountId, ev.perpId, ev.kind, l.blockNumber, l.observedMs, ev.lotsAfter?.toString() ?? null, ev.leverageHdths ?? null, fill?.toString() ?? null,
     );
     this.log.info(
       { leader: ev.accountId, perpId: ev.perpId, kind: ev.kind, lotsAfter: ev.lotsAfter?.toString(), leverageHdths: ev.leverageHdths, tx: l.transactionHash, block: l.blockNumber, commitState: l.commitState },
@@ -169,6 +173,7 @@ export class LeaderWatcher {
       increased: (prev?.increased ?? false) || ev.increased,
       leverageHdths: ev.leverageHdths ?? prev?.leverageHdths,
       expectedLotsAfter: ev.lotsAfter ?? prev?.expectedLotsAfter,
+      fillPNS: fill ?? prev?.fillPNS,
     };
     this.pending.set(key, change);
     if (!prev) {

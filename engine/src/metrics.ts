@@ -92,6 +92,7 @@ export const metrics = {
   relayCalls: reg(new Counter('mirror_relay_calls_total', 'Relay calls by kind and outcome')),
   demoCycles: reg(new Counter('mirror_demo_cycles_total', 'Demo cycles by kind and outcome')),
   nansenCalls: reg(new Counter('mirror_nansen_calls_total', 'Nansen calls by endpoint and outcome')),
+  stopTriggers: reg(new Counter('mirror_stop_triggers_total', 'Stop executor attempts by kind and outcome')),
 };
 
 export function renderMetrics(): string {

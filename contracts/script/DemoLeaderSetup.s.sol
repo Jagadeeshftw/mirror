@@ -7,10 +7,14 @@ import {IPerplExchange} from "../src/interfaces/IPerplExchange.sol";
 import {IAuthorizedToken} from "../src/interfaces/IAuthorizedToken.sol";
 
 /// Opens the team-run demo leader's Perpl account: approves AUSD and calls Exchange.createAccount from
-/// the broadcasting EOA. Run by the wallet owner (it deposits real funds):
+/// the broadcasting EOA. Run by the wallet owner (it deposits real funds).
 ///
-///   forge script script/DemoLeaderSetup.s.sol --rpc-url https://rpc.monad.xyz \
-///     --private-key $OPS_PRIVATE_KEY --broadcast --gas-estimate-multiplier 120
+/// Do not broadcast this with forge on Monad: forge prices gas with its own Ethereum-style simulation, and Monad
+/// charges the full gas limit. Send transactions to Monad with scripts/deploy-contracts.mjs, which takes every
+/// gas limit from Monad's own eth_estimateGas plus headroom. On a local anvil fork:
+///
+///   forge script script/DemoLeaderSetup.s.sol --rpc-url http://127.0.0.1:8545 \
+///     --private-key <anvil test key> --broadcast --disable-code-size-limit
 ///
 /// Env: DEMO_LEADER_DEPOSIT (6-decimal units, default 10_000_000 = 10.00 AUSD, Perpl's minimum).
 contract DemoLeaderSetup is Script {

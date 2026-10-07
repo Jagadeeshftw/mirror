@@ -29,6 +29,7 @@ export interface FeedRow {
 }
 
 export function feedJson(r: FeedRow, explorerTx: string) {
+  const data = r.data ? (JSON.parse(r.data) as Record<string, unknown>) : null;
   return {
     id: r.id,
     account: r.account,
@@ -54,7 +55,9 @@ export function feedJson(r: FeedRow, explorerTx: string) {
     keeper: r.keeper,
     amount: r.amount,
     latencyMs: r.latency_ms,
-    data: r.data ? JSON.parse(r.data) : null,
+    /** Mirrored only: leader fill and entry, mark, follower fill and entry deviation, as emitted onchain. */
+    proof: (data?.proof as Record<string, unknown> | undefined) ?? null,
+    data,
   };
 }
 

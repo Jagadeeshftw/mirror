@@ -4,7 +4,8 @@ import { mirrorAccountAbi } from '../abi/MirrorAccount.js';
 import { mirrorAccountFactoryAbi } from '../abi/MirrorAccountFactory.js';
 import { authTokenAbi } from '../abi/erc20.js';
 import { decodeRevert } from '../chain/errors.js';
-import type { TxSender, SendResult } from '../chain/sender.js';
+import type { GasProfile, TxSender, SendResult } from '../chain/sender.js';
+import { ACTION } from '../domain/types.js';
 import type { Logger } from '../log.js';
 import { metrics } from '../metrics.js';
 
@@ -81,9 +82,13 @@ export interface RelayResult {
   [k: string]: unknown;
 }
 
+/** Owner actions that trade on the Perpl book; their gas depends on the book, so they get the book headroom. */
+const BOOK_ACTIONS = new Set<number>([ACTION.CLOSE_ALL, ACTION.EXCHANGE_CALL, ACTION.FOLLOW, ACTION.MATCH_NOW, ACTION.CLOSE_MARKET]);
+
 /**
  * Gasless relayer: every call is simulated with eth_call from the relayer first (reverts are returned to the
- * client, decoded, and nothing is sent), then submitted with an explicit gas limit (estimate x 1.2).
+ * client, decoded, and nothing is sent), then submitted with a gas limit from Monad's eth_estimateGas times
+ * headroom (GAS_LIMIT_MULTIPLIER, or BOOK_GAS_LIMIT_MULTIPLIER for actions that trade).
  */
 export class Relayer {
   constructor(
@@ -98,7 +103,7 @@ export class Relayer {
     return this.sender.address;
   }
 
-  private async simulateAndSend(kind: string, to: Address, data: Hex): Promise<SendResult> {
+  private async simulateAndSend(kind: string, to: Address, data: Hex, gasProfile: GasProfile = 'standard'): Promise<SendResult> {
     try {
       await this.client.call({ account: this.sender.address, to, data });
     } catch (err) {
@@ -106,7 +111,7 @@ export class Relayer {
       metrics.relayCalls.inc({ kind, outcome: 'simulation_reverted' });
       throw new RelayError(400, `simulation reverted: ${r.message}`, { error: r.name, args: r.args.map(String) });
     }
-    const res = await this.sender.send({ to, data, label: `relay:${kind}` });
+    const res = await this.sender.send({ to, data, label: `relay:${kind}`, gasProfile });
     metrics.relayCalls.inc({ kind, outcome: res.status });
     this.log.info({ kind, to, tx: res.hash, status: res.status, gasUsed: res.gasUsed.toString(), gasLimit: res.gasLimit.toString() }, 'relayed');
     return res;
@@ -164,7 +169,8 @@ export class Relayer {
       functionName: 'execute',
       args: [{ kind: b.action.kind, data: b.action.data, nonce: b.action.nonce, deadline: b.action.deadline }, b.signature],
     });
-    return this.result(await this.simulateAndSend(`execute_${b.action.kind}`, b.account, data), { account: b.account, kind: b.action.kind });
+    const profile: GasProfile = BOOK_ACTIONS.has(b.action.kind) ? 'book' : 'standard';
+    return this.result(await this.simulateAndSend(`execute_${b.action.kind}`, b.account, data, profile), { account: b.account, kind: b.action.kind });
   }
 
   async transfer(b: z.infer<typeof TransferBody>): Promise<RelayResult> {

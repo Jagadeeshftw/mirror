@@ -9,13 +9,17 @@ import {KeeperRegistry} from "../src/KeeperRegistry.sol";
 import {MirrorAccountFactory} from "../src/MirrorAccountFactory.sol";
 
 /// Deploys KeeperRegistry and MirrorAccountFactory (which deploys the MirrorAccount implementation) and
-/// registers the keeper set.
+/// registers the keeper set. For local forks and tests only.
 ///
-///   forge script script/Deploy.s.sol --rpc-url $MONAD_RPC_URL --private-key $OPS_PRIVATE_KEY \
-///     --broadcast --verify --verifier sourcify   (see docs/deploy.md)
+/// Do not broadcast this with forge on Monad: forge sizes gas limits from its own Ethereum-priced simulation, and
+/// Monad charges the full gas limit. Deploy to Monad testnet or mainnet with scripts/deploy-contracts.mjs, which
+/// takes every limit from Monad's own eth_estimateGas plus headroom. On a local anvil fork:
+///
+///   forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --private-key <anvil test key> \
+///     --broadcast --disable-code-size-limit
 ///
 /// Env: PERPL_EXCHANGE, COLLATERAL_TOKEN, DEPOSIT_CAP (6-decimal units), KEEPERS (comma-separated),
-///      WRITE_DEPLOYMENT=true to record deployments/<chainId>.json (set it only for the real broadcast).
+///      WRITE_DEPLOYMENT=true to record deployments/<chainId>.json.
 contract Deploy is Script {
     function run() external returns (KeeperRegistry registry, MirrorAccountFactory factory) {
         address exchange = vm.envOr("PERPL_EXCHANGE", address(0x34B6552d57a35a1D042CcAe1951BD1C370112a6F));

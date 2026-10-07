@@ -20,7 +20,8 @@ import { LeaderService } from './services/leaders.js';
 import { Views } from './services/views.js';
 import { PushService } from './services/push.js';
 import { RateLimiter } from './services/ratelimit.js';
-import { NansenClient } from './nansen/client.js';
+import { createNansenSignal, type NansenSignal } from './nansen/client.js';
+import { StopExecutor } from './services/stops.js';
 import { mirrorAccountFactoryAbi } from './abi/MirrorAccountFactory.js';
 
 export interface Engine {
@@ -45,7 +46,8 @@ export interface Engine {
   leaders: LeaderService;
   views: Views;
   push: PushService;
-  nansen?: NansenClient;
+  nansen: NansenSignal;
+  stops?: StopExecutor;
   balances: Map<string, bigint>;
   depositCap?: bigint;
   startedMs: number;
@@ -81,6 +83,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     chainId: cfg.chainId,
     priorityFeeWei: BigInt(Math.round(env.PRIORITY_FEE_GWEI * 1e9)),
     gasMultiplier: env.GAS_LIMIT_MULTIPLIER,
+    bookGasMultiplier: env.BOOK_GAS_LIMIT_MULTIPLIER,
     timeoutMs: env.TX_TIMEOUT_MS,
     circuitFailures: env.CIRCUIT_FAILURES,
     circuitCooldownMs: env.CIRCUIT_COOLDOWN_MS,
@@ -131,16 +134,21 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
         followerAccount: cfg.demoFollowerAccount,
       }, log.child({ mod: 'demo' }))
     : undefined;
-  const nansen = env.NANSEN_ENABLED
-    ? new NansenClient(db, {
-        apiUrl: env.NANSEN_API_URL,
-        apiKey: env.NANSEN_API_KEY,
-        payer: env.NANSEN_PAYER_PRIVATE_KEY ? privateKeyToAccount(env.NANSEN_PAYER_PRIVATE_KEY as `0x${string}`) : undefined,
-        network: env.NANSEN_NETWORK,
-        maxPerCall: BigInt(env.NANSEN_MAX_PER_CALL),
-        dailyBudget: BigInt(env.NANSEN_DAILY_BUDGET),
-        cacheHours: env.NANSEN_CACHE_HOURS,
-      }, log.child({ mod: 'nansen' }))
+  // API key when set, else x402 when a payer is set, else no Nansen signal (ranking unaffected).
+  const nansen = createNansenSignal(db, {
+    enabled: env.NANSEN_ENABLED,
+    apiUrl: env.NANSEN_API_URL,
+    apiKey: env.NANSEN_API_KEY,
+    payer: env.NANSEN_PAYER_PRIVATE_KEY ? privateKeyToAccount(env.NANSEN_PAYER_PRIVATE_KEY as `0x${string}`) : undefined,
+    network: env.NANSEN_NETWORK,
+    maxPerCall: BigInt(env.NANSEN_MAX_PER_CALL),
+    dailyBudget: BigInt(env.NANSEN_DAILY_BUDGET),
+    cacheHours: env.NANSEN_CACHE_HOURS,
+  }, log.child({ mod: 'nansen' }));
+  // Stop triggers are permissionless; a dedicated signer if configured, else the keeper pool.
+  const stopSender = env.STOP_EXECUTOR_PRIVATE_KEY ? senderFor(env.STOP_EXECUTOR_PRIVATE_KEY as `0x${string}`, 'stops') : undefined;
+  const stops = registry && env.STOP_EXECUTOR_ENABLED && (stopSender || keepers)
+    ? new StopExecutor(db, reads, () => registry.all(), () => stopSender ?? keepers!.pick(), bus, { intervalMs: env.STOP_CHECK_MS, retryMs: env.STOP_RETRY_MS }, log.child({ mod: 'stops' }), (res) => registry.handleReceipt(res))
     : undefined;
   const fallbackRegistry = registry ?? nullRegistry(cfg.teamRun);
   const leaders = new LeaderService(db, reads, market, fallbackRegistry, nansen, env.INDEXER_GRAPHQL_URL, () => demo?.leaderAccountId ?? 0, log.child({ mod: 'leaders' }));
@@ -163,7 +171,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
 
   const engine: Engine = {
     cfg, db, client, streams, reads, market, bus, limiter, fees, keepers, relayerSender, registry, watcher, copier, tracker, relayer, quote, demo,
-    leaders, views, push, nansen, balances, startedMs: Date.now(),
+    leaders, views, push, nansen, stops, balances, startedMs: Date.now(),
     async start() {
       const id = await client.getChainId();
       if (id !== cfg.chainId) throw new Error(`RPC chain id ${id} != configured ${cfg.chainId}`);
@@ -174,6 +182,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
       await watcher.start(env.LEADER_BACKFILL_BLOCKS);
       if (registry) registry.onLeadersChanged = () => log.debug({ leaders: [...registry.leaderIds()] }, 'leader set changed');
       await demo?.init();
+      if (stops) streams.onHead(() => stops.kick());
       if (cfg.factory) {
         engine.depositCap = await client.readContract({ address: cfg.factory, abi: mirrorAccountFactoryAbi, functionName: 'depositCap' }).catch(() => undefined);
       }
@@ -191,6 +200,10 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
           demoLeader: demoLeader?.address ?? null,
           demoFollower: cfg.demoFollowerAccount ?? null,
           leaders: registry ? [...registry.leaderIds()] : [],
+          stopExecutor: stops ? (stopSender?.address ?? 'keeper pool') : null,
+          nansen: nansen.mode,
+          gasMultiplier: env.GAS_LIMIT_MULTIPLIER,
+          bookGasMultiplier: env.BOOK_GAS_LIMIT_MULTIPLIER,
         },
         'engine started',
       );

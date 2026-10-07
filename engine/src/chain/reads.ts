@@ -2,7 +2,7 @@ import type { Address, PublicClient } from 'viem';
 import { perplExchangeAbi } from '../abi/PerplExchange.js';
 import { mirrorAccountAbi } from '../abi/MirrorAccount.js';
 import { authTokenAbi } from '../abi/erc20.js';
-import type { Side } from '../domain/types.js';
+import type { Level, Side } from '../domain/types.js';
 
 export interface PerplPosition {
   side: Side;
@@ -24,8 +24,11 @@ export interface AccountState {
   maxSlippageBps: number;
   dailyLossBps: number;
   drawdownBps: number;
-  leaders: { accountId: number; ratioBps: number }[];
-  markets: { perpId: number; allowed: boolean; lotDecimals: number; priceDecimals: number; maxNotionalCNS: bigint }[];
+  maxEntryDeviationBps: number;
+  stopSlippageBps: number;
+  flattenOnStop: boolean;
+  leaders: { accountId: number; ratioBps: number; budgetCNS: bigint; lossStopBps: number }[];
+  markets: { perpId: number; allowed: boolean; halted: boolean; lotDecimals: number; priceDecimals: number; maxNotionalCNS: bigint }[];
   equity: bigint;
   riskDay: number;
   dayStartEquity: bigint;
@@ -33,6 +36,19 @@ export interface AccountState {
   netDeposits: bigint;
   idleBalance: bigint;
   actionNonce: bigint;
+}
+
+export interface LeaderBook {
+  marginCNS: bigint;
+  unrealizedCNS: bigint;
+  realizedCNS: bigint;
+  stopped: boolean;
+}
+
+export interface OraclePrice {
+  oraclePNS: bigint;
+  /** Same freshness rule as MirrorAccount._trustedMark. */
+  fresh: boolean;
 }
 
 export class Reads {
@@ -86,7 +102,7 @@ export class Reads {
   async account(address: Address): Promise<AccountState> {
     const c = { address, abi: mirrorAccountAbi } as const;
     const r = this.client;
-    const [owner, perplAccountId, paused, expiry, maxLev, maxSlip, dailyLoss, drawdown, leaders, marketIds, equity, riskDay, dayStart, hwm, netDeposits, actionNonce, idle] =
+    const [owner, perplAccountId, paused, expiry, maxLev, maxSlip, dailyLoss, drawdown, maxEntryDev, stopSlip, flatten, leaders, marketIds, equity, riskDay, dayStart, hwm, netDeposits, actionNonce, idle] =
       await Promise.all([
         r.readContract({ ...c, functionName: 'owner' }),
         r.readContract({ ...c, functionName: 'perplAccountId' }),
@@ -96,6 +112,9 @@ export class Reads {
         r.readContract({ ...c, functionName: 'maxSlippageBps' }),
         r.readContract({ ...c, functionName: 'dailyLossBps' }),
         r.readContract({ ...c, functionName: 'drawdownBps' }),
+        r.readContract({ ...c, functionName: 'maxEntryDeviationBps' }),
+        r.readContract({ ...c, functionName: 'stopSlippageBps' }),
+        r.readContract({ ...c, functionName: 'flattenOnStop' }),
         r.readContract({ ...c, functionName: 'leaders' }),
         r.readContract({ ...c, functionName: 'marketIds' }),
         r.readContract({ ...c, functionName: 'equity' }),
@@ -108,8 +127,8 @@ export class Reads {
       ]);
     const markets = await Promise.all(
       marketIds.map(async (id) => {
-        const [allowed, lotDecimals, priceDecimals, maxNotionalCNS] = await r.readContract({ ...c, functionName: 'markets', args: [BigInt(id)] });
-        return { perpId: Number(id), allowed, lotDecimals, priceDecimals, maxNotionalCNS };
+        const [allowed, halted, lotDecimals, priceDecimals, maxNotionalCNS] = await r.readContract({ ...c, functionName: 'markets', args: [BigInt(id)] });
+        return { perpId: Number(id), allowed, halted, lotDecimals, priceDecimals, maxNotionalCNS };
       }),
     );
     return {
@@ -122,7 +141,10 @@ export class Reads {
       maxSlippageBps: maxSlip,
       dailyLossBps: dailyLoss,
       drawdownBps: drawdown,
-      leaders: leaders.map((l) => ({ accountId: Number(l.accountId), ratioBps: Number(l.ratioBps) })),
+      maxEntryDeviationBps: maxEntryDev,
+      stopSlippageBps: stopSlip,
+      flattenOnStop: flatten,
+      leaders: leaders.map((l) => ({ accountId: Number(l.accountId), ratioBps: Number(l.ratioBps), budgetCNS: l.budgetCNS, lossStopBps: Number(l.lossStopBps) })),
       markets,
       equity,
       riskDay: Number(riskDay),
@@ -132,5 +154,35 @@ export class Reads {
       idleBalance: idle,
       actionNonce,
     };
+  }
+
+  /** MirrorAccount.marketLeader(perpId): the leader whose copy opened the position held in the market. */
+  async marketLeader(account: Address, perpId: number): Promise<number> {
+    return Number(await this.client.readContract({ address: account, abi: mirrorAccountAbi, functionName: 'marketLeader', args: [BigInt(perpId)] }));
+  }
+
+  async leaderBook(account: Address, leaderAccountId: number): Promise<LeaderBook> {
+    const [marginCNS, unrealizedCNS, realizedCNS, stopped] = await this.client.readContract({ address: account, abi: mirrorAccountAbi, functionName: 'leaderBook', args: [leaderAccountId] });
+    return { marginCNS, unrealizedCNS, realizedCNS, stopped };
+  }
+
+  async level(account: Address, perpId: number): Promise<Level> {
+    const l = await this.client.readContract({ address: account, abi: mirrorAccountAbi, functionName: 'level', args: [BigInt(perpId)] });
+    return { perpId: Number(l.perpId), side: (l.side === 1 ? 1 : 0) as Side, stopLossPNS: l.stopLossPNS, takeProfitPNS: l.takeProfitPNS, slippageBps: l.slippageBps };
+  }
+
+  /** MirrorAccount.targetLots view (the contract's own number, used to cross-check the planner). */
+  async targetLots(account: Address, perpId: number, leaderAccountId: number, side: Side): Promise<bigint> {
+    return this.client.readContract({ address: account, abi: mirrorAccountAbi, functionName: 'targetLots', args: [BigInt(perpId), leaderAccountId, side] });
+  }
+
+  /** Perpl's Chainlink price for a market and whether the stop triggers would treat it as fresh. */
+  async oracle(perpId: number): Promise<OraclePrice> {
+    const [info, block] = await Promise.all([
+      this.client.readContract({ address: this.exchange, abi: perplExchangeAbi, functionName: 'getPerpetualInfoV2', args: [BigInt(perpId)] }),
+      this.client.getBlock(),
+    ]);
+    const fresh = !info.ignOracle && info.oraclePNS !== 0n && info.oracleTimestampSec + info.refPriceMaxAgeSec >= block.timestamp;
+    return { oraclePNS: info.oraclePNS, fresh };
   }
 }
