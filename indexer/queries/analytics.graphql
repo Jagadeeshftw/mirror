@@ -1,0 +1,111 @@
+# GraphQL operations the Perpl analytics view (web /perpl and /perpl/wallet/[account]) runs against the
+# indexer (Hasura, role "public"). Numeric (BigInt) values come back as strings.
+# web/lib/perpl/queries.ts holds the same operations; web/lib/perpl/queries.test.ts keeps them in sync.
+# Hasura's public role has no _aggregate fields, so counts and sums are done client-side.
+
+# Indexed range: the window every indexer-backed number covers.
+query AnalyticsCoverage {
+  chain_metadata {
+    start_block
+    latest_processed_block
+    block_height
+  }
+  first: PositionEvent(order_by: { blockNumber: asc }, limit: 1) {
+    blockNumber
+    timestamp
+  }
+  last: PositionEvent(order_by: { blockNumber: desc }, limit: 1) {
+    blockNumber
+    timestamp
+  }
+}
+
+# Active traders: distinct accounts with any position event since $since (unix seconds).
+query ActiveTraders($since: Int!, $limit: Int! = 20000) {
+  PositionEvent(distinct_on: accountId, where: { timestamp: { _gte: $since } }, limit: $limit) {
+    accountId
+  }
+}
+
+# Liquidations and deleverages since $since, newest first.
+query Liquidations($since: Int!, $limit: Int! = 1000) {
+  PositionEvent(
+    where: { kind: { _in: [LIQUIDATION, DELEVERAGE] }, timestamp: { _gte: $since } }
+    order_by: { timestamp: desc }
+    limit: $limit
+  ) {
+    accountId
+    perpId
+    kind
+    side
+    lotsClosedLNS
+    pricePNS
+    notionalCNS
+    realizedPnlCNS
+    depositBeforeCNS
+    timestamp
+    txHash
+  }
+}
+
+# Wallet drill-down: account flags and lifetime stats, daily realised PnL, recent position events.
+query WalletHistory($id: String!, $accountId: numeric!, $sinceDay: Int!, $events: Int! = 200) {
+  PerplAccount_by_pk(id: $id) {
+    accountId
+    address
+    isMirrorAccount
+    teamRun
+    createdAt
+    netDepositedCNS
+    stats {
+      trades
+      closingTrades
+      wins
+      losses
+      winRateBps
+      liquidations
+      realizedPnlCNS
+      fundingCNS
+      feesCNS
+      netPnlCNS
+      volumeCNS
+      avgLeverageHdths
+      maxDrawdownCNS
+      firstTradeAt
+      lastTradeAt
+      followers
+    }
+  }
+  DailyAccountStats(where: { accountId: { _eq: $accountId }, day: { _gte: $sinceDay } }, order_by: { day: asc }) {
+    day
+    date
+    trades
+    realizedPnlCNS
+    fundingCNS
+    feesCNS
+    netPnlCNS
+    volumeCNS
+    endCumPnlCNS
+  }
+  PositionEvent(
+    where: { accountId: { _eq: $accountId } }
+    order_by: [{ timestamp: desc }, { logIndex: desc }]
+    limit: $events
+  ) {
+    perpId
+    kind
+    side
+    lotsTradedLNS
+    lotsAfterLNS
+    lotsKnown
+    pricePNS
+    priceSource
+    notionalCNS
+    realizedPnlCNS
+    netPnlCNS
+    leverageHdths
+    depositAfterCNS
+    timestamp
+    txHash
+  }
+}

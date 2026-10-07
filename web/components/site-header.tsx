@@ -3,13 +3,14 @@ import React from "react";
 import { IconBrandAndroid, IconMenu2, IconWorld } from "@tabler/icons-react";
 import { Logo } from "./logo";
 import { ModeToggle } from "./mode-toggle";
-import { DOCS_URL, DOWNLOAD_URL, STATS_URL, WEB_APP_URL } from "@/lib/site";
+import { DOCS_URL, DOWNLOAD_URL, PERPL_URL, STATS_URL, WEB_APP_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
   { title: "Product", href: "/" },
   { title: "Docs", href: DOCS_URL },
   { title: "Stats", href: STATS_URL },
+  { title: "Perpl analytics", href: PERPL_URL },
   { title: "Download", href: DOWNLOAD_URL },
 ];
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import React from "react";
-import { BETA_DEPOSIT_CAP, BRAND, CONTRACTS_URL, DOCS_URL, DOWNLOAD_URL, GITHUB_URL, STATS_URL, X_HANDLE, X_URL } from "@/lib/site";
+import { BETA_DEPOSIT_CAP, BRAND, CONTRACTS_URL, DOCS_URL, DOWNLOAD_URL, GITHUB_URL, PERPL_URL, STATS_URL, X_HANDLE, X_URL } from "@/lib/site";
 
 /** Compact static footer for docs, stats and download. */
 export const SiteFooter = () => (
@@ -16,6 +16,7 @@ export const SiteFooter = () => (
         <Link href={DOCS_URL} className="hover:text-foreground">Docs</Link>
         <Link href={CONTRACTS_URL} className="hover:text-foreground">Contracts</Link>
         <Link href={STATS_URL} className="hover:text-foreground">Stats</Link>
+        <Link href={PERPL_URL} className="hover:text-foreground">Perpl analytics</Link>
         <Link href={DOWNLOAD_URL} className="hover:text-foreground">Download</Link>
         <a href={GITHUB_URL} className="hover:text-foreground">GitHub</a>
         <a href={X_URL} className="hover:text-foreground">X {X_HANDLE}</a>

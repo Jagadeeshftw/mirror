@@ -13,6 +13,7 @@ export const DOWNLOAD_URL = "/download";
 export const DOCS_URL = "/docs";
 export const CONTRACTS_URL = "/docs/contracts";
 export const STATS_URL = "/stats";
+export const PERPL_URL = "/perpl";
 
 /** Static facts about the Android app. Version, size, SHA-256 and URL come from public/release.json (lib/release.ts). */
 export const APK = {

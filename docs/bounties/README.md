@@ -18,3 +18,4 @@ Status: `todo` · `in progress` · `done` (with evidence)
 | Monad Foundation: Mera One Passkey, Many Keys ($2.5k) | [mera-many-keys.md](mera-many-keys.md) |
 | Nansen: Best use of Nansen ($5k pool) | [nansen.md](nansen.md) |
 | Envio: Best Use of Envio ($1k) | [envio.md](envio.md) |
+| Perpl: Analytics / Risk Tool ($3k, 3 × $1k, text to confirm) | [perpl-analytics.md](perpl-analytics.md) |
