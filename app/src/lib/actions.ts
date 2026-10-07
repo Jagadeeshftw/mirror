@@ -2,7 +2,7 @@
 // relayer submits (gasless; the user never needs MON).
 import { toHex, type LocalAccount } from "viem";
 import { api } from "./api";
-import { actionNonce, permitNonce } from "./chain";
+import { actionNonce, permitNonce, predictAccountOnchain } from "./chain";
 import {
   ACTION,
   actionTypedData,
@@ -70,7 +70,7 @@ export function nextAccountFor(cfg: AppConfig, owner: Address, existing: MirrorA
  */
 export async function follow(cfg: AppConfig, plan: FollowPlan, progress: Progress) {
   const { salt, account: computed } = nextAccountFor(cfg, plan.owner, plan.existing);
-  const account = (computed ?? plan.predicted) as Address;
+  const account = (computed ?? plan.predicted ?? (await predictAccountOnchain(cfg, plan.owner, salt).catch(() => null))) as Address;
   if (!account) throw new Error("Can't determine the account address");
   const deadline = nowSec() + 1800n;
   progress("sign", "now");

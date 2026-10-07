@@ -19,7 +19,10 @@ export function useConfig() {
     queryFn: async () => saveConfigCache(await api.config()),
     staleTime: 5 * 60_000,
     retry: 2,
-    placeholderData: cachedConfig() ?? undefined,
+    // The last good config stays as data when /v1/config fails (placeholderData is dropped on error, which
+    // left the app without the RPC and markets exactly when Mirror is down). Updated-at 0: refetched at once.
+    initialData: cachedConfig() ?? undefined,
+    initialDataUpdatedAt: 0,
   });
 }
 

@@ -1,0 +1,111 @@
+{
+ "leaderAccountId": 3,
+ "period": "7d",
+ "from": 1790764654,
+ "to": 1791369454,
+ "source": "indexer",
+ "slippage": {
+  "bps": 5,
+  "source": "default assumption; not enough measured copies of this leader"
+ },
+ "takerFeeBps": 3.5,
+ "builderFee": {
+  "id": 26,
+  "feePer100K": 20,
+  "appliesTo": "opening size only"
+ },
+ "simulation": true,
+ "depositCNS": "20000000",
+ "finalEquityCNS": "19997521",
+ "pnlCNS": "-2479",
+ "pnlPct": -0.0123,
+ "feesCNS": "769",
+ "builderFeesCNS": "172",
+ "maxDrawdownCNS": "2479",
+ "maxDrawdownBps": 1,
+ "tradesCopied": 2,
+ "tradesBlocked": {
+  "LeverageTooHigh": 1
+ },
+ "tradesBlockedTotal": 1,
+ "skipped": {},
+ "stops": [],
+ "equityCurve": [
+  {
+   "day": 20726,
+   "date": "2026-09-30",
+   "equityCNS": "20000000"
+  },
+  {
+   "day": 20727,
+   "date": "2026-10-01",
+   "equityCNS": "20000000"
+  },
+  {
+   "day": 20728,
+   "date": "2026-10-02",
+   "equityCNS": "20000000"
+  },
+  {
+   "day": 20729,
+   "date": "2026-10-03",
+   "equityCNS": "20000000"
+  },
+  {
+   "day": 20730,
+   "date": "2026-10-04",
+   "equityCNS": "20000000"
+  },
+  {
+   "day": 20731,
+   "date": "2026-10-05",
+   "equityCNS": "20000000"
+  },
+  {
+   "day": 20732,
+   "date": "2026-10-06",
+   "equityCNS": "20000000"
+  },
+  {
+   "day": 20733,
+   "date": "2026-10-07",
+   "equityCNS": "19997521"
+  }
+ ],
+ "openPositions": [],
+ "trades": [
+  {
+   "t": 1791369439,
+   "perpId": 1,
+   "action": "open",
+   "side": "long",
+   "lots": "1",
+   "fillPNS": "855855",
+   "feeCNS": "471",
+   "pnlCNS": "-471"
+  },
+  {
+   "t": 1791369445,
+   "perpId": 1,
+   "action": "close",
+   "side": "long",
+   "lots": "1",
+   "fillPNS": "854145",
+   "feeCNS": "298",
+   "pnlCNS": "-2008"
+  }
+ ],
+ "eventsReplayed": 4,
+ "assumptions": [
+  "This is a simulation of past trades, not a record of real copies. Past results do not predict future results.",
+  "Every leader position event is replayed in chain order; the follower copies it with the same rules the MirrorAccount contract applies (ratio target, max leverage, slippage bound, entry filter, per-market max notional, leader budget, leader loss stop, daily loss and drawdown stops).",
+  "Each copy fills at the leader's own fill price moved 5 bps against the follower (default assumption; not enough measured copies of this leader), never past the order's limit price.",
+  "A taker fee of 3.5 bps of notional is charged on every fill, opens and closes. Funding payments are ignored.",
+  "Mirror's Perpl builder fee of 20 per 100,000 (0.020%) of the added notional is charged on every opening fill, rounded up as onchain; closes never pay it.",
+  "The leader's fill price is used as the mark price at that moment; open positions are valued at the last known price of each market.",
+  "Copies are assumed to always find liquidity at that price (no thin-book shrinking or skipping, no partial fills).",
+  "Leader events whose size or price is unknown (positions opened before the indexed history) are skipped, and markets outside your policy are not copied.",
+  "The follower account is never liquidated in the simulation; margin is tracked only for the budget check and available collateral.",
+  "Loss stops only block new copies (flatten on stop is off), as onchain."
+ ]
+}

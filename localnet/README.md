@@ -11,6 +11,11 @@ cd localnet && npm install && npm run fetch && npm start      # keeps running; C
 node smoke.mjs                                                  # in another shell
 ```
 
+Stage-A runs on a fresh localnet (each starts and stops its own chain): `./run-stage-a.sh` (engine API,
+`e2e-api.mjs`), `./run-stage-a.sh --web` (the web app with Playwright and a Chrome virtual authenticator with PRF,
+`e2e-web.mjs`: builds the export with `MERA_RP_ID=localhost`, engine on 8807, web on 8818), `--all` for both.
+Evidence goes to `devices/evidence/stage-a/<run>/` (`web/index.html` is the contact sheet, `web/report.json` the checks).
+
 - Same anvil settings as the kit: 0.4 s blocks, 128 KiB code size limit, 200M block gas limit, 100 gwei base
   fee, FIFO ordering, chain id 1337. RPC on port 8546, faucet and test controls on 8547.
 - Perpl's exchange and proxy artifacts are fetched from dex-sdk commit `01b9910` and checked by SHA-256.

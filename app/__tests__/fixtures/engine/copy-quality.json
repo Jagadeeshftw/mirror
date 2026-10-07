@@ -1,0 +1,147 @@
+{
+ "source": "engine",
+ "period": "all",
+ "since": null,
+ "leaderAccountId": null,
+ "excludesTeamRun": true,
+ "definitions": {
+  "deviationBps": "follower fill vs leader fill, positive = follower got the worse price",
+  "latencyMs": "engine clock: leader event first seen (Proposed) to copy receipt",
+  "latencyBlocks": "copy block - leader block",
+  "percentiles": "nearest rank; samples from keeper copies only (match-now has no leader fill)",
+  "builderFeesCNS": "builder fees Perpl charged on copies in scope (keeper and match-now, opening size only), collateral units"
+ },
+ "aggregates": {
+  "copies": 0,
+  "matchNowCopies": 0,
+  "opens": 0,
+  "closes": 0,
+  "blocked": 0,
+  "deviationBps": {
+   "samples": 0,
+   "median": null,
+   "p90": null,
+   "avg": null,
+   "worseThanLeader": 0
+  },
+  "latencyMs": {
+   "samples": 0,
+   "median": null,
+   "p90": null
+  },
+  "latencyBlocks": {
+   "samples": 0,
+   "median": null,
+   "p90": null
+  },
+  "builderFeesCNS": "0"
+ },
+ "blockedByReason": {},
+ "copies": [],
+ "teamRun": {
+  "label": "team-run (demo leader / demo follower); excluded from every number above",
+  "aggregates": {
+   "copies": 4,
+   "matchNowCopies": 0,
+   "opens": 3,
+   "closes": 1,
+   "blocked": 3,
+   "deviationBps": {
+    "samples": 4,
+    "median": 0,
+    "p90": 0,
+    "avg": 0,
+    "worseThanLeader": 0
+   },
+   "latencyMs": {
+    "samples": 4,
+    "median": 403,
+    "p90": 405
+   },
+   "latencyBlocks": {
+    "samples": 4,
+    "median": 1,
+    "p90": 1
+   },
+   "builderFeesCNS": "3937"
+  },
+  "blockedByReason": {
+   "EntryTooFar": 2,
+   "LeverageTooHigh": 1
+  },
+  "copies": [
+   {
+    "txHash": "0x6845cd55948dab1133b602b542e8d9c97cccc8cb32f54ceca9c2ae2c9c8eef43",
+    "account": "0xc4668f465e7bd81eba43d664efb1a23d59a534df",
+    "leaderAccountId": 3,
+    "perpId": 1,
+    "orderType": 0,
+    "lotLNS": "2",
+    "leaderRef": "0x899744170182bb452fddbd76f0c89bf07b8bd836662507c67470d769ec10720f",
+    "leaderFillPNS": "855428",
+    "followerFillPNS": "855428",
+    "deviationBps": 0,
+    "latencyMs": 403,
+    "latencyBlocks": 1,
+    "block": 136,
+    "timestamp": 1791369457,
+    "matchNow": false,
+    "builderFeeCNS": "343"
+   },
+   {
+    "txHash": "0x0fe7b1bd87f0ce9e1c97803b8cdc6cf9d68c627a3d2cc82c93e2bc02edc583bc",
+    "account": "0x4240891ce7b11ee7bd156d2cc12b178fef101ca6",
+    "leaderAccountId": 3,
+    "perpId": 1,
+    "orderType": 0,
+    "lotLNS": "20",
+    "leaderRef": "0x899744170182bb452fddbd76f0c89bf07b8bd836662507c67470d769ec10720f",
+    "leaderFillPNS": "855428",
+    "followerFillPNS": "855428",
+    "deviationBps": 0,
+    "latencyMs": 405,
+    "latencyBlocks": 1,
+    "block": 136,
+    "timestamp": 1791369457,
+    "matchNow": false,
+    "builderFeeCNS": "3422"
+   },
+   {
+    "txHash": "0xe80b7678e66e6b36b6a9ac28a1bfd40dac24d27d30dc0acd4f8998a769df4cd8",
+    "account": "0x4240891ce7b11ee7bd156d2cc12b178fef101ca6",
+    "leaderAccountId": 3,
+    "perpId": 1,
+    "orderType": 2,
+    "lotLNS": "1",
+    "leaderRef": "0xff31baab6114d00409fd0d54a53b40b7b82a920e0da1771663104134a21a0402",
+    "leaderFillPNS": "854573",
+    "followerFillPNS": "854573",
+    "deviationBps": 0,
+    "latencyMs": 400,
+    "latencyBlocks": 1,
+    "block": 106,
+    "timestamp": 1791369445,
+    "matchNow": false,
+    "builderFeeCNS": "0"
+   },
+   {
+    "txHash": "0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
+    "account": "0x4240891ce7b11ee7bd156d2cc12b178fef101ca6",
+    "leaderAccountId": 3,
+    "perpId": 1,
+    "orderType": 0,
+    "lotLNS": "1",
+    "leaderRef": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41",
+    "leaderFillPNS": "855428",
+    "followerFillPNS": "855428",
+    "deviationBps": 0,
+    "latencyMs": 403,
+    "latencyBlocks": 1,
+    "block": 92,
+    "timestamp": 1791369440,
+    "matchNow": false,
+    "builderFeeCNS": "172"
+   }
+  ]
+ }
+}

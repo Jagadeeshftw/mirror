@@ -1,0 +1,102 @@
+{
+ "accountId": 3,
+ "address": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+ "score": -7.68,
+ "pnlUsd": -0.00171,
+ "pnlPct": 0,
+ "maxDrawdownPct": 0,
+ "winRate": 0,
+ "avgLeverage": 6,
+ "trades": 4,
+ "markets": [
+  "BTC"
+ ],
+ "followers": 1,
+ "nansen": {
+  "labels": [],
+  "monad": null,
+  "crossVenue": null,
+  "fetchedAt": null
+ },
+ "riskFlags": [
+  "few_trades",
+  "single_market"
+ ],
+ "teamRun": true,
+ "source": "engine",
+ "window": "30d",
+ "equityCurve": [
+  {
+   "t": 1791369445,
+   "pnlCNS": "-855"
+  },
+  {
+   "t": 1791369451,
+   "pnlCNS": "-1710"
+  }
+ ],
+ "openPositions": [],
+ "recentTrades": [
+  {
+   "txHash": "0xaf98381257eb54e1b8771f5c685c397dfa7602cab0040e4e46017a4f2c3ecfcc",
+   "block": 120,
+   "t": 1791369451,
+   "perpId": 1,
+   "symbol": "BTC",
+   "kind": "close",
+   "side": "long",
+   "lotsAfter": "0",
+   "pricePNS": "854573",
+   "realizedPnlCNS": "-855",
+   "leverageHdths": null
+  },
+  {
+   "txHash": "0x42f212c8a8816fecb740ea154c4d0c0109c373137b425b446ba9c1b4c3705810",
+   "block": 113,
+   "t": 1791369448,
+   "perpId": 1,
+   "symbol": "BTC",
+   "kind": "open",
+   "side": "long",
+   "lotsAfter": "1",
+   "pricePNS": "855428",
+   "realizedPnlCNS": null,
+   "leverageHdths": 1000
+  },
+  {
+   "txHash": "0xff31baab6114d00409fd0d54a53b40b7b82a920e0da1771663104134a21a0402",
+   "block": 105,
+   "t": 1791369445,
+   "perpId": 1,
+   "symbol": "BTC",
+   "kind": "close",
+   "side": "long",
+   "lotsAfter": "0",
+   "pricePNS": "854573",
+   "realizedPnlCNS": "-855",
+   "leverageHdths": null
+  },
+  {
+   "txHash": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41",
+   "block": 91,
+   "t": 1791369439,
+   "perpId": 1,
+   "symbol": "BTC",
+   "kind": "open",
+   "side": "long",
+   "lotsAfter": "1",
+   "pricePNS": "855428",
+   "realizedPnlCNS": null,
+   "leverageHdths": 200
+  }
+ ],
+ "notes": [],
+ "adversarial": {
+  "exitsIntoFollowers": 0,
+  "bookMoving": 0,
+  "lastSeen": null,
+  "score": 0,
+  "flagged": false,
+  "copiedFills": 2
+ }
+}

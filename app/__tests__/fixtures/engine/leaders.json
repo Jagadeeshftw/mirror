@@ -1,0 +1,133 @@
+{
+ "source": "engine",
+ "nansenSource": "off",
+ "window": "30d",
+ "sort": "score",
+ "eventsConsidered": 12,
+ "leaders": [
+  {
+   "accountId": 3,
+   "address": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+   "score": -7.68,
+   "pnlUsd": -0.00171,
+   "pnlPct": 0,
+   "maxDrawdownPct": 0,
+   "winRate": 0,
+   "avgLeverage": 6,
+   "trades": 4,
+   "markets": [
+    "BTC"
+   ],
+   "followers": 1,
+   "nansen": {
+    "labels": [],
+    "monad": null,
+    "crossVenue": null,
+    "fetchedAt": null
+   },
+   "riskFlags": [],
+   "teamRun": true,
+   "adversarial": {
+    "exitsIntoFollowers": 0,
+    "bookMoving": 0,
+    "lastSeen": null,
+    "score": 0,
+    "flagged": false,
+    "copiedFills": 2
+   }
+  },
+  {
+   "accountId": 2,
+   "address": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+   "score": -8,
+   "pnlUsd": 0,
+   "pnlPct": 0,
+   "maxDrawdownPct": 0,
+   "winRate": 0,
+   "avgLeverage": 10,
+   "trades": 3,
+   "markets": [
+    "BTC"
+   ],
+   "followers": 0,
+   "nansen": {
+    "labels": [],
+    "monad": null,
+    "crossVenue": null,
+    "fetchedAt": null
+   },
+   "riskFlags": [],
+   "teamRun": false,
+   "adversarial": {
+    "exitsIntoFollowers": 0,
+    "bookMoving": 0,
+    "lastSeen": null,
+    "score": 0,
+    "flagged": false,
+    "copiedFills": 0
+   }
+  },
+  {
+   "accountId": 1,
+   "address": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+   "score": -8,
+   "pnlUsd": 0,
+   "pnlPct": 0,
+   "maxDrawdownPct": 0,
+   "winRate": 0,
+   "avgLeverage": 10,
+   "trades": 3,
+   "markets": [
+    "BTC"
+   ],
+   "followers": 0,
+   "nansen": {
+    "labels": [],
+    "monad": null,
+    "crossVenue": null,
+    "fetchedAt": null
+   },
+   "riskFlags": [],
+   "teamRun": false,
+   "adversarial": {
+    "exitsIntoFollowers": 0,
+    "bookMoving": 0,
+    "lastSeen": null,
+    "score": 0,
+    "flagged": false,
+    "copiedFills": 0
+   }
+  },
+  {
+   "accountId": 4,
+   "address": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6",
+   "score": -8.42,
+   "pnlUsd": -0.000855,
+   "pnlPct": 0,
+   "maxDrawdownPct": 0,
+   "winRate": 0,
+   "avgLeverage": 2,
+   "trades": 2,
+   "markets": [
+    "BTC"
+   ],
+   "followers": 0,
+   "nansen": {
+    "labels": [],
+    "monad": null,
+    "crossVenue": null,
+    "fetchedAt": null
+   },
+   "riskFlags": [],
+   "teamRun": false,
+   "adversarial": {
+    "exitsIntoFollowers": 0,
+    "bookMoving": 0,
+    "lastSeen": null,
+    "score": 0,
+    "flagged": false,
+    "copiedFills": 0
+   }
+  }
+ ]
+}

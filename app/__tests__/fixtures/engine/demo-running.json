@@ -1,0 +1,91 @@
+{
+ "enabled": true,
+ "running": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+ "perpId": 1,
+ "lots": 1,
+ "leverageHdths": 200,
+ "blockedLeverageHdths": 1000,
+ "limits": {
+  "perIpHourly": 50,
+  "dailyCap": 500,
+  "usedToday": 1
+ },
+ "leader": {
+  "address": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+  "accountId": 3,
+  "teamRun": true,
+  "position": {
+   "side": 0,
+   "lotLNS": "1"
+  }
+ },
+ "follower": {
+  "account": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6",
+  "teamRun": true,
+  "perplAccountId": 4,
+  "maxLeverageHdths": 500,
+  "following": [
+   {
+    "accountId": 3,
+    "ratioBps": 10000,
+    "budgetCNS": "50000000",
+    "lossStopBps": 0,
+    "stopped": false
+   }
+  ],
+  "position": {
+   "side": 0,
+   "lotLNS": "1"
+  }
+ },
+ "cycles": [
+  {
+   "id": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+   "kind": "trade",
+   "ip": "127.0.0.1",
+   "status": "running",
+   "started_ms": 1791369439467,
+   "ended_ms": null,
+   "open_tx": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41",
+   "close_tx": null,
+   "copy_tx": "0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
+   "copy_close_tx": null,
+   "error": null,
+   "steps": [
+    {
+     "type": "demo",
+     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "step": "leader_opening",
+     "at": 1791369439468,
+     "kind": "trade",
+     "perpId": 1,
+     "lots": "1",
+     "leverageHdths": 200
+    },
+    {
+     "type": "demo",
+     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "step": "leader_opened",
+     "at": 1791369439619,
+     "txHash": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41"
+    },
+    {
+     "type": "demo",
+     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "step": "copy_executed",
+     "at": 1791369440123,
+     "txHash": "0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
+     "reason": null,
+     "latencyMs": 403
+    },
+    {
+     "type": "demo",
+     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "step": "holding",
+     "at": 1791369440123,
+     "ms": 5000
+    }
+   ]
+  }
+ ]
+}

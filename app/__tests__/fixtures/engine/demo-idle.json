@@ -1,0 +1,42 @@
+{
+ "enabled": true,
+ "running": null,
+ "perpId": 1,
+ "lots": 1,
+ "leverageHdths": 200,
+ "blockedLeverageHdths": 1000,
+ "limits": {
+  "perIpHourly": 50,
+  "dailyCap": 500,
+  "usedToday": 0
+ },
+ "leader": {
+  "address": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+  "accountId": 3,
+  "teamRun": true,
+  "position": {
+   "side": 0,
+   "lotLNS": "0"
+  }
+ },
+ "follower": {
+  "account": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6",
+  "teamRun": true,
+  "perplAccountId": 4,
+  "maxLeverageHdths": 500,
+  "following": [
+   {
+    "accountId": 3,
+    "ratioBps": 10000,
+    "budgetCNS": "50000000",
+    "lossStopBps": 0,
+    "stopped": false
+   }
+  ],
+  "position": {
+   "side": 0,
+   "lotLNS": "0"
+  }
+ },
+ "cycles": []
+}

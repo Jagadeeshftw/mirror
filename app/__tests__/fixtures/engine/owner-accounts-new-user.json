@@ -1,0 +1,13 @@
+{
+ "owner": "0xE779C8C74874EFe0ea924B849918d34e6a64A581",
+ "accounts": [
+  {
+   "address": "0xe3dD5010fb063AB10118E5ECf094Fc12d5d4c932",
+   "owner": "0xE779C8C74874EFe0ea924B849918d34e6a64A581",
+   "deployed": false,
+   "predicted": true,
+   "salt": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "teamRun": false
+  }
+ ]
+}

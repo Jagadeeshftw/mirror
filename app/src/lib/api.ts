@@ -1,5 +1,8 @@
 // Typed client for the Mirror backend (docs/api.md). The app talks only to this API and to
 // Monad RPC for reads.
+import { normalizeLeaderProfile, normalizeLeaderSummary } from "./leaderShape";
+import { knowsLeader, learnConfig, normalizeAccount, normalizeFeedPage, normalizeOwnerAccounts } from "./engineShape";
+import { normalizeDemo, normalizeMarkets, normalizeQuote } from "./engineDemo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import type {
@@ -114,32 +117,63 @@ const q = (params: Record<string, string | number | undefined | null>) => {
 export type LeaderWindow = "7d" | "30d" | "90d";
 export type LeaderSort = "score" | "pnl" | "drawdown";
 
+// Accounts and feed items carry only the leader's account id; the address and labels come from its profile.
+const leaderLookups = new Map<number, Promise<unknown>>();
+async function ensureLeaders(ids: unknown[]): Promise<void> {
+  const todo = [...new Set(ids.map(Number).filter((id) => id > 0 && !knowsLeader(id)))].slice(0, 8);
+  await Promise.all(
+    todo.map((id) => {
+      if (!leaderLookups.has(id)) leaderLookups.set(id, request<unknown>("GET", `/v1/leaders/${id}`, undefined, 8000).then(normalizeLeaderProfile).catch(() => leaderLookups.delete(id)));
+      return leaderLookups.get(id);
+    }),
+  );
+}
+const leaderIdsOf = (raw: any): unknown[] => {
+  const list: any[] = Array.isArray(raw) ? raw : (raw?.accounts ?? raw?.items ?? raw?.events ?? []);
+  return list.flatMap((x) => [x?.leaderAccountId, x?.leader?.accountId, ...(x?.policy?.leaders ?? []).map((l: any) => l.accountId)]);
+};
+
 export const api = {
   health: (timeoutMs = 8000) => request<HealthState>("GET", "/v1/health", undefined, timeoutMs),
-  config: () => request<unknown>("GET", "/v1/config").then(normalizeConfig),
-  markets: () => request<MarketState[]>("GET", "/v1/markets"),
+  config: () =>
+    request<any>("GET", "/v1/config").then((raw) => {
+      learnConfig(raw);
+      return normalizeConfig(raw);
+    }),
+  markets: () => request<unknown>("GET", "/v1/markets").then(normalizeMarkets),
   leaders: (window: LeaderWindow = "30d", sort: LeaderSort = "score", market?: string) =>
     request<LeaderSummary[] | { leaders: LeaderSummary[] }>("GET", `/v1/leaders${q({ window, sort, market })}`).then((r) =>
-      Array.isArray(r) ? r : r.leaders,
+      (Array.isArray(r) ? r : r.leaders).map(normalizeLeaderSummary),
     ),
   leader: (accountId: number, window: LeaderWindow = "30d") =>
-    request<LeaderProfile>("GET", `/v1/leaders/${accountId}${q({ window })}`),
+    request<LeaderProfile>("GET", `/v1/leaders/${accountId}${q({ window })}`).then(normalizeLeaderProfile),
   ownerAccounts: (owner: Address) =>
-    request<OwnerAccounts | MirrorAccount[]>("GET", `/v1/owners/${owner}/accounts`).then((r) =>
-      Array.isArray(r) ? ({ owner, accounts: r } as OwnerAccounts) : r,
-    ),
-  account: (account: Address) => request<MirrorAccount>("GET", `/v1/accounts/${account}`),
+    request<unknown>("GET", `/v1/owners/${owner}/accounts`).then(async (r) => {
+      await ensureLeaders(leaderIdsOf(r));
+      return normalizeOwnerAccounts(r, owner);
+    }),
+  account: (account: Address) => request<unknown>("GET", `/v1/accounts/${account}`).then(normalizeAccount),
   feed: (account: Address, cursor?: string | null, timeoutMs?: number) =>
-    request<FeedPage>("GET", `/v1/accounts/${account}/feed${q({ cursor: cursor ?? undefined })}`, undefined, timeoutMs),
+    request<unknown>("GET", `/v1/accounts/${account}/feed${q({ cursor: cursor ?? undefined })}`, undefined, timeoutMs).then(async (r) => {
+      await ensureLeaders(leaderIdsOf(r));
+      return normalizeFeedPage(r);
+    }),
   stats: () => request<Record<string, unknown>>("GET", "/v1/stats"),
-  demo: (timeoutMs?: number) => request<DemoState>("GET", "/v1/demo", undefined, timeoutMs),
+  demo: async (timeoutMs?: number): Promise<DemoState> => {
+    const raw = await request<any>("GET", "/v1/demo", undefined, timeoutMs);
+    // The engine's demo view names the follower; its equity, policy and positions come from its account view.
+    const acct = raw?.follower?.account && raw?.follower?.equityCNS === undefined
+      ? await request<unknown>("GET", `/v1/accounts/${raw.follower.account}`, undefined, timeoutMs).catch(() => undefined)
+      : undefined;
+    return normalizeDemo(raw, acct);
+  },
   copyQuality: (period: QualityPeriod = "30d") => request<CopyQuality>("GET", `/v1/stats/copy-quality${q({ period })}`),
   leaderCopyQuality: (accountId: number, period: QualityPeriod = "30d") =>
     request<CopyQuality>("GET", `/v1/leaders/${accountId}/copy-quality${q({ period })}`),
   backtest: (accountId: number, body: BacktestRequest) => request<BacktestResult>("POST", `/v1/leaders/${accountId}/backtest`, body, 30000),
 
   quoteFollow: (body: { owner: Address; leaderAccountId: number; policy: Policy; account?: Address }) =>
-    request<FollowQuote>("POST", "/v1/quote/follow", body),
+    request<unknown>("POST", "/v1/quote/follow", body).then((r) => normalizeQuote(r, body.leaderAccountId)),
 
   relayCreate: (body: { owner: Address; salt: Hex }) => request<RelayResult & { account?: Address }>("POST", "/v1/relay/create", body, 60000),
   relayDeposit: (

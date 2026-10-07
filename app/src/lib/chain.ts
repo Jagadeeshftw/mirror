@@ -7,6 +7,7 @@ const ERC20_ABI = parseAbi([
   "function balanceOf(address) view returns (uint256)",
   "function nonces(address) view returns (uint256)",
 ]);
+const FACTORY_ABI = parseAbi(["function predictAccount(address owner, bytes32 salt) view returns (address)"]);
 const ACCOUNT_ABI = parseAbi(["function actionNonce() view returns (uint256)", "function netDeposits() view returns (uint256)"]);
 
 let client: PublicClient | null = null;
@@ -40,6 +41,12 @@ export async function permitNonce(cfg: AppConfig, owner: Address): Promise<bigin
 
 export async function actionNonce(cfg: AppConfig, account: Address): Promise<bigint> {
   return publicClient(cfg).readContract({ address: account, abi: ACCOUNT_ABI, functionName: "actionNonce" });
+}
+
+/** MirrorAccountFactory.predictAccount, for deployments whose /v1/config doesn't name the implementation. */
+export async function predictAccountOnchain(cfg: AppConfig, owner: Address, salt: `0x${string}`): Promise<Address | null> {
+  if (!cfg.contracts.factory) return null;
+  return (await publicClient(cfg).readContract({ address: cfg.contracts.factory, abi: FACTORY_ABI, functionName: "predictAccount", args: [owner, salt] })) as Address;
 }
 
 export async function blockNumber(cfg: AppConfig): Promise<{ block: bigint; ms: number }> {

@@ -1,0 +1,58 @@
+{
+ "source": {
+  "config": "perpl REST /v1/pub/context",
+  "live": "perpl REST ticker"
+ },
+ "markets": [
+  {
+   "perpId": 1,
+   "symbol": "BTC",
+   "lotDecimals": 5,
+   "priceDecimals": 1,
+   "isOpen": true,
+   "minPostingCNS": "0",
+   "markPNS": null,
+   "oraclePNS": null,
+   "lastPNS": null,
+   "bestBidPNS": null,
+   "bestAskPNS": null,
+   "fundingRatePct100k": null,
+   "openInterestLNS": null,
+   "dayVolumeLNS": null,
+   "markDisplay": null,
+   "minOrderLots": 1,
+   "minOrderSize": "0.00001",
+   "source": {
+    "mark": "none",
+    "book": "none"
+   },
+   "markAgeMs": null,
+   "recentTrades": []
+  },
+  {
+   "perpId": 20,
+   "symbol": "ETH",
+   "lotDecimals": 3,
+   "priceDecimals": 2,
+   "isOpen": true,
+   "minPostingCNS": "0",
+   "markPNS": null,
+   "oraclePNS": null,
+   "lastPNS": null,
+   "bestBidPNS": null,
+   "bestAskPNS": null,
+   "fundingRatePct100k": null,
+   "openInterestLNS": null,
+   "dayVolumeLNS": null,
+   "markDisplay": null,
+   "minOrderLots": 1,
+   "minOrderSize": "0.001",
+   "source": {
+    "mark": "none",
+    "book": "none"
+   },
+   "markAgeMs": null,
+   "recentTrades": []
+  }
+ ]
+}

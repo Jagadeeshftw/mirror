@@ -1,0 +1,180 @@
+{
+ "enabled": true,
+ "running": null,
+ "perpId": 1,
+ "lots": 1,
+ "leverageHdths": 200,
+ "blockedLeverageHdths": 1000,
+ "limits": {
+  "perIpHourly": 50,
+  "dailyCap": 500,
+  "usedToday": 2
+ },
+ "leader": {
+  "address": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+  "accountId": 3,
+  "teamRun": true,
+  "position": {
+   "side": 0,
+   "lotLNS": "0"
+  }
+ },
+ "follower": {
+  "account": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6",
+  "teamRun": true,
+  "perplAccountId": 4,
+  "maxLeverageHdths": 500,
+  "following": [
+   {
+    "accountId": 3,
+    "ratioBps": 10000,
+    "budgetCNS": "50000000",
+    "lossStopBps": 0,
+    "stopped": false
+   }
+  ],
+  "position": {
+   "side": 0,
+   "lotLNS": "0"
+  }
+ },
+ "cycles": [
+  {
+   "id": "30ff49e3-0f48-464d-94ab-f2112607c378",
+   "kind": "blocked",
+   "ip": "127.0.0.1",
+   "status": "done",
+   "started_ms": 1791369448010,
+   "ended_ms": 1791369451220,
+   "open_tx": "0x42f212c8a8816fecb740ea154c4d0c0109c373137b425b446ba9c1b4c3705810",
+   "close_tx": "0xaf98381257eb54e1b8771f5c685c397dfa7602cab0040e4e46017a4f2c3ecfcc",
+   "copy_tx": "0x0482e6ffcb92696db65f241b5a490d55dad105f7515dee91936f161457e6047f",
+   "copy_close_tx": null,
+   "error": null,
+   "steps": [
+    {
+     "type": "demo",
+     "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+     "step": "leader_opening",
+     "at": 1791369448010,
+     "kind": "blocked",
+     "perpId": 1,
+     "lots": "1",
+     "leverageHdths": 1000
+    },
+    {
+     "type": "demo",
+     "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+     "step": "leader_opened",
+     "at": 1791369448420,
+     "txHash": "0x42f212c8a8816fecb740ea154c4d0c0109c373137b425b446ba9c1b4c3705810"
+    },
+    {
+     "type": "demo",
+     "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+     "step": "copy_blocked",
+     "at": 1791369448823,
+     "txHash": "0x0482e6ffcb92696db65f241b5a490d55dad105f7515dee91936f161457e6047f",
+     "reason": "LeverageTooHigh",
+     "latencyMs": 399
+    },
+    {
+     "type": "demo",
+     "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+     "step": "leader_closing",
+     "at": 1791369450826,
+     "lots": "1"
+    },
+    {
+     "type": "demo",
+     "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+     "step": "leader_closed",
+     "at": 1791369451220,
+     "txHash": "0xaf98381257eb54e1b8771f5c685c397dfa7602cab0040e4e46017a4f2c3ecfcc"
+    },
+    {
+     "type": "demo",
+     "cycleId": "30ff49e3-0f48-464d-94ab-f2112607c378",
+     "step": "done",
+     "at": 1791369451220
+    }
+   ]
+  },
+  {
+   "id": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+   "kind": "trade",
+   "ip": "127.0.0.1",
+   "status": "done",
+   "started_ms": 1791369439467,
+   "ended_ms": 1791369445624,
+   "open_tx": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41",
+   "close_tx": "0xff31baab6114d00409fd0d54a53b40b7b82a920e0da1771663104134a21a0402",
+   "copy_tx": "0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
+   "copy_close_tx": "0xe80b7678e66e6b36b6a9ac28a1bfd40dac24d27d30dc0acd4f8998a769df4cd8",
+   "error": null,
+   "steps": [
+    {
+     "type": "demo",
+     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "step": "leader_opening",
+     "at": 1791369439468,
+     "kind": "trade",
+     "perpId": 1,
+     "lots": "1",
+     "leverageHdths": 200
+    },
+    {
+     "type": "demo",
+     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "step": "leader_opened",
+     "at": 1791369439619,
+     "txHash": "0x914fdbc5360c1c786a1851ca758d7b14b673d20e38b7f7e58c097a21630b5e41"
+    },
+    {
+     "type": "demo",
+     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "step": "copy_executed",
+     "at": 1791369440123,
+     "txHash": "0xf451b051146740757f9e166822c94c4d64645c077a49344f09ae6f05bafcdb3f",
+     "reason": null,
+     "latencyMs": 403
+    },
+    {
+     "type": "demo",
+     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "step": "holding",
+     "at": 1791369440123,
+     "ms": 5000
+    },
+    {
+     "type": "demo",
+     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "step": "leader_closing",
+     "at": 1791369445126,
+     "lots": "1"
+    },
+    {
+     "type": "demo",
+     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "step": "leader_closed",
+     "at": 1791369445220,
+     "txHash": "0xff31baab6114d00409fd0d54a53b40b7b82a920e0da1771663104134a21a0402"
+    },
+    {
+     "type": "demo",
+     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "step": "copy_closed",
+     "at": 1791369445624,
+     "txHash": "0xe80b7678e66e6b36b6a9ac28a1bfd40dac24d27d30dc0acd4f8998a769df4cd8",
+     "latencyMs": 400
+    },
+    {
+     "type": "demo",
+     "cycleId": "9c4ed235-17a3-4967-b63a-fd9e65ce5733",
+     "step": "done",
+     "at": 1791369445624
+    }
+   ]
+  }
+ ]
+}

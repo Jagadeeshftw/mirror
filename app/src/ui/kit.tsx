@@ -182,6 +182,8 @@ export function Button({
       onPress={disabled ? undefined : onPress}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
+      // Pressable's own prop: react-native-web 0.21 ignores accessibilityState and sets aria-disabled from this.
+      disabled={!!disabled}
       style={[
         {
           height: h,

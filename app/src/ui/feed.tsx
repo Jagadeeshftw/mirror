@@ -192,7 +192,7 @@ export function FeedItem({ e, cfg, onBlockedPress, onCopyPress, highlight, testI
               </T>
               <Side side={orderSide(e.orderType ?? 0)} />
               <T size={13} color="mu">
-                Leader {orderAction(e.orderType ?? 0).toLowerCase()} · {leverage(lev)}
+                Leader {orderAction(e.orderType ?? 0).toLowerCase()}{lev > 0 ? ` · ${leverage(lev)}` : ""}
               </T>
             </Row>
             <T size={13} mono>

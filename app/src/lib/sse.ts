@@ -2,6 +2,8 @@
 // incremental responseText when an onprogress handler is attached. Reconnects with backoff
 // and resumes with Last-Event-ID.
 
+import { normalizeStreamMessage } from "./engineDemo";
+
 export interface SseMessage {
   event: string;
   data: string;
@@ -45,7 +47,15 @@ export function parseSse(buffer: string): { messages: SseMessage[]; rest: string
   return { messages, rest };
 }
 
-export function openSse(url: string, opts: SseOptions): SseHandle {
+export function openSse(url: string, rawOpts: SseOptions): SseHandle {
+  // Engine envelopes ({type, item} feed frames, demo step events, keeper-internal frames) become app messages.
+  const opts: SseOptions = {
+    ...rawOpts,
+    onMessage: (m) => {
+      const n = normalizeStreamMessage(m);
+      if (n) rawOpts.onMessage(n);
+    },
+  };
   let closed = false;
   let xhr: XMLHttpRequest | null = null;
   let lastId: string | undefined;

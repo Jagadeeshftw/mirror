@@ -1,0 +1,57 @@
+{
+ "chainId": 1337,
+ "rpc": "http://127.0.0.1:8546",
+ "explorerTx": "https://monadvision.com/tx/",
+ "explorerAddress": "https://monadvision.com/address/",
+ "contracts": {
+  "factory": "0x82B769500E34362a76DF81150e12C746093D954F",
+  "keeperRegistry": "0x7ef8E99980Da5bcEDcF7C10f41E55f759F6A174B",
+  "perplExchange": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+  "collateral": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "deployBlock": 28
+ },
+ "collateralDecimals": 6,
+ "depositCapCNS": "200000000",
+ "builder": {
+  "id": 26,
+  "feePer100K": 20,
+  "appliesTo": "opening size only"
+ },
+ "perplMinAccountOpenCNS": "10000000",
+ "keepers": [
+  "0x976EA74026E726554dB657fA54763abd0C3a0aa9"
+ ],
+ "relayer": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+ "teamRun": {
+  "addresses": [
+   "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc",
+   "0x4240891ce7b11ee7bd156d2cc12b178fef101ca6"
+  ],
+  "demoLeaderAccountId": 3,
+  "demoFollowerAccount": "0x4240891ce7B11EE7Bd156d2cc12B178FeF101ca6"
+ },
+ "markets": [
+  {
+   "perpId": 1,
+   "symbol": "BTC",
+   "lotDecimals": 5,
+   "priceDecimals": 1,
+   "markPNS": null,
+   "minOrderLots": 1,
+   "minOrderSize": "0.00001",
+   "minPostingCNS": "0",
+   "isOpen": true
+  },
+  {
+   "perpId": 20,
+   "symbol": "ETH",
+   "lotDecimals": 3,
+   "priceDecimals": 2,
+   "markPNS": null,
+   "minOrderLots": 1,
+   "minOrderSize": "0.001",
+   "minPostingCNS": "0",
+   "isOpen": true
+  }
+ ]
+}

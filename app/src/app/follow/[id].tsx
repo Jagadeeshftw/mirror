@@ -28,6 +28,7 @@ import { AlertsCard } from "../../ui/alertsCard";
 import { BUILDER_ID, FEE_PCT, feeFor, feeText, plannedFeeCNS } from "../../lib/fees";
 
 const LEV_STEPS = Array.from({ length: 15 }, (_, i) => i + 1);
+const ENTRY_FILTER_PRESETS = [0, 0.5, 1, 2, 5];
 const LOSS_STEPS = [0, 2, 5, 8, 10, 12, 15, 20, 25, 30, 40, 50];
 
 function Section({ title, sub, icon, children, testID }: { title: string; sub?: string; icon: IconName; children: React.ReactNode; testID?: string }) {
@@ -119,6 +120,7 @@ export default function FollowSheet() {
         dailyLossPct: p.dailyLossBps / 100,
         drawdownPct: p.drawdownBps / 100,
         expiryDays: Math.max(1, Math.round((p.expiry * 1000 - Date.now()) / 86400e3)),
+        entryFilterPct: (p.maxEntryDeviationBps ?? 0) / 100,
         matchNow: false,
       });
     } else if (!isEdit) {
@@ -372,6 +374,7 @@ export default function FollowSheet() {
           <KV k="Max leverage" v={`${form.maxLeverage}x`} />
           <KV k="Max slippage" v={bps(form.maxSlippageBps)} testID="follow.review.slippage" />
           <KV k="Max notional per market" v={`${form.maxNotionalAusd} AUSD`} />
+          <KV k="Entry filter" v={form.entryFilterPct ? `within ${form.entryFilterPct}% of the leader's entry` : "Off"} testID="follow.review.entryFilter" />
           <KV k="Allowed markets" v={form.markets.join(", ")} />
           <KV k="Daily loss stop" v={form.dailyLossPct ? `${form.dailyLossPct}% · ${ausd((allocCNS * BigInt(Math.round(form.dailyLossPct * 100))) / 10000n)} AUSD` : "Off"} />
           <KV k="Account loss stop" v={form.drawdownPct ? `${form.drawdownPct}% · at ${ausd((allocCNS * BigInt(10000 - Math.round(form.drawdownPct * 100))) / 10000n)} AUSD` : "Off"} />
@@ -509,6 +512,15 @@ export default function FollowSheet() {
             maxSlippageBps
           </T>
         </Field>
+      </Section>
+
+      <Section title="Entry filter" icon="shield" sub="Only copy an opening order when the price is within this much of the leader's onchain entry. Checked by your contract." testID="follow.section.entryFilter">
+        <BigV v={form.entryFilterPct ? `${form.entryFilterPct}%` : "Off"} right={form.entryFilterPct ? `${Math.round(form.entryFilterPct * 100)} bps · maxEntryDeviationBps` : "copies at any distance from the entry"} testID="follow.entryFilter.value" />
+        <Row gap={8} style={{ flexWrap: "wrap" }}>
+          {ENTRY_FILTER_PRESETS.map((v) => (
+            <Chip key={v} label={v ? `${v}%` : "Off"} on={form.entryFilterPct === v} onPress={() => set("entryFilterPct", v)} testID={`follow.entryFilter.${v}`} />
+          ))}
+        </Row>
       </Section>
 
       <Section title="Max notional per market" icon="layers" sub="Largest position you can hold in any one market" testID="follow.section.notional">

@@ -8,6 +8,8 @@
 //   EXPO_PUBLIC_API_BASE=http://localhost:8787 + `adb reverse tcp:8787 tcp:8787`
 //
 // No real chain is touched. Nothing here sends a transaction anywhere.
+import { wireAccount, wireDemo, wireFeedPage, wireMarkets, wireOwnerAccounts, wireQuote, wireStream } from "./wire.mjs";
+import { wireLeaderProfile, wireLeaderSummary } from "./wire-leaders.mjs";
 import http from "node:http";
 import { base64 } from "@scure/base";
 import { decodeAbiParameters, decodeFunctionData, encodeAbiParameters, getAddress, parseAbi, recoverTypedDataAddress, toHex } from "viem";
@@ -334,8 +336,12 @@ function equityHistory(a) {
 // ---------------------------------------------------------------- SSE
 const clients = new Set();
 function broadcast(key, event, data) {
-  const payload = `event: ${event}\nid: ${Date.now()}\ndata: ${JSON.stringify(data, replacer)}\n\n`;
-  for (const c of clients) if (c.keys.has(lc(key))) c.res.write(payload);
+  // Engine frames: `event: <type>` with the bus event ({type, ...}) as data (engine/src/api/server.ts).
+  const frames = wireStream(event, JSON.parse(JSON.stringify(data, replacer)));
+  for (const [ev, d] of frames) {
+    const payload = `event: ${ev}\ndata: ${JSON.stringify(d, replacer)}\n\n`;
+    for (const c of clients) if (c.keys.has(lc(key))) c.res.write(payload);
+  }
 }
 setInterval(() => {
   for (const c of clients) c.res.write(`: ping ${Date.now()}\n\n`);
@@ -810,6 +816,7 @@ const RPC_ABI = parseAbi([
   "function nonces(address) view returns (uint256)",
   "function actionNonce() view returns (uint256)",
   "function netDeposits() view returns (uint256)",
+  "function predictAccount(address owner, bytes32 salt) view returns (address)",
 ]);
 function rpc(req) {
   const ok = (result) => ({ jsonrpc: "2.0", id: req.id, result });
@@ -834,6 +841,7 @@ function rpc(req) {
           const a = accounts.get(who);
           return ok(enc(o ? o.wallet : a ? 0n : 0n));
         }
+        if (lc(to) === lc(FACTORY) && d.functionName === "predictAccount") return ok(encodeAbiParameters([{ type: "address" }], [predictAccount(FACTORY, IMPLEMENTATION, d.args[0], d.args[1])]));
         if (lc(to) === lc(AUSD) && d.functionName === "nonces") return ok(enc(owners.get(lc(d.args[0]))?.permitNonce ?? 0n));
         const a = accounts.get(lc(to));
         if (a && d.functionName === "actionNonce") return ok(enc(a.actionNonce));
@@ -943,7 +951,7 @@ const server = http.createServer(async (req, res) => {
       const keys = new Set((url.searchParams.get("account") ?? "").split(",").map(lc).filter(Boolean));
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "Access-Control-Allow-Origin": "*" });
       res.write(`: connected ${[...keys].join(",")}\n\n`);
-      res.write(`event: hello\ndata: ${JSON.stringify({ block, at: now() })}\n\n`);
+      res.write(`event: hello\ndata: ${JSON.stringify({ channel: [...keys].join(","), block })}\n\n`);
       const c = { res, keys };
       clients.add(c);
       req.on("close", () => clients.delete(c));
@@ -958,16 +966,19 @@ const server = http.createServer(async (req, res) => {
         rpc: `${base}/rpc`,
         explorerTx: MAINNET.explorerTx,
         explorerAddress: MAINNET.explorerAddress,
-        contracts: { factory: FACTORY, implementation: IMPLEMENTATION, keeperRegistry: KEEPER, perplExchange: MAINNET.perplExchange, collateral: AUSD, deployBlock: 75_000_000 },
+        contracts: { factory: FACTORY, keeperRegistry: KEEPER, perplExchange: MAINNET.perplExchange, collateral: AUSD, deployBlock: 75_000_000 },
+        builder: { id: 26, feePer100K: 20, appliesTo: "opening size only" },
+        keepers: [KEEPER],
+        relayer: KEEPER,
         collateralDecimals: 6,
         depositCapCNS: CAP.toString(),
         perplMinAccountOpenCNS: MIN_OPEN.toString(),
-        markets: markets.map((m) => ({ perpId: m.perpId, symbol: m.symbol, lotDecimals: m.lotDecimals, priceDecimals: m.priceDecimals, markPNS: m.markPNS.toString(), minOrderLotLNS: "1", maxLeverage: m.maxLeverage })),
+        markets: markets.map((m) => ({ perpId: m.perpId, symbol: m.symbol, lotDecimals: m.lotDecimals, priceDecimals: m.priceDecimals, markPNS: m.markPNS.toString(), minOrderLots: 1, minOrderSize: (1 / 10 ** m.lotDecimals).toFixed(m.lotDecimals), minPostingCNS: "0", isOpen: true })),
         teamRun: { addresses: [cs(DEMO_LEADER.address), cs(DEMO_FOLLOWER)], demoLeaderAccountId: DEMO_LEADER.accountId, demoFollowerAccount: cs(DEMO_FOLLOWER) },
       });
     }
     if (req.method === "GET" && p === "/v1/markets")
-      return send(res, 200, markets.map((m) => ({ perpId: m.perpId, symbol: m.symbol, markPNS: m.markPNS, oraclePNS: m.markPNS, fundingRateBps: 0.6, openInterestLNS: "0", bestBidPNS: (m.markPNS * 9_999n) / BPS, bestAskPNS: (m.markPNS * 10_001n) / BPS, change24hPct: 1.2 })));
+      return send(res, 200, wireMarkets(markets.map((m) => ({ perpId: m.perpId, symbol: m.symbol, markPNS: m.markPNS, oraclePNS: m.markPNS, fundingRateBps: 0.6, openInterestLNS: "0", bestBidPNS: (m.markPNS * 9_999n) / BPS, bestAskPNS: (m.markPNS * 10_001n) / BPS, change24hPct: 1.2 }))));
     if (req.method === "GET" && p === "/v1/leaders") {
       const window = url.searchParams.get("window") ?? "30d";
       const sort = url.searchParams.get("sort") ?? "score";
@@ -975,7 +986,7 @@ const server = http.createServer(async (req, res) => {
       let list = LEADERS.map((l) => leaderSummary(l, window));
       if (market) list = list.filter((l) => l.markets.includes(market));
       list.sort((a, b) => (sort === "pnl" ? b.pnlPct - a.pnlPct : sort === "drawdown" ? a.maxDrawdownPct - b.maxDrawdownPct : b.score - a.score));
-      return send(res, 200, list);
+      return send(res, 200, { source: "indexer", nansenSource: "mock", window, sort, leaders: list.map(wireLeaderSummary) });
     }
     if (req.method === "GET" && p === "/v1/stats/copy-quality") return send(res, 200, copyQuality(accounts.values(), url.searchParams.get("period") ?? "30d"));
     if (req.method === "GET" && (m = p.match(/^\/v1\/leaders\/(\d+)\/copy-quality$/))) return send(res, 200, copyQuality(accounts.values(), url.searchParams.get("period") ?? "30d", Number(m[1])));
@@ -986,17 +997,18 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && (m = p.match(/^\/v1\/leaders\/(\d+)$/))) {
       const l = leaderById[Number(m[1])];
       if (!l) return send(res, 404, { error: "not_found", message: "Unknown leader" });
-      return send(res, 200, leaderProfile(l, url.searchParams.get("window") ?? "30d"));
+      const w = url.searchParams.get("window") ?? "30d";
+      return send(res, 200, { ...wireLeaderProfile(leaderProfile(l, w), w, sym), adversarial: adversarialFor(l.accountId) });
     }
     if (req.method === "GET" && (m = p.match(/^\/v1\/owners\/(0x[0-9a-fA-F]{40})\/accounts$/))) {
       const o = ownerState(m[1]);
       const list = [...accounts.values()].filter((a) => lc(a.owner) === lc(m[1]) && !a.teamRun).sort((x, y) => x.createdAt - y.createdAt);
-      return send(res, 200, { owner: o.owner, walletBalanceCNS: o.wallet.toString(), accounts: list.map(serializeAccount) });
+      return send(res, 200, wireOwnerAccounts(o.owner, list.map(serializeAccount), predictAccount(FACTORY, IMPLEMENTATION, cs(m[1]), "0x" + "0".repeat(64))));
     }
     if (req.method === "GET" && (m = p.match(/^\/v1\/accounts\/(0x[0-9a-fA-F]{40})$/))) {
       const a = accounts.get(lc(m[1]));
       if (!a) return send(res, 404, { error: "not_found", message: "Unknown account" });
-      return send(res, 200, serializeAccount(a));
+      return send(res, 200, wireAccount(serializeAccount(a)));
     }
     if (req.method === "GET" && (m = p.match(/^\/v1\/accounts\/(0x[0-9a-fA-F]{40})\/feed$/))) {
       const a = accounts.get(lc(m[1]));
@@ -1004,17 +1016,17 @@ const server = http.createServer(async (req, res) => {
       const cursor = Number(url.searchParams.get("cursor") ?? 0);
       const src = a.teamRun && SW.demoQuiet ? a.feed.map((e) => ({ ...e, timestamp: e.timestamp - 2.2 * 3600e3 })) : a.feed;
       const page = src.slice(cursor, cursor + 30);
-      return send(res, 200, { events: page, cursor: cursor + 30 < a.feed.length ? String(cursor + 30) : null });
+      return send(res, 200, wireFeedPage(page, cursor + 30 < a.feed.length ? cursor + 30 : null));
     }
     if (req.method === "GET" && p === "/v1/stats") {
       const user = [...accounts.values()].filter((a) => !a.teamRun);
       return send(res, 200, { accountsCreated: user.length + 41, fundedAccounts: user.length + 29, netAusdDepositedCNS: "512400000", copiesExecuted: 1840, copiesBlocked: { LeverageTooHigh: 61, MarketNotAllowed: 22, ExceedsMaxNotional: 17, DailyLossStop: 4, DrawdownStop: 2 }, medianLatencyMs: 604, activeFollowers7d: 33, copies: [] });
     }
-    if (req.method === "GET" && p === "/v1/demo") return send(res, 200, demoState());
+    if (req.method === "GET" && p === "/v1/demo") return send(res, 200, wireDemo(demoState()));
     if (req.method === "POST" && p === "/v1/quote/follow") {
       const b = await readBody(req);
       const r = quote(b.owner, Number(b.leaderAccountId), b.policy ?? {}, b.account);
-      return send(res, r.status, r.body);
+      return send(res, r.status, r.status === 200 ? wireQuote(r.body, b.owner) : r.body);
     }
     if (req.method === "POST" && p === "/v1/relay/create") {
       const r = await relayCreate(await readBody(req));

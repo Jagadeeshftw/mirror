@@ -96,6 +96,30 @@
   "scheme": "dark"
  },
  {
+  "file": "watch-quiet-mobile-light.png",
+  "state": "watch-quiet",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "watch-quiet-mobile-dark.png",
+  "state": "watch-quiet",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "watch-quiet-desktop-light.png",
+  "state": "watch-quiet",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "watch-quiet-desktop-dark.png",
+  "state": "watch-quiet",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
   "file": "skeleton-mobile-light.png",
   "state": "skeleton",
   "size": "mobile",
@@ -312,6 +336,30 @@
   "scheme": "dark"
  },
  {
+  "file": "leaders-mobile-light.png",
+  "state": "leaders",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "leaders-mobile-dark.png",
+  "state": "leaders",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "leaders-desktop-light.png",
+  "state": "leaders",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "leaders-desktop-dark.png",
+  "state": "leaders",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
   "file": "leader-adversarial-mobile-light.png",
   "state": "leader-adversarial",
   "size": "mobile",
@@ -380,102 +428,6 @@
  {
   "file": "follow-whatif-503-desktop-dark.png",
   "state": "follow-whatif-503",
-  "size": "desktop",
-  "scheme": "dark"
- },
- {
-  "file": "positions-mobile-light.png",
-  "state": "positions",
-  "size": "mobile",
-  "scheme": "light"
- },
- {
-  "file": "positions-mobile-dark.png",
-  "state": "positions",
-  "size": "mobile",
-  "scheme": "dark"
- },
- {
-  "file": "positions-desktop-light.png",
-  "state": "positions",
-  "size": "desktop",
-  "scheme": "light"
- },
- {
-  "file": "positions-desktop-dark.png",
-  "state": "positions",
-  "size": "desktop",
-  "scheme": "dark"
- },
- {
-  "file": "settings-network-mobile-light.png",
-  "state": "settings-network",
-  "size": "mobile",
-  "scheme": "light"
- },
- {
-  "file": "settings-network-mobile-dark.png",
-  "state": "settings-network",
-  "size": "mobile",
-  "scheme": "dark"
- },
- {
-  "file": "settings-network-desktop-light.png",
-  "state": "settings-network",
-  "size": "desktop",
-  "scheme": "light"
- },
- {
-  "file": "settings-network-desktop-dark.png",
-  "state": "settings-network",
-  "size": "desktop",
-  "scheme": "dark"
- },
- {
-  "file": "monad-down-mobile-light.png",
-  "state": "monad-down",
-  "size": "mobile",
-  "scheme": "light"
- },
- {
-  "file": "monad-down-mobile-dark.png",
-  "state": "monad-down",
-  "size": "mobile",
-  "scheme": "dark"
- },
- {
-  "file": "monad-down-desktop-light.png",
-  "state": "monad-down",
-  "size": "desktop",
-  "scheme": "light"
- },
- {
-  "file": "monad-down-desktop-dark.png",
-  "state": "monad-down",
-  "size": "desktop",
-  "scheme": "dark"
- },
- {
-  "file": "watch-quiet-mobile-light.png",
-  "state": "watch-quiet",
-  "size": "mobile",
-  "scheme": "light"
- },
- {
-  "file": "watch-quiet-mobile-dark.png",
-  "state": "watch-quiet",
-  "size": "mobile",
-  "scheme": "dark"
- },
- {
-  "file": "watch-quiet-desktop-light.png",
-  "state": "watch-quiet",
-  "size": "desktop",
-  "scheme": "light"
- },
- {
-  "file": "watch-quiet-desktop-dark.png",
-  "state": "watch-quiet",
   "size": "desktop",
   "scheme": "dark"
  },
@@ -552,26 +504,74 @@
   "scheme": "dark"
  },
  {
-  "file": "leaders-mobile-light.png",
-  "state": "leaders",
+  "file": "positions-mobile-light.png",
+  "state": "positions",
   "size": "mobile",
   "scheme": "light"
  },
  {
-  "file": "leaders-mobile-dark.png",
-  "state": "leaders",
+  "file": "positions-mobile-dark.png",
+  "state": "positions",
   "size": "mobile",
   "scheme": "dark"
  },
  {
-  "file": "leaders-desktop-light.png",
-  "state": "leaders",
+  "file": "positions-desktop-light.png",
+  "state": "positions",
   "size": "desktop",
   "scheme": "light"
  },
  {
-  "file": "leaders-desktop-dark.png",
-  "state": "leaders",
+  "file": "positions-desktop-dark.png",
+  "state": "positions",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "settings-network-mobile-light.png",
+  "state": "settings-network",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "settings-network-mobile-dark.png",
+  "state": "settings-network",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "settings-network-desktop-light.png",
+  "state": "settings-network",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "settings-network-desktop-dark.png",
+  "state": "settings-network",
+  "size": "desktop",
+  "scheme": "dark"
+ },
+ {
+  "file": "monad-down-mobile-light.png",
+  "state": "monad-down",
+  "size": "mobile",
+  "scheme": "light"
+ },
+ {
+  "file": "monad-down-mobile-dark.png",
+  "state": "monad-down",
+  "size": "mobile",
+  "scheme": "dark"
+ },
+ {
+  "file": "monad-down-desktop-light.png",
+  "state": "monad-down",
+  "size": "desktop",
+  "scheme": "light"
+ },
+ {
+  "file": "monad-down-desktop-dark.png",
+  "state": "monad-down",
   "size": "desktop",
   "scheme": "dark"
  }
