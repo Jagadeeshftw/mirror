@@ -163,7 +163,17 @@ const EnvSchema = z.object({
   NANSEN_DAILY_BUDGET: int(1_000_000),
   NANSEN_CACHE_HOURS: int(24),
 
-  /** Expo push (Android): off unless set; EXPO_ACCESS_TOKEN when the Expo project enforces push security. */
+  /**
+   * Android push through FCM HTTP v1 with a Firebase service account (secret). FCM_SERVICE_ACCOUNT_PATH: a JSON key
+   * file outside the repo; FCM_SERVICE_ACCOUNT_JSON: the same JSON as one value (hosting). Off when neither is set.
+   */
+  FCM_SERVICE_ACCOUNT_PATH: z.string().optional(),
+  FCM_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  /** Overrides the service account's project_id in the send URL. */
+  FCM_PROJECT_ID: z.string().optional().transform((v) => v || undefined).pipe(z.string().regex(/^[a-z0-9-]{4,40}$/).optional()),
+  /** Test hook (localnet only): FCM send URL; tokens are minted at <origin>/token of the same server. */
+  FCM_ENDPOINT_OVERRIDE: z.string().url().optional(),
+  /** Expo push (optional fallback for Expo tokens): off unless set; EXPO_ACCESS_TOKEN when the project enforces push security. */
   PUSH_ENABLED: bool,
   EXPO_ACCESS_TOKEN: z.string().optional(),
   /** Web Push (VAPID). On when both keys are set; generate them with `pnpm gen:vapid`. Never commit the private key. */

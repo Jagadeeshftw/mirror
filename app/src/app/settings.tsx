@@ -57,7 +57,7 @@ function SetRow({ icon, title, sub, right, onPress, testID }: { icon: IconName; 
 function channelLabel(r: PushRegistration): string {
   if (!r.registered) return "Not registered yet";
   if (r.channel === "webpush") return "Registered · Web Push";
-  if (r.channel === "expo") return "Registered · Android push";
+  if (r.channel === "fcm" || r.channel === "expo") return "Registered · Android push";
   return "Registered · in-app delivery while open";
 }
 

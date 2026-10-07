@@ -1,18 +1,30 @@
 // Encrypted alerts (Web Push with VAPID, no Firebase): opt in after the first follow, a demo trade, the engine's Web
 // Push request captured by the push sink (PUSH_WEBPUSH_ENDPOINT_OVERRIDE), then the real service worker receives
 // that push (CDP ServiceWorker.deliverPushMessage), shows the generic text, and the app decrypts it on the Alerts screen.
+import { randomBytes } from "node:crypto";
+import { keccak256, stringToBytes, toHex } from "viem";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { env, leaderTrade, sleep } from "./chain.mjs";
 import { click, isVisible, text, tid, until, visible } from "./browser.mjs";
 
-/** Stands in for PushManager.subscribe: headless Chrome has no push service, so the subscription's keys come from the sink. */
+/**
+ * Stands in for PushManager.subscribe: headless Chrome has no push service, so the subscription's keys come from the
+ * sink. Like a real subscription it outlives page loads (a localStorage flag), so app starts find it again.
+ */
 const FAKE_SUBSCRIPTION = (sub) => {
   const P = globalThis.PushManager?.prototype;
   if (!P || P.__mirrorFake) return;
   P.__mirrorFake = true;
-  const fake = { endpoint: sub.endpoint, expirationTime: null, options: { userVisibleOnly: true, applicationServerKey: null }, toJSON: () => ({ endpoint: sub.endpoint, expirationTime: null, keys: sub.keys }), unsubscribe: async () => true, getKey: () => null };
+  const FLAG = "__mirrorFakePushSub";
+  const ls = { get: () => { try { return localStorage.getItem(FLAG) === sub.endpoint; } catch { return false; } }, set: (v) => { try { v ? localStorage.setItem(FLAG, sub.endpoint) : localStorage.removeItem(FLAG); } catch {} } };
   let current = null;
-  P.subscribe = async function () { current = fake; return fake; };
-  P.getSubscription = async function () { return current; };
+  const fake = { endpoint: sub.endpoint, expirationTime: null, options: { userVisibleOnly: true, applicationServerKey: null }, toJSON: () => ({ endpoint: sub.endpoint, expirationTime: null, keys: sub.keys }), unsubscribe: async () => { current = null; ls.set(false); return true; }, getKey: () => null };
+  P.subscribe = async function () { current = fake; ls.set(true); return fake; };
+  P.getSubscription = async function () { return current ?? (ls.get() ? fake : null); };
+};
+
+const PUSH_TYPES = {
+  PushRegister: [{ name: "owner", type: "address" }, { name: "notifyPublicKey", type: "bytes32" }, { name: "channelHash", type: "bytes32" }, { name: "deadline", type: "uint256" }],
 };
 
 export async function installPushDouble(ctx) {
@@ -26,18 +38,38 @@ export async function installPushDouble(ctx) {
 
 /** Called by the follow flow while the result screen shows "Get alerts for this follow?". */
 export async function optInAfterFirstFollow(ctx) {
-  const { R, page, state, dev } = ctx;
+  const { R, page, state, dev, push } = ctx;
   await R.check("after the first follow: Turn on alerts (permission asked only now) -> Web Push subscription registered", page, async () => {
     await visible(page, "follow.alerts", 20_000);
     const before = await page.evaluate(() => Notification.permission);
+    const p0 = (await dev.webauthnLog()).length;
     await installPushDouble(ctx);
     await click(page, "follow.alerts.enable");
     await visible(page, "follow.alerts.on.done", 20_000);
     const swScope = await until("service worker", () => page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.scope ?? null), 20_000);
     state.alertsOn = true;
     const after = await page.evaluate(() => Notification.permission);
-    return { ok: !!swScope && after === "granted", permissionBefore: before, permissionAfter: after, swScope, note: await text(page, "follow.alerts.on.done"), prompts: (await dev.webauthnLog()).length };
+    // The registration is owner-signed: exactly one passkey prompt for the opt-in.
+    const optInPrompts = (await dev.webauthnLog()).length - p0;
+    return { ok: !!swScope && after === "granted" && optInPrompts === 1, permissionBefore: before, permissionAfter: after, swScope, note: await text(page, "follow.alerts.on.done"), optInPrompts };
   });
+
+  await R.check("push registration needs the owner's signature: unsigned and forged registrations for this owner are refused", null, async () => {
+    const owner = state.address;
+    const attackerKey = randomBytes(32);
+    const attackerSub = { endpoint: `https://fcm.googleapis.com/fcm/send/attacker-${ctx.RUN}`, keys: push.sub.keys };
+    const body = { owner, notifyPublicKey: attackerKey.toString("base64"), webPush: attackerSub };
+    const status = (p) => p.then(() => 200, (e) => e.status);
+    const unsigned = await status(ctx.api("POST", "/v1/push/register", body));
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
+    const attacker = privateKeyToAccount(generatePrivateKey());
+    const message = { owner, notifyPublicKey: toHex(attackerKey), channelHash: keccak256(stringToBytes(`webpush:${attackerSub.endpoint}`)), deadline };
+    const signature = await attacker.signTypedData({ domain: { name: "Mirror Push", version: "1", chainId: env.chainId }, types: PUSH_TYPES, primaryType: "PushRegister", message });
+    let forgedErr = null;
+    const forged = await ctx.api("POST", "/v1/push/register", { ...body, deadline: deadline.toString(), signature }).then(() => 200, (e) => ((forgedErr = e.json), e.status));
+    const shareList = state.userAccount ? await status(ctx.api("GET", `/v1/accounts/${state.userAccount}/share?key=${encodeURIComponent(body.notifyPublicKey)}`)) : null;
+    return { ok: (unsigned === 400 || unsigned === 401) && forged === 401 && forgedErr?.code === "not_owner" && (shareList === null || shareList === 403), unsigned, forged, forgedCode: forgedErr?.code, attackerShareList: shareList };
+  }, { needs: ["alertsOn", "address"] });
 }
 
 const swRegistrationId = async (cdp, scopePrefix) => {

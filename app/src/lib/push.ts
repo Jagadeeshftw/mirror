@@ -1,16 +1,19 @@
 // Push (Android): alerts are sealed to this device's notification key (X25519 from the passkey's second PRF namespace,
-// "mirror.prf.ns.notify.v1"), so Mirror's server, Expo and FCM only relay ciphertext. The remote message shows the
-// generic "Mirror / New activity" and carries the envelope in data.mirror. Foreground: the generic banner is
+// "mirror.prf.ns.notify.v1"), so Mirror's server and FCM only relay ciphertext. The engine sends FCM HTTP v1 data
+// messages straight to this device's native FCM token (no Expo push service, no Expo project id): the message shows
+// the generic "Mirror / New activity" and carries the envelope in data.mirror. The registration is owner-signed
+// (pushAuth.ts) in the passkey prompt shown when alerts are turned on. Foreground: the generic banner is
 // suppressed and the decrypted alert is shown as a local notification. Background: the OS shows the generic text and
 // the background task decrypts into the Alerts list. While the app is open the same envelopes also arrive over SSE.
 // Web build: push.web.ts.
-import Constants from "expo-constants";
-import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
 import { Platform } from "react-native";
 import { api } from "./api";
 import { openJson, publicKeyB64 } from "./notifyKey";
+import { envelopeFrom } from "./pushEnvelope";
+import { channelHash, keyRegistered, sameReg, type PushChannel } from "./pushAuth";
+import { loadPushReg, registerSigned, savePushReg, unregisterSigned } from "./pushRegistration";
 import { addNotification } from "../state/notifications";
 import { getAlertsPref } from "../state/alertsPref";
 import type { Address, PushEnvelope, PushPayload } from "./types";
@@ -24,23 +27,12 @@ export interface PushRegistration {
   registered: boolean;
   permission: string;
   /** Where alerts reach this device: remote push, or only while the app is open. */
-  channel: "expo" | "webpush" | "in-app";
+  channel: "fcm" | "expo" | "webpush" | "in-app";
   /** Web only: the service worker cannot decrypt, so the browser shows the generic text. */
   decryptInBackground: boolean;
 }
 
-/** The sealed envelope from a push message's data, or null if it isn't one. */
-export function envelopeFrom(data: unknown): PushEnvelope | null {
-  if (!data || typeof data !== "object") return null;
-  const d = data as Record<string, unknown>;
-  const raw = d.mirror ?? d.envelope ?? d.body ?? d;
-  try {
-    const env = (typeof raw === "string" ? JSON.parse(raw) : raw) as PushEnvelope;
-    return env && env.v === 1 && env.ct ? env : null;
-  } catch {
-    return null;
-  }
-}
+export { envelopeFrom };
 
 Notifications.setNotificationHandler({
   // The generic remote banner is replaced by the decrypted local one while the app is in the foreground.
@@ -104,15 +96,18 @@ export function listenForEncryptedPush() {
   });
 }
 
-function easProjectId(): string | undefined {
-  const c = Constants as unknown as { expoConfig?: { extra?: { eas?: { projectId?: string } } }; easConfig?: { projectId?: string } };
-  return c.expoConfig?.extra?.eas?.projectId ?? c.easConfig?.projectId;
+/** The native FCM registration token (Android). No Expo project id needed. */
+async function fcmToken(): Promise<string> {
+  const t = await Notifications.getDevicePushTokenAsync();
+  if (t.type !== "android" || typeof t.data !== "string") throw new Error("no FCM token");
+  return t.data;
 }
 
 /**
  * Registers the passkey-derived notification public key (in-app delivery over SSE) and, when alerts are on and the
- * OS allows notifications, the Expo push token. The OS permission is requested only with `ask: true`, which the app
- * passes only when the user turns alerts on (Settings, or after the first follow).
+ * OS allows notifications, this device's FCM token. The OS permission is requested and the registration signed (one
+ * passkey prompt) only with `ask: true`, which the app passes only when the user turns alerts on (Settings, or after
+ * the first follow). Without it nothing prompts: a registration this device already signed is reported as is.
  */
 export async function registerForPush(owner: Address, opts: { ask?: boolean } = {}): Promise<PushRegistration> {
   const keys = await loadNotifyKey();
@@ -126,28 +121,42 @@ export async function registerForPush(owner: Address, opts: { ask?: boolean } = 
     if (cur.status !== "granted" && opts.ask) permission = (await Notifications.requestPermissionsAsync()).status;
   } catch {}
   let token = !on ? "unavailable:alerts-off" : permission === "granted" ? "unavailable" : "unavailable:not-permitted";
-  if (on && permission === "granted" && Platform.OS !== "web" && (Device.isDevice || Platform.OS === "android")) {
+  let fcm: string | undefined;
+  if (on && permission === "granted" && Platform.OS === "android") {
     try {
-      // Needs google-services.json in the build and an Expo project id (docs/app.md, "Android push").
-      token = (await Notifications.getExpoPushTokenAsync({ projectId: easProjectId() })).data;
+      // Needs google-services.json in the build (docs/app.md, "Android push").
+      fcm = await fcmToken();
+      token = fcm;
     } catch {
       token = "unavailable:no-fcm-config";
     }
   }
-  const channel = token.startsWith("Expo") ? "expo" : "in-app";
+  const ch: PushChannel = fcm ? "fcm" : "app";
+  const target = fcm ?? "";
+  const key = publicKeyB64(keys);
+  const channel = fcm ? "fcm" : "in-app";
+  const prev = await loadPushReg();
+  const out = { token, permission, channel, decryptInBackground: true } as const;
+  if (sameReg(prev, owner, key, ch, target) || (!opts.ask && ch === "app" && keyRegistered(prev, owner, key))) return { ...out, registered: true };
+  // A new key or channel (first opt-in, a rotated FCM token) needs the owner's signature: only when asked.
+  if (!opts.ask) return { ...out, registered: false };
   try {
-    await api.pushRegister({ owner, notifyPublicKey: publicKeyB64(keys), ...(channel === "expo" ? { expoPushToken: token } : {}) });
-    return { token, registered: true, permission, channel, decryptInBackground: true };
+    await registerSigned(owner, key, ch, target, fcm ? { fcmToken: fcm } : {});
+    return { ...out, registered: true };
   } catch {
-    return { token, registered: false, permission, channel, decryptInBackground: true };
+    return { ...out, registered: false };
   }
 }
 
-/** Alerts off: stop remote push to this device (the in-app channel stays while the app is open). */
+/** Alerts off: stop remote push to this device (owner-signed; the in-app channel stays while the app is open). */
 export async function unregisterPush(owner: Address): Promise<void> {
   try {
-    const token = (await Notifications.getExpoPushTokenAsync({ projectId: easProjectId() })).data;
-    await api.pushUnregister({ owner, target: token });
+    const prev = await loadPushReg();
+    if (!prev || prev.channel !== "fcm" || prev.owner !== owner.toLowerCase()) return;
+    const t = await fcmToken();
+    if (channelHash("fcm", t) !== prev.hash) return;
+    await unregisterSigned(owner, "fcm", t);
+    await savePushReg(owner, prev.key, "app", "");
   } catch {}
 }
 

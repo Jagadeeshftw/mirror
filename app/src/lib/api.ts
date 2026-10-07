@@ -204,9 +204,11 @@ export const api = {
   demoBlocked: () => request<{ cycleId: string }>("POST", "/v1/demo/blocked", {}),
 
   pushConfig: () => request<PushConfig>("GET", "/v1/push/config"),
-  pushRegister: (body: { owner: Address; notifyPublicKey: string; expoPushToken?: string; webPush?: WebPushSubscriptionJSON }) =>
+  // Both owner-signed (lib/pushAuth.ts): PushRegister / PushUnregister typed data.
+  pushRegister: (body: { owner: Address; notifyPublicKey: string; fcmToken?: string; expoPushToken?: string; webPush?: WebPushSubscriptionJSON; deadline: string; signature: Hex }) =>
     request<{ ok: boolean; channels?: string[] }>("POST", "/v1/push/register", body),
-  pushUnregister: (body: { owner: Address; target: string }) => request<{ ok: boolean }>("POST", "/v1/push/unregister", body),
+  pushUnregister: (body: { owner: Address; channel: "webpush" | "fcm" | "expo"; target: string; deadline: string; signature: Hex }) =>
+    request<{ ok: boolean }>("POST", "/v1/push/unregister", body),
   // Shared position links (docs/api.md "Shared positions").
   shareCreate: (body: { account: Address; perpId: number; linkId: Hex; deadline: string; signature: Hex }) =>
     request<{ linkId: Hex; urlId: string; status: string; perpId: number; side: string }>("POST", "/v1/share", body, 30000),

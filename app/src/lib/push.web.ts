@@ -8,6 +8,9 @@
 // envelopes that arrive over SSE while it is open.
 import { api } from "./api";
 import { openJson, publicKeyB64 } from "./notifyKey";
+import { envelopeFrom } from "./pushEnvelope";
+import { channelHash, keyRegistered, sameReg, type PushChannel } from "./pushAuth";
+import { loadPushReg, registerSigned, savePushReg, unregisterSigned } from "./pushRegistration";
 import { basePath } from "./pwa";
 import { addNotification } from "../state/notifications";
 import { getAlertsPref } from "../state/alertsPref";
@@ -23,21 +26,11 @@ export interface PushRegistration {
   token: string;
   registered: boolean;
   permission: string;
-  channel: "expo" | "webpush" | "in-app";
+  channel: "fcm" | "expo" | "webpush" | "in-app";
   decryptInBackground: boolean;
 }
 
-export function envelopeFrom(data: unknown): PushEnvelope | null {
-  if (!data || typeof data !== "object") return null;
-  const d = data as Record<string, unknown>;
-  const raw = d.mirror ?? d.envelope ?? d;
-  try {
-    const env = (typeof raw === "string" ? JSON.parse(raw) : raw) as PushEnvelope;
-    return env && env.v === 1 && env.ct ? env : null;
-  } catch {
-    return null;
-  }
-}
+export { envelopeFrom };
 
 export async function decryptEnvelope(env: PushEnvelope): Promise<PushPayload | null> {
   const keys = await loadNotifyKey();
@@ -144,7 +137,9 @@ async function subscribe(vapidPublicKey: string): Promise<PushSubscription | nul
 
 /**
  * Registers the notification public key (in-app delivery over SSE) and, with alerts on and notifications allowed, a
- * Web Push subscription. The browser permission is requested only with `ask: true` (Turn on alerts / Settings).
+ * Web Push subscription. The browser permission is requested and the registration signed by the owner key (one
+ * passkey prompt, pushAuth.ts) only with `ask: true` (Turn on alerts / Settings). Without it nothing prompts: a
+ * registration this browser already signed is reported as is.
  */
 export async function registerForPush(owner: Address, opts: { ask?: boolean } = {}): Promise<PushRegistration> {
   const keys = await loadNotifyKey();
@@ -160,7 +155,8 @@ export async function registerForPush(owner: Address, opts: { ask?: boolean } = 
   if (on && permission === "granted") {
     try {
       const cfg = await api.pushConfig();
-      const sub = cfg.webPush ? await subscribe(cfg.webPush.vapidPublicKey) : null;
+      // Without a prompt, only look at an existing subscription; subscribing is part of turning alerts on.
+      const sub = cfg.webPush ? (opts.ask ? await subscribe(cfg.webPush.vapidPublicKey) : await existing()) : null;
       const j = sub?.toJSON();
       if (j?.endpoint && j.keys?.p256dh && j.keys?.auth) {
         webPush = { endpoint: j.endpoint, keys: { p256dh: j.keys.p256dh, auth: j.keys.auth } };
@@ -170,20 +166,35 @@ export async function registerForPush(owner: Address, opts: { ask?: boolean } = 
       token = "unavailable:no-webpush";
     }
   }
-  const channel = webPush ? "webpush" : "in-app";
+  const ch: PushChannel = webPush ? "webpush" : "app";
+  const target = webPush?.endpoint ?? "";
+  const key = publicKeyB64(keys);
+  const out = { ...base, token, permission, channel: webPush ? ("webpush" as const) : ("in-app" as const) };
+  const prev = await loadPushReg();
+  if (sameReg(prev, owner, key, ch, target) || (!opts.ask && ch === "app" && keyRegistered(prev, owner, key))) return { ...out, registered: true };
+  if (!opts.ask) return out;
   try {
-    await api.pushRegister({ owner, notifyPublicKey: publicKeyB64(keys), ...(webPush ? { webPush } : {}) });
-    return { ...base, token, registered: true, permission, channel };
+    await registerSigned(owner, key, ch, target, webPush ? { webPush } : {});
+    return { ...out, registered: true };
   } catch {
-    return { ...base, token, registered: false, permission, channel };
+    return out;
   }
 }
 
-/** Alerts off: drop the browser subscription and tell the server. */
+async function existing(): Promise<PushSubscription | null> {
+  const reg = await swRegistration();
+  return (await reg?.pushManager?.getSubscription().catch(() => null)) ?? null;
+}
+
+/** Alerts off: tell the server (owner-signed) and drop the browser subscription. */
 export async function unregisterPush(owner: Address): Promise<void> {
   const reg = await swRegistration().catch(() => null);
   const sub = await reg?.pushManager?.getSubscription().catch(() => null);
   if (!sub) return;
-  await api.pushUnregister({ owner, target: sub.endpoint }).catch(() => {});
+  const prev = await loadPushReg();
+  if (prev && prev.channel === "webpush" && prev.owner === owner.toLowerCase() && prev.hash === channelHash("webpush", sub.endpoint)) {
+    await unregisterSigned(owner, "webpush", sub.endpoint).catch(() => {});
+    await savePushReg(owner, prev.key, "app", "").catch(() => {});
+  }
   await sub.unsubscribe().catch(() => {});
 }

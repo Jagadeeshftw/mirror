@@ -1,0 +1,15 @@
+{
+  "description": "PushRegister / PushUnregister EIP-712 (engine services/pushauth.ts, app src/lib/pushAuth.ts). channelHash = keccak256(utf8('<channel>:<target>')).",
+  "chainId": 143,
+  "owner": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+  "notifyPublicKeyHex": "0x1111111111111111111111111111111111111111111111111111111111111111",
+  "notifyPublicKeyB64": "ERERERERERERERERERERERERERERERERERERERERERE=",
+  "deadline": "1700000000",
+  "channelHashes": {
+    "webpush:https://fcm.googleapis.com/fcm/send/abc": "0xca41f11f71199c4bd8a12b3e0cb573e451675c1c629adf1351ab05aa938f0704",
+    "fcm:tok": "0x1f82b5b66bf0bdc41b6ba21f759eeb18f93de4b4d5d500648ed4591e9f7762b3",
+    "app:": "0xc5600339ff09f86cb8c2640aa7ae76a7e9911b5a0b8df0762ff1447a719e845b"
+  },
+  "registerFcmTokDigest": "0x4ae4eb3fec54dce6c9b9f1aff97d1a934e4da2dcf9f3a534c6b7fac0b70ea203",
+  "unregisterWebpushDigest": "0x9ed423cf61acc775701c304c8b4d589ed6fe2792971d20e62e17b4163b49b90c"
+}

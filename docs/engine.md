@@ -325,15 +325,33 @@ back to x402; with only a payer key it uses x402; with neither (or `NANSEN_ENABL
 score simply has no Nansen term. `/v1/leaders` reports the source as `nansenSource` (`api_key` | `x402` | `off`).
 Tested against a mock 402 server built from a real Nansen 402; no paid call has been made.
 
-### Push (`services/push.ts`, `alerts.ts`, `pushcrypto.ts`, `webpush.ts`)
+### Push (`services/push.ts`, `pushauth.ts`, `alerts.ts`, `pushcrypto.ts`, `webpush.ts`, `fcm.ts`)
 
 Encrypted alerts for an owner's accounts. `alerts.ts` picks the feed events that alert and writes their text;
 `pushcrypto.ts` seals each alert to every registered device's notification public key (envelope v1: X25519 →
 HKDF-SHA256 → ChaCha20-Poly1305, byte-identical to the app's `notifyKey.ts`, checked against
 `shared/test-vectors/push-envelope-v1.json`); `push.ts` dedupes, rate-limits and fans out over SSE (`event: push`),
-Web Push (VAPID, `webpush.ts`) and Expo push. Targets live in `push_subs` (rows of the older `push_tokens` table are
-copied in as Expo targets). The visible push text is always the generic "Mirror / New activity". Team-run accounts
-never alert. Triggers, payload, channels and env: [api.md, Push](api.md#push).
+Web Push (VAPID, `webpush.ts`), FCM HTTP v1 (`fcm.ts`, Android) and, as a fallback, Expo push. Every registration is
+owner-signed EIP-712 (`pushauth.ts`: `PushRegister` / `PushUnregister`, deadline at most an hour ahead, each digest
+used once via `push_sig_used`). Targets live in `push_subs` with `signed_ms`; unsigned rows (from before signatures
+were required, and the old `push_tokens` table) are never used and are deleted at startup. The sealed share list uses
+the same signed keys only (`PushService.ownerKeys`). The visible push text is always the generic "Mirror / New
+activity". Team-run accounts never alert. Triggers, payload, channels: [api.md, Push](api.md#push).
+
+| Env | Meaning |
+|---|---|
+| `FCM_SERVICE_ACCOUNT_PATH` | path to the Firebase Admin SDK service-account JSON (secret; keep it outside the repo, e.g. `keys/firebase-adminsdk.json`, gitignored). Turns FCM on |
+| `FCM_SERVICE_ACCOUNT_JSON` | the same JSON as one value, for hosting secrets; wins over the path |
+| `FCM_PROJECT_ID` | overrides the service account's `project_id` in the send URL (Mirror: `mirror-c8061`) |
+| `FCM_ENDPOINT_OVERRIDE` | test hook, refused unless `NETWORK=localnet`: FCM send URL; the OAuth token is minted at `<origin>/token` |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push (`pnpm gen:vapid`); the private key is a secret |
+| `PUSH_WEBPUSH_ENDPOINT_OVERRIDE` | test hook, refused unless `NETWORK=localnet` |
+| `PUSH_ENABLED`, `EXPO_ACCESS_TOKEN` | Expo push fallback for earlier Expo tokens; off unless set |
+| `PUSH_RATE_PER_MIN`, `PUSH_MAX_AGE_SEC`, `PUSH_LOW_EQUITY_PCT` | 20 alerts per owner per minute, 900 s max event age, low-equity threshold 50% |
+
+The engine logs only the FCM project id, never anything from the key; key load errors name the variable, not the
+content. Access tokens are minted with a hand-rolled RS256 JWT (`node:crypto`, no Google SDK) and cached until a minute
+before expiry.
 
 ### Stats
 

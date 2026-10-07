@@ -111,6 +111,7 @@ export async function loadNotifyKey(): Promise<NotifyKeyPair | null> {
 export async function signOutDevice(): Promise<void> {
   await SecureStore.deleteItem(ACCOUNT_KEY);
   await SecureStore.deleteItem(NOTIFY_KEY);
+  await SecureStore.deleteItem("mirror.pushreg.v1"); // the remembered signed push registration (pushRegistration.ts)
 }
 
 // ---------- ceremonies ----------

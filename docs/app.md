@@ -73,29 +73,40 @@ notification namespace alone; it is never derived from the account output.
 ## Alerts
 
 Turned on from "Get alerts for this follow?" after the first follow (`follow.alerts.enable`) or the Settings switch.
-The OS / browser permission is asked only then, never at sign-up. The Alerts screen (`/alerts`, also from Settings →
+The OS / browser permission is asked only then, never at sign-up. Turning alerts on also signs the push registration
+with the owner key (`PushRegister`, docs/api.md "Push"): one passkey prompt. The app remembers that registration
+(`mirror.pushreg.v1`), so later app starts never prompt; if the channel changes (a rotated FCM token, a new browser
+subscription) Settings shows "Not registered yet" until alerts are turned on again. Turning alerts off signs
+`PushUnregister` (one prompt). The sealed share list needs a signed key too: if this device never turned alerts on, the
+share-link prompt registers the in-app channel in the same prompt. The Alerts screen (`/alerts`, also from Settings →
 "Alerts received" and Notifications) lists the decrypted alerts; they never leave the device.
 
 | Platform | Remote delivery | What the user sees | Where it is decrypted |
 |---|---|---|---|
 | Web | Web Push with VAPID through `public/sw.js` (no Firebase) | "Mirror / New activity" from the service worker | In the app when it opens or regains focus: the worker can't read the key (it sits in the app's encrypted storage) and has no X25519/ChaCha20 code, so it only queues the envelope in IndexedDB `mirror-inbox` and pings open tabs. Settings says so |
-| Android | Expo push (FCM), data `mirror` = envelope | Foreground: the decrypted text as a local notification (the generic banner is suppressed). Background: "Mirror / New activity"; the background task decrypts into Alerts | On the phone |
+| Android | FCM HTTP v1 straight from the engine to the native FCM token (no Expo push service), data message with `mirror` = envelope | Foreground: the decrypted text as a local notification (the generic banner is suppressed). Background: "Mirror / New activity"; the background task decrypts into Alerts | On the phone |
 | Both, app open | SSE `event: push` | Alerts list | On the device |
 
 ### Android push: what the owner provides
 
-Android remote push needs Firebase; everything else (web alerts, in-app alerts on Android) works without it.
+Android remote push uses Firebase Cloud Messaging directly; everything else (web alerts, in-app alerts on Android)
+works without it. No Expo project id, EAS project or Expo push credentials are needed.
 
-1. Firebase console → a project → add an Android app with package `com.zeroxo.mirror` → download
-   `google-services.json` and put it at `app/google-services.json` (gitignored). `app.config.ts` picks it up
-   automatically (`android.googleServicesFile`) on the next `expo prebuild` / `scripts/build-apk.sh`.
-2. Expo push also needs an Expo project id and the FCM V1 service-account key: `eas init` (or set
-   `EXPO_PUBLIC_EAS_PROJECT_ID` at build time), then upload the Firebase service-account JSON in the Expo dashboard
-   (Credentials → Android → FCM V1). On the engine set `PUSH_ENABLED=1` (and `EXPO_ACCESS_TOKEN` if push security
-   is on in the Expo project).
+The owner has configured (Firebase project `mirror-c8061`):
 
-Without these the app registers the in-app channel only (`expoPushToken` is not sent) and Settings shows
-"Registered · in-app delivery while open".
+1. `app/google-services.json` for the Android app `com.zeroxo.mirror` (gitignored). `app.config.ts` picks it up
+   (`android.googleServicesFile`) on the next `expo prebuild` / `scripts/build-apk.sh`; the app then gets its native
+   FCM token with `Notifications.getDevicePushTokenAsync()` and registers it (`fcmToken`, signed).
+2. The Firebase Admin SDK service-account key at `keys/firebase-adminsdk.json` (gitignored, secret). The engine reads
+   it only at runtime: `FCM_SERVICE_ACCOUNT_PATH=<path to that file>` locally, or `FCM_SERVICE_ACCOUNT_JSON=<the JSON>`
+   as a hosting secret (docs/engine.md). Never copy it into the repo, logs or test fixtures.
+
+The engine sends a data message (`title` "Mirror", `message` "New activity", `channelId` "copies", `mirror` =
+envelope); expo-notifications shows the generic text, the foreground listener replaces it with the decrypted local
+notification, and the background task decrypts into Alerts. Without `google-services.json` in the build the token
+call fails and the app registers the in-app channel only; Settings shows "Registered · in-app delivery while open".
+Expo push stays as a fallback in the engine for Expo tokens registered earlier (`PUSH_ENABLED=1`); the app no longer
+asks for Expo tokens.
 
 ## What the app signs
 

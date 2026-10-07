@@ -20,6 +20,7 @@ import { LeaderService } from './services/leaders.js';
 import { Views } from './services/views.js';
 import { PushService } from './services/push.js';
 import { webPushSender } from './services/webpush.js';
+import { fcmFromEnv } from './services/fcm.js';
 import { RateLimiter } from './services/ratelimit.js';
 import { createNansenSignal, type NansenSignal } from './nansen/client.js';
 import { StopExecutor } from './services/stops.js';
@@ -188,7 +189,12 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
   const views = new Views(db, reads, market, fallbackRegistry, relayer, cfg.explorerTx, equity);
   // Endpoint override is a Stage-A test hook: refused outside the localnet.
   if (env.PUSH_WEBPUSH_ENDPOINT_OVERRIDE && env.NETWORK !== 'localnet') throw new Error('PUSH_WEBPUSH_ENDPOINT_OVERRIDE is only allowed with NETWORK=localnet');
+  const fcm = fcmFromEnv(env);
+  // Only the project id is logged, never anything from the key.
+  if (fcm) log.info({ project: fcm.projectId }, 'FCM push enabled');
   const push = new PushService(db, fallbackRegistry, bus, {
+    chainId: cfg.chainId,
+    fcm,
     enabled: env.PUSH_ENABLED,
     accessToken: env.EXPO_ACCESS_TOKEN,
     webPush: webPushSender(env),

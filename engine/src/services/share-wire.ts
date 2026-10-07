@@ -65,7 +65,8 @@ export function startShareService(w: ShareWiring): ShareService {
     market: (perpId) => w.market.meta(perpId),
     head: w.head,
     alert: (owner, account, p) => w.push.deliver(owner, account, p),
-    ownerKeys: (owner) => w.db.all<{ k: string }>('SELECT DISTINCT notify_public_key AS k FROM push_subs WHERE owner = ?', owner.toLowerCase()).map((r) => r.k),
+    // Only keys the owner registered with a valid PushRegister signature (PushService.ownerKeys).
+    ownerKeys: (owner) => w.push.ownerKeys(owner),
     receipt: async (hash: Hex) => {
       const r = await w.client.getTransactionReceipt({ hash });
       return { status: r.status, logs: r.logs.map((g) => ({ address: g.address, topics: g.topics as Hex[], data: g.data })) };

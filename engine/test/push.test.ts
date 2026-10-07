@@ -8,6 +8,8 @@ import { alertFor, lowEquityAlert, type FeedItem } from '../src/services/alerts.
 import { Bus } from '../src/services/bus.js';
 import { EXPO_TOKEN, GENERIC, PushService, type WebPushSender } from '../src/services/push.js';
 import { open, seal, x25519PublicOf, type PushEnvelope } from '../src/services/pushcrypto.js';
+import { privateKeyToAccount } from 'viem/accounts';
+import { PUSH_CHAIN, signedRegister } from './pushsig.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const V = JSON.parse(readFileSync(join(here, '../../shared/test-vectors/push-envelope-v1.json'), 'utf8'));
@@ -37,7 +39,8 @@ describe('alert envelope v1 (shared test vector with the app)', () => {
   });
 });
 
-const OWNER = '0x00000000000000000000000000000000000000a0';
+const ownerAcct = privateKeyToAccount('0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d');
+const OWNER = ownerAcct.address.toLowerCase();
 const ACCT = '0x00000000000000000000000000000000000000a1';
 const TEAM = '0x00000000000000000000000000000000000000c1';
 const KEEPER = '0x00000000000000000000000000000000000000e1';
@@ -88,7 +91,7 @@ describe('trigger selection', () => {
   it('LeaderStopped, deposit and withdrawal', () => {
     expect(alertFor(item('LeaderStopped', { limit: '2000000', actual: '-2100000' }), ctx)).toMatchObject({ kind: 'leader_stop', title: 'Stopped copying leader #4638' });
     expect(alertFor(item('Deposited', { amount: '20000000' }), ctx)).toMatchObject({ kind: 'deposit', body: '20.00 AUSD added to your follow account' });
-    expect(alertFor(item('Withdrawn', { amount: '5000000', data: { to: OWNER } }), ctx)!.body).toBe('5.00 AUSD sent to 0x0000…00a0');
+    expect(alertFor(item('Withdrawn', { amount: '5000000', data: { to: '0x00000000000000000000000000000000000000a0' } }), ctx)!.body).toBe('5.00 AUSD sent to 0x0000…00a0');
   });
   it('policy, level, pause and shrink events are not alerted', () => {
     for (const k of ['PolicyUpdated', 'LevelSet', 'Paused', 'PerplAccountCreated', 'EngineShrunk', 'MarketClosed']) expect(alertFor(item(k), ctx)).toBeNull();
@@ -108,7 +111,7 @@ describe('trigger selection', () => {
 const DEVICE_PRIV = b64(V.recipientPrivateKey);
 const SUB = { endpoint: 'https://fcm.googleapis.com/fcm/send/abc', keys: { p256dh: Buffer.alloc(65, 4).toString('base64url'), auth: Buffer.alloc(16, 1).toString('base64url') } };
 
-function setup(opts: { status?: number; ratePerMin?: number } = {}) {
+async function setup(opts: { status?: number; ratePerMin?: number } = {}) {
   const db = new Db(':memory:');
   const bus = new Bus();
   const accounts: Record<string, { owner: string; teamRun: boolean }> = { [ACCT]: { owner: OWNER, teamRun: false }, [TEAM]: { owner: OWNER, teamRun: true } };
@@ -121,16 +124,17 @@ function setup(opts: { status?: number; ratePerMin?: number } = {}) {
     expo.push(...msgs);
     return new Response(JSON.stringify({ data: msgs.map(() => ({ status: 'ok' })) }));
   }) as typeof fetch;
-  const svc = new PushService(db, registry, bus, { enabled: true, fetchImpl, webPush, vapidPublicKey: 'BPub', ratePerMin: opts.ratePerMin, markets: [BTC], keepers: () => [KEEPER] }, log);
+  const svc = new PushService(db, registry, bus, { chainId: PUSH_CHAIN, enabled: true, fetchImpl, webPush, vapidPublicKey: 'BPub', ratePerMin: opts.ratePerMin, markets: [BTC], keepers: () => [KEEPER] }, log);
   const sse: PushEnvelope[] = [];
   bus.subscribe(ACCT, (e) => e.type === 'push' && sse.push(e as unknown as PushEnvelope));
-  svc.register({ owner: OWNER, notifyPublicKey: V.recipientPublicKey, webPush: SUB, expoPushToken: 'ExponentPushToken[dev1]' });
+  await svc.register(await signedRegister(ownerAcct, { notifyPublicKey: V.recipientPublicKey, webPush: SUB }));
+  await svc.register(await signedRegister(ownerAcct, { notifyPublicKey: V.recipientPublicKey, expoPushToken: 'ExponentPushToken[dev1]' }));
   return { db, bus, svc, web, expo, sse };
 }
 
 describe('PushService fan-out', () => {
   it('seals once per device key and relays only ciphertext on SSE, Web Push and Expo', async () => {
-    const { svc, web, expo, sse } = setup();
+    const { svc, web, expo, sse } = await setup();
     const r = await svc.notify(ACCT, item('Mirrored', { proof: { fillPNS: '1000000', builderFeeCNS: '200000' } }));
     expect(r).toMatchObject({ sse: 1, webpush: 1, expo: 1 });
     const wenv = JSON.parse(web[0]!.body).mirror as PushEnvelope;
@@ -143,7 +147,7 @@ describe('PushService fan-out', () => {
     }
   });
   it('team-run accounts and the demo channel never alert', async () => {
-    const { svc, bus, web, sse } = setup();
+    const { svc, bus, web, sse } = await setup();
     expect((await svc.notify(TEAM, item('Mirrored', { account: TEAM }))).skipped).toBe('team run');
     svc.start();
     bus.publish('demo', { type: 'feed', item: item('Mirrored') });
@@ -151,28 +155,30 @@ describe('PushService fan-out', () => {
     expect(web.length + sse.length).toBe(0);
   });
   it('skips old events (backfill) and duplicates', async () => {
-    const { svc } = setup();
+    const { svc } = await setup();
     expect((await svc.notify(ACCT, item('Deposited', { timestamp: nowSec() - 3600 }))).skipped).toBe('old event');
     const ev = item('Deposited', { amount: '1' });
     expect((await svc.notify(ACCT, ev)).webpush).toBe(1);
     expect((await svc.notify(ACCT, ev)).skipped).toBe('duplicate');
   });
   it('rate-limits per owner', async () => {
-    const { svc } = setup({ ratePerMin: 2 });
+    const { svc } = await setup({ ratePerMin: 2 });
     const out = [];
     for (let i = 0; i < 3; i++) out.push(await svc.notify(ACCT, item('Deposited')));
     expect(out.map((o) => o.skipped ?? 'sent')).toEqual(['sent', 'sent', 'rate limited']);
   });
   it('removes a Web Push subscription on 410 Gone', async () => {
-    const { svc, db } = setup({ status: 410 });
+    const { svc, db } = await setup({ status: 410 });
     await svc.notify(ACCT, item('Deposited'));
     expect(db.all("SELECT * FROM push_subs WHERE channel = 'webpush'")).toHaveLength(0);
     expect(db.all("SELECT * FROM push_subs WHERE channel = 'app'")).toHaveLength(1);
   });
-  it('registration: unknown push hosts refused; devices without remote push keep the in-app channel', () => {
-    const { svc } = setup();
-    expect(() => svc.register({ owner: OWNER, notifyPublicKey: V.recipientPublicKey, webPush: { ...SUB, endpoint: 'http://169.254.169.254/x' } })).toThrow(/push service/);
-    expect(svc.register({ owner: OWNER, notifyPublicKey: V.recipientPublicKey, expoPushToken: 'unavailable:no-fcm-config' }).channels).toEqual(['sse']);
-    expect(() => svc.register({ owner: OWNER, notifyPublicKey: 'short' })).toThrow(/32-byte/);
+  it('registration: unknown push hosts refused; devices without remote push keep the in-app channel', async () => {
+    const { svc } = await setup();
+    const evil = { ...SUB, endpoint: 'http://169.254.169.254/x' };
+    await expect(svc.register(await signedRegister(ownerAcct, { notifyPublicKey: V.recipientPublicKey, webPush: evil }))).rejects.toThrow(/push service/);
+    const none = await signedRegister(ownerAcct, { notifyPublicKey: V.recipientPublicKey }, { channel: ['app', ''] });
+    expect((await svc.register({ ...none, expoPushToken: 'unavailable:no-fcm-config' })).channels).toEqual(['sse']);
+    await expect(svc.register({ owner: OWNER, notifyPublicKey: 'short' })).rejects.toThrow(/32-byte/);
   });
 });

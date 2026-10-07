@@ -57,8 +57,8 @@ One cycle runs at a time globally, with a per-IP hourly limit and a global daily
 
 | Method | Path | Body |
 |---|---|---|
-| GET | `/v1/push/config` | Which alert channels the server delivers on: `{webPush: {vapidPublicKey} or null, expo, sse}`. |
-| POST | `/v1/push/register` | `{owner, notifyPublicKey, expoPushToken?, webPush?}`. Alerts are sealed to `notifyPublicKey`, an X25519 key the device derives from its passkey's second PRF namespace (`mirror.prf.ns.notify.v1`), so the server and the push service only relay ciphertext. `webPush` is the browser's push subscription (Web Push with VAPID, no Firebase). |
-| POST | `/v1/push/unregister` | `{owner, target}`: stop sending to a Web Push endpoint or Expo token. |
+| GET | `/v1/push/config` | Which alert channels the server delivers on: `{webPush: {vapidPublicKey} or null, fcm, expo, sse, chainId}`. |
+| POST | `/v1/push/register` | `{owner, notifyPublicKey, webPush? or fcmToken?, deadline, signature}`. Alerts are sealed to `notifyPublicKey`, an X25519 key the device derives from its passkey's second PRF namespace (`mirror.prf.ns.notify.v1`), so the server and the push service only relay ciphertext. `webPush` is the browser's push subscription (Web Push with VAPID); `fcmToken` the Android app's FCM token. Signed by the owner: EIP-712 `PushRegister(address owner,bytes32 notifyPublicKey,bytes32 channelHash,uint256 deadline)` in the domain `{name: "Mirror Push", version: "1", chainId}`, deadline at most an hour ahead, each signature used once. |
+| POST | `/v1/push/unregister` | `{owner, channel, target, deadline, signature}` (owner-signed `PushUnregister`): stop sending to a Web Push endpoint or FCM token. |
 
 Alerts cover copies (with the Mirror fee), blocked copies (the rule and its numbers), stops (which stop, and who triggered it), a leader's loss stop, low equity, deposits and withdrawals, for your own accounts only. The notification itself always reads "Mirror: new activity"; the app decrypts the details on your device. In a browser the details are decrypted when you open Mirror, because the service worker can't read the key.

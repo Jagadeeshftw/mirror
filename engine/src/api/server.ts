@@ -17,6 +17,7 @@ import { applyDetach, DetachError } from '../services/detach.js';
 import { mirrorAccountAbi } from '../abi/MirrorAccount.js';
 import { registerShareRoutes } from './share-routes.js';
 import { ShareError } from '../services/share-rules.js';
+import { PushAuthError } from '../services/pushauth.js';
 
 const json = (v: unknown) => JSON.stringify(v, (_k, x) => (typeof x === 'bigint' ? x.toString() : x));
 
@@ -40,6 +41,7 @@ export function buildServer(e: Engine, log: Logger) {
     if (err instanceof RateLimitError) return reply.status(429).header('retry-after', Math.ceil((err.resetAt - Date.now()) / 1000)).send({ error: err.message, resetAt: err.resetAt });
     if (err instanceof RelayError || err instanceof DemoError) return reply.status(err.status).send({ error: err.message, ...(err instanceof RelayError && err.details ? { details: err.details } : {}) });
     if (err instanceof DetachError) return reply.status(err.status).send({ error: err.message, code: err.code });
+    if (err instanceof PushAuthError) return reply.status(err.statusCode).send({ error: err.message, code: err.code });
     if (err instanceof ShareError) return reply.status(err.status).send({ error: err.message, code: err.code, ...((err as ShareError & { field?: string }).field ? { field: (err as ShareError & { field?: string }).field } : {}) });
     if (err instanceof SimulationError) return reply.status(400).send({ error: err.message, revert: err.revert.name });
     if (err instanceof CircuitOpenError) return reply.status(503).send({ error: 'relayer temporarily unavailable' });
@@ -254,18 +256,24 @@ export function buildServer(e: Engine, log: Logger) {
   app.get('/v1/push/config', async () => e.push.config());
 
   const webPushSub = z.object({ endpoint: z.string().max(1024), keys: z.object({ p256dh: z.string().max(200), auth: z.string().max(100) }) });
+  // Both are owner-signed EIP-712 (services/pushauth.ts): a registration decides who can read the owner's alerts.
+  const pushDeadline = z.union([z.string().regex(/^\d{1,20}$/), z.number().int().nonnegative()]);
+  const pushSig = z.string().regex(/^0x[0-9a-fA-F]{130}$/);
   app.post('/v1/push/register', async (req) => {
-    const b = z
-      .object({ owner: z.string(), notifyPublicKey: z.string().max(100), expoPushToken: z.string().max(300).optional(), webPush: webPushSub.optional() })
-      .parse(req.body);
     limit(`push:${req.ip}`, 30, 3600_000, 'push register per-IP');
+    const b = z
+      .object({
+        owner: z.string(), notifyPublicKey: z.string().max(100), fcmToken: z.string().max(512).optional(), expoPushToken: z.string().max(300).optional(), webPush: webPushSub.optional(),
+        deadline: pushDeadline, signature: pushSig,
+      })
+      .parse(req.body);
     return e.push.register(b);
   });
 
   app.post('/v1/push/unregister', async (req) => {
-    const b = z.object({ owner: z.string(), target: z.string().max(1024) }).parse(req.body);
     limit(`push:${req.ip}`, 30, 3600_000, 'push register per-IP');
-    return e.push.unregister(b.owner, b.target);
+    const b = z.object({ owner: z.string(), channel: z.enum(['webpush', 'fcm', 'expo']), target: z.string().max(1024), deadline: pushDeadline, signature: pushSig }).parse(req.body);
+    return e.push.unregister(b);
   });
 
   // ---------------------------------------------------------------- ops

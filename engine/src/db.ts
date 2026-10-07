@@ -222,8 +222,9 @@ CREATE TABLE IF NOT EXISTS push_tokens (
 );
 
 -- Alert delivery targets. channel: 'app' (in-app SSE only), 'webpush' (target = endpoint, p256dh/auth from the
--- browser subscription) or 'expo' (target = Expo push token). Every row carries the device's notification public key;
--- alerts are sealed to it, so every channel relays ciphertext only.
+-- browser subscription), 'fcm' (target = native FCM device token) or 'expo' (target = Expo push token). Every row
+-- carries the device's notification public key; alerts are sealed to it, so every channel relays ciphertext only.
+-- signed_ms: when the owner's PushRegister signature was checked (services/pushauth.ts); rows without it are never used.
 CREATE TABLE IF NOT EXISTS push_subs (
   id TEXT PRIMARY KEY,
   owner TEXT NOT NULL,
@@ -238,6 +239,13 @@ CREATE TABLE IF NOT EXISTS push_subs (
   failures INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS push_subs_owner ON push_subs (owner);
+
+-- Owner signatures already used for PushRegister / PushUnregister (replay protection). A row lives until the
+-- signature's deadline has passed; deadlines are at most an hour ahead.
+CREATE TABLE IF NOT EXISTS push_sig_used (
+  digest TEXT PRIMARY KEY,
+  expires_ms INTEGER NOT NULL
+);
 
 -- Shared position links (owner-signed ShareLink; services/share.ts). status: open | revoked | closed (the position
 -- closed or flipped). Nothing about the friends who open them is stored.
@@ -294,6 +302,7 @@ CREATE TABLE IF NOT EXISTS nansen_spend (
 /** Columns added after the first schema; applied to existing databases on open (idempotent). */
 const COLUMN_MIGRATIONS: Array<[table: string, column: string, decl: string]> = [
   ['accounts', 'max_entry_deviation_bps', 'INTEGER'],
+  ['push_subs', 'signed_ms', 'INTEGER'],
   ['accounts', 'stop_slippage_bps', 'INTEGER'],
   ['accounts', 'flatten_on_stop', 'INTEGER NOT NULL DEFAULT 0'],
   ['account_leaders', 'budget_cns', "TEXT NOT NULL DEFAULT '0'"],

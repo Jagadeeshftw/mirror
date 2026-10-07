@@ -454,6 +454,10 @@ export interface WebPushSubscriptionJSON {
 /** GET /v1/push/config: which channels the server can deliver on. */
 export interface PushConfig {
   webPush: { vapidPublicKey: string } | null;
+  /** Android push through FCM HTTP v1. */
+  fcm?: boolean;
   expo: boolean;
   sse: boolean;
+  /** EIP-712 chain id for PushRegister / PushUnregister. */
+  chainId?: number;
 }

@@ -26,6 +26,7 @@ import {
   transferAuthTypedData,
 } from "../src/lib/contracts.ts";
 import { seal } from "../src/lib/notifyKey.ts";
+import { pushRegisterTypedData } from "../src/lib/pushAuth.ts";
 import {
   AUSD,
   DEMO_FOLLOWER,
@@ -1132,9 +1133,13 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { cycleId: runDemo(p.endsWith("trade") ? "trade" : "blocked") });
     }
     if ((p.startsWith("/v1/share") || p.endsWith("/share") || p === "/__mock/suggest" || p === "/__mock/link" || p === "/__mock/endlink") && (await share.route(req, res, p))) return;
-    if (req.method === "GET" && p === "/v1/push/config") return send(res, 200, { webPush: null, expo: false, sse: true });
+    if (req.method === "GET" && p === "/v1/push/config") return send(res, 200, { webPush: null, fcm: false, expo: false, sse: true, chainId: CHAIN_ID });
     if (req.method === "POST" && p === "/v1/push/register") {
       const b = await readBody(req);
+      // Owner-signed PushRegister, as the engine (services/pushauth.ts).
+      const [ch, target] = b.webPush ? ["webpush", b.webPush.endpoint] : b.fcmToken ? ["fcm", b.fcmToken] : ["app", ""];
+      const signer = b.signature ? await recoverTypedDataAddress({ ...pushRegisterTypedData(CHAIN_ID, b.owner, b.notifyPublicKey, ch, target, BigInt(b.deadline ?? 0)), signature: b.signature }).catch(() => null) : null;
+      if (!signer || lc(signer) !== lc(b.owner)) return send(res, 401, { error: "Signature is not from the owner", code: "not_owner" });
       const o = ownerState(b.owner);
       o.notifyPub = b.notifyPublicKey;
       o.pushToken = b.expoPushToken ?? null;
