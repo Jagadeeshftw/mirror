@@ -17,17 +17,30 @@ contract MirrorAccountFactory {
     IAuthorizedToken public immutable collateral;
     KeeperRegistry public immutable keepers;
     uint256 public immutable depositCap;
+    uint8 public immutable builderId;
+    uint16 public immutable builderFeePer100K;
 
     mapping(address account => bool) public isAccount;
 
     event AccountCreated(address indexed owner, address indexed account, bytes32 salt);
 
-    constructor(IPerplExchange exchange_, IAuthorizedToken collateral_, KeeperRegistry keepers_, uint256 depositCap_) {
+    constructor(
+        IPerplExchange exchange_,
+        IAuthorizedToken collateral_,
+        KeeperRegistry keepers_,
+        uint256 depositCap_,
+        uint8 builderId_,
+        uint16 builderFeePer100K_
+    ) {
         exchange = exchange_;
         collateral = collateral_;
         keepers = keepers_;
         depositCap = depositCap_;
-        implementation = address(new MirrorAccount(exchange_, collateral_, keepers_, address(this), depositCap_));
+        builderId = builderId_;
+        builderFeePer100K = builderFeePer100K_;
+        implementation = address(
+            new MirrorAccount(exchange_, collateral_, keepers_, address(this), depositCap_, builderId_, builderFeePer100K_)
+        );
     }
 
     function createAccount(address owner, bytes32 salt) external returns (MirrorAccount account) {

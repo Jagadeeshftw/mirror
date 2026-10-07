@@ -45,6 +45,18 @@ contract MockPerplExchange {
     uint256 public lastOrderDescId;
     IPerplExchange.OrderDesc public lastOrder;
 
+    // Builder attribution as Perpl's V2 entrypoint sees it. Like Perpl, the fee is charged on every fill of an
+    // attributed order, closes included, so tests can prove the account never attributes a reducing order.
+    bytes public lastExtension;
+    uint256 public lastBuilderId;
+    uint256 public lastBuilderFeePer100K;
+    uint256 public v2Orders;
+    uint256 public attributedCloses;
+    mapping(uint256 builderId => uint256) public builderFeesCNS;
+    uint256 public lastBuilderFeeCNS;
+    uint256 internal _pendingBuilderId;
+    uint256 internal _pendingBuilderFee;
+
     constructor(IERC20 token_) {
         token = token_;
     }
@@ -128,8 +140,45 @@ contract MockPerplExchange {
         token.transfer(msg.sender, amountCNS);
     }
 
+    function execOrderV2(IPerplExchange.OrderDesc memory d, bytes memory extension)
+        external
+        returns (IPerplExchange.OrderSignature memory)
+    {
+        lastExtension = extension;
+        ++v2Orders;
+        if (extension.length != 0) {
+            (uint16 version, bytes memory payload) = abi.decode(extension, (uint16, bytes));
+            require(version == 1, "ext version");
+            (uint256 bid, uint256 fee) = abi.decode(payload, (uint256, uint256));
+            require(bid <= 255 && fee <= 1_000, "ext range");
+            lastBuilderId = bid;
+            lastBuilderFeePer100K = fee;
+            if (d.orderType == 2 || d.orderType == 3) ++attributedCloses;
+            _pendingBuilderId = bid;
+            _pendingBuilderFee = fee;
+        }
+        IPerplExchange.OrderSignature memory sig = this.execOrderFrom(msg.sender, d);
+        _pendingBuilderId = 0;
+        _pendingBuilderFee = 0;
+        return sig;
+    }
+
+    /// Internal hop so execOrderV2 can reuse execOrder's logic for the original caller.
+    function execOrderFrom(address caller, IPerplExchange.OrderDesc memory d)
+        external
+        returns (IPerplExchange.OrderSignature memory)
+    {
+        require(msg.sender == address(this), "self only");
+        return _exec(caller, d);
+    }
+
     function execOrder(IPerplExchange.OrderDesc memory d) external returns (IPerplExchange.OrderSignature memory) {
-        uint256 id = accountOf[msg.sender];
+        lastBuilderFeeCNS = 0;
+        return _exec(msg.sender, d);
+    }
+
+    function _exec(address caller, IPerplExchange.OrderDesc memory d) internal returns (IPerplExchange.OrderSignature memory) {
+        uint256 id = accountOf[caller];
         require(id != 0, "no account");
         require(d.immediateOrCancel, "only IOC in mock");
         lastOrderDescId = d.orderDescId;
@@ -143,8 +192,15 @@ contract MockPerplExchange {
         uint256 lots = d.lotLNS * fillBps / 10_000;
         if (lots == 0) return IPerplExchange.OrderSignature(0, 0);
         uint256 fee = _notional(d.perpId, lots, p.mark) * feeBps / 10_000;
-        require(balanceOf[id] >= fee, "fee");
-        balanceOf[id] -= fee;
+        uint256 bfee;
+        if (_pendingBuilderId != 0 && _pendingBuilderFee != 0) {
+            uint256 n = _notional(d.perpId, lots, p.mark);
+            bfee = (n * _pendingBuilderFee + 99_999) / 100_000;
+            builderFeesCNS[_pendingBuilderId] += bfee;
+        }
+        lastBuilderFeeCNS = bfee;
+        require(balanceOf[id] >= fee + bfee, "fee");
+        balanceOf[id] -= fee + bfee;
 
         if (d.orderType == 0 || d.orderType == 1) {
             uint8 side = d.orderType == 0 ? 0 : 1;

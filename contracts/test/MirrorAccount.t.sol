@@ -304,7 +304,8 @@ contract MirrorTest is MirrorBase {
         (uint8 side, uint256 lots) = _lots(BTC);
         assertEq(side, LONG);
         assertEq(lots, 10);
-        assertEq(ex.balanceOf(account.perplAccountId()), 20e6 - 1.71e6);
+        // 1.71 AUSD margin at 5x, plus the 0.02% builder fee on 8.55 AUSD of opening notional.
+        assertEq(ex.balanceOf(account.perplAccountId()), 20e6 - 1.71e6 - 1710);
         (,,,,,,,,,,, uint256 lev,,,) = ex.lastOrder();
         assertEq(lev, 500);
     }
@@ -350,7 +351,8 @@ contract MirrorTest is MirrorBase {
             leaderEntryPNS: 855_000,
             markPNS: 855_000,
             fillPNS: 855_000,
-            entryDeviationBps: 0
+            entryDeviationBps: 0,
+            builderFeeCNS: 1026 // 6 lots x 85,500 = 5.13 AUSD x 0.02%
         });
         emit MirrorAccount.Mirrored(keeper, LEADER, uint32(BTC), OPEN_LONG, 6, 859_000, 500, 0, 6, o.leaderRef, proof);
         _mirror(o);
@@ -672,7 +674,9 @@ contract OwnerActionsTest is MirrorBase {
         (, uint256 eth) = _lots(ETH);
         assertEq(btc, 0);
         assertEq(eth, 0);
-        assertEq(account.equity(), 20e6);
+        // Only the two opens paid the builder fee (1,710 + 2,700); the closes paid none.
+        assertEq(account.equity(), 20e6 - 4410);
+        assertEq(ex.attributedCloses(), 0);
     }
 
     function test_closeAll_rejectsBadSlippage() public {

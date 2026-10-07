@@ -19,6 +19,8 @@ abstract contract MirrorBase is Test {
     uint32 internal constant LEADER = 6;
     uint32 internal constant LEADER2 = 88;
     uint256 internal constant CAP = 25e6;
+    uint8 internal constant BUILDER = 26;
+    uint16 internal constant BUILDER_FEE = 20; // 0.02%
 
     uint8 internal constant OPEN_LONG = 0;
     uint8 internal constant OPEN_SHORT = 1;
@@ -55,7 +57,7 @@ abstract contract MirrorBase is Test {
         registry.setKeeper(keeper, true);
 
         factory = new MirrorAccountFactory(
-            IPerplExchange(address(ex)), IAuthorizedToken(address(ausd)), registry, CAP
+            IPerplExchange(address(ex)), IAuthorizedToken(address(ausd)), registry, CAP, BUILDER, BUILDER_FEE
         );
         account = factory.createAccount(owner, bytes32("follow-1"));
 
@@ -77,6 +79,7 @@ abstract contract MirrorBase is Test {
         p.maxEntryDeviationBps = 0;
         p.stopSlippageBps = 200;
         p.flattenOnStop = false;
+        p.maxBuilderFeePer100K = BUILDER_FEE;
         p.leaders = new MirrorAccount.LeaderRule[](1);
         p.leaders[0] = MirrorAccount.LeaderRule({accountId: LEADER, ratioBps: 100, budgetCNS: 20e6, lossStopBps: 0});
         p.markets = new MirrorAccount.MarketRule[](2);

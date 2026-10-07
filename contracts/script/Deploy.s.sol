@@ -19,6 +19,7 @@ import {MirrorAccountFactory} from "../src/MirrorAccountFactory.sol";
 ///     --broadcast --disable-code-size-limit
 ///
 /// Env: PERPL_EXCHANGE, COLLATERAL_TOKEN, DEPOSIT_CAP (6-decimal units), KEEPERS (comma-separated),
+///      BUILDER_ID (default 26), BUILDER_FEE_PER_100K (default 20 = 0.02%),
 ///      WRITE_DEPLOYMENT=true to record deployments/<chainId>.json.
 contract Deploy is Script {
     function run() external returns (KeeperRegistry registry, MirrorAccountFactory factory) {
@@ -26,11 +27,13 @@ contract Deploy is Script {
         address collateral = vm.envOr("COLLATERAL_TOKEN", address(0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a));
         uint256 cap = vm.envOr("DEPOSIT_CAP", uint256(25e6));
         address[] memory keepers = vm.envOr("KEEPERS", ",", new address[](0));
+        uint8 builderId = uint8(vm.envOr("BUILDER_ID", uint256(26)));
+        uint16 builderFee = uint16(vm.envOr("BUILDER_FEE_PER_100K", uint256(20)));
 
         vm.startBroadcast();
         address admin = msg.sender;
         registry = new KeeperRegistry(admin);
-        factory = new MirrorAccountFactory(IPerplExchange(exchange), IAuthorizedToken(collateral), registry, cap);
+        factory = new MirrorAccountFactory(IPerplExchange(exchange), IAuthorizedToken(collateral), registry, cap, builderId, builderFee);
         if (keepers.length > 0) registry.setKeepers(keepers, true);
         vm.stopBroadcast();
 

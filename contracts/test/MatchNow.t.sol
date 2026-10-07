@@ -59,7 +59,8 @@ contract MatchNowTest is MirrorBase {
             leaderEntryPNS: 855_000,
             markPNS: 855_000,
             fillPNS: 855_000,
-            entryDeviationBps: 0
+            entryDeviationBps: 0,
+            builderFeeCNS: 1710 // 10 lots x 85,500 = 8.55 AUSD x 0.02%
         });
         emit MirrorAccount.Mirrored(owner, LEADER, uint32(BTC), OPEN_LONG, 10, 859_000, 500, 0, 10, ref, proof);
         vm.prank(owner);

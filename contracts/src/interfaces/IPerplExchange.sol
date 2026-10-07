@@ -105,6 +105,10 @@ interface IPerplExchange {
     function depositCollateral(uint256 amountCNS) external;
     function withdrawCollateral(uint256 amountCNS) external;
     function execOrder(OrderDesc memory orderDesc) external returns (OrderSignature memory signature);
+    /// V2 entrypoint: `extension` is `abi.encode(uint16 version, bytes payload)` with version 1 and payload
+    /// `abi.encode(uint256 builderId, uint256 builderFeePer100K)` (perpl dex-sdk `BuilderAttribution::encode`).
+    /// An empty extension is the builder-blind path.
+    function execOrderV2(OrderDesc memory orderDesc, bytes memory extension) external returns (OrderSignature memory signature);
 
     function getAccountById(uint256 accountId) external view returns (AccountInfo memory accountInfo);
     function getAccountByAddr(address accountAddress) external view returns (AccountInfo memory accountInfo);

@@ -63,6 +63,10 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
     uint256 public constant MAX_MATCHES = 1_000;
     /// Stop triggers refuse to act when Perpl's mark and a fresh Chainlink price disagree by more than this.
     uint256 public constant MAX_MARK_ORACLE_GAP_BPS = 200;
+    /// Perpl's decoder rejects builder fees above 1% (1,000 per 100,000).
+    uint256 public constant MAX_BUILDER_FEE_PER_100K = 1_000;
+    uint256 internal constant FEE_DENOMINATOR = 100_000;
+    uint16 internal constant ORDER_EXTENSION_VERSION = 1;
     /// Perpl's default cap on negative-PnL collateralisation drawn on a fill.
     uint256 internal constant MAX_NEG_PNL_COLLAT_BPS = 1_000;
 
@@ -124,6 +128,9 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         uint16 stopSlippageBps;
         /// When true, anyone may close positions once an account or leader loss stop is hit.
         bool flattenOnStop;
+        /// Highest builder fee, per 100,000 of opening notional, the owner accepts. An opening copy is refused when
+        /// the account's fixed builder fee is above it.
+        uint16 maxBuilderFeePer100K;
         LeaderRule[] leaders;
         MarketRule[] markets;
     }
@@ -198,7 +205,8 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         LeaderBudgetExceeded,
         LeaderLossStop,
         MarketHalted,
-        CloseBelowTarget
+        CloseBelowTarget,
+        BuilderFeeTooHigh
     }
 
     enum StopKind {
@@ -222,6 +230,9 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         uint64 fillPNS;
         /// fillPNS against leaderEntryPNS in basis points, positive when the follower paid worse.
         int32 entryDeviationBps;
+        /// Builder fee Perpl charged on this copy: added lots x fill price x rate, rounded up as Perpl does (0 for
+        /// closes, which never carry attribution). Perpl's TakerOrderFilledV2 has the exact figure.
+        uint64 builderFeeCNS;
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -235,6 +246,11 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
     /// Maximum net deposits per account, in collateral units. The code is unaudited.
     uint256 public immutable DEPOSIT_CAP;
     uint8 internal immutable COLLATERAL_DECIMALS;
+    /// Perpl builder id every opening order is attributed to (0 = none). Fixed at deployment: neither the keeper
+    /// nor the owner can change where builder fees go.
+    uint8 public immutable BUILDER_ID;
+    /// Builder fee per 100,000 of the notional an opening order adds. Fixed at deployment.
+    uint16 public immutable BUILDER_FEE_PER_100K;
 
     // ---------------------------------------------------------------------------------------------
     // Storage
@@ -260,6 +276,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
     uint16 public maxEntryDeviationBps;
     uint16 public stopSlippageBps;
     bool public flattenOnStop;
+    uint16 public maxBuilderFeePer100K;
 
     LeaderRule[] internal _leaders;
     uint32[] internal _marketIds;
@@ -290,6 +307,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         uint16 maxEntryDeviationBps,
         uint16 stopSlippageBps,
         bool flattenOnStop,
+        uint16 maxBuilderFeePer100K,
         LeaderRule[] leaders,
         MarketRule[] markets
     );
@@ -379,12 +397,19 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         IAuthorizedToken collateral,
         KeeperRegistry keepers,
         address factory,
-        uint256 depositCap
+        uint256 depositCap,
+        uint8 builderId,
+        uint16 builderFeePer100K
     ) EIP712("Mirror Account", "1") {
         if (
             address(exchange) == address(0) || address(collateral) == address(0) || address(keepers) == address(0)
                 || factory == address(0)
         ) revert ZeroAddress();
+        if (builderFeePer100K > MAX_BUILDER_FEE_PER_100K || (builderId == 0 && builderFeePer100K != 0)) {
+            revert InvalidPolicy("builderFee");
+        }
+        BUILDER_ID = builderId;
+        BUILDER_FEE_PER_100K = builderFeePer100K;
         EXCHANGE = exchange;
         COLLATERAL = collateral;
         KEEPERS = keepers;
@@ -512,7 +537,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         uint256 leaderEntry,
         uint8 side,
         bool opening
-    ) internal pure returns (CopyProof memory p) {
+    ) internal view returns (CopyProof memory p) {
         p.leaderFillPNS = o.leaderFillPNS;
         p.leaderEntryPNS = uint64(leaderEntry);
         p.markPNS = uint64(mark);
@@ -524,6 +549,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         if (valueAfter < valueBefore) return p;
         uint256 fill = (valueAfter - valueBefore) / added;
         p.fillPNS = uint64(fill);
+        p.builderFeeCNS = uint64(_builderFee(o.perpId, added, fill));
         if (leaderEntry != 0) {
             int256 diff = int256(fill) - int256(leaderEntry);
             if (side == SHORT) diff = -diff;
@@ -551,6 +577,9 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         if (!leaderAllowed) return (BlockReason.LeaderNotAllowed, 0, o.leaderAccountId, 0);
         if (leaderStopped[o.leaderAccountId]) return (BlockReason.LeaderLossStop, 0, 0, 0);
 
+        if (BUILDER_FEE_PER_100K > maxBuilderFeePer100K) {
+            return (BlockReason.BuilderFeeTooHigh, maxBuilderFeePer100K, BUILDER_FEE_PER_100K, 0);
+        }
         if (o.leverageHdths < MIN_LEVERAGE_HDTHS) {
             return (BlockReason.LeverageTooLow, MIN_LEVERAGE_HDTHS, o.leverageHdths, 0);
         }
@@ -983,6 +1012,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         if (p.stopSlippageBps == 0 || p.stopSlippageBps > MAX_CLOSE_ALL_SLIPPAGE_BPS) {
             revert InvalidPolicy("stopSlippageBps");
         }
+        if (p.maxBuilderFeePer100K > MAX_BUILDER_FEE_PER_100K) revert InvalidPolicy("maxBuilderFeePer100K");
         if (p.leaders.length == 0 || p.leaders.length > MAX_LEADERS) revert InvalidPolicy("leaders");
         if (p.markets.length == 0 || p.markets.length > MAX_MARKETS) revert InvalidPolicy("markets");
 
@@ -1041,6 +1071,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         maxEntryDeviationBps = p.maxEntryDeviationBps;
         stopSlippageBps = p.stopSlippageBps;
         flattenOnStop = p.flattenOnStop;
+        maxBuilderFeePer100K = p.maxBuilderFeePer100K;
         emit PolicyUpdated(
             p.maxLeverageHdths,
             p.maxSlippageBps,
@@ -1050,6 +1081,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
             p.maxEntryDeviationBps,
             p.stopSlippageBps,
             p.flattenOnStop,
+            p.maxBuilderFeePer100K,
             p.leaders,
             p.markets
         );
@@ -1258,8 +1290,7 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
         unchecked {
             ++orderNonce;
         }
-        EXCHANGE.execOrder(
-            IPerplExchange.OrderDesc({
+        IPerplExchange.OrderDesc memory d = IPerplExchange.OrderDesc({
                 orderDescId: orderNonce,
                 perpId: perpId,
                 orderType: orderType,
@@ -1275,8 +1306,25 @@ contract MirrorAccount is Initializable, ReentrancyGuardTransient, EIP712 {
                 lastExecutionBlock: 0,
                 amountCNS: 0,
                 maxNegPnlCollatBPS: MAX_NEG_PNL_COLLAT_BPS
-            })
-        );
+            });
+        // Only opening orders carry builder attribution. Perpl charges the builder fee on whatever an attributed
+        // order fills, closes included, so every reducing path (keeper closes, stops, close-all, close-market)
+        // goes through the builder-blind entrypoint and can never pay one.
+        bool opening = orderType == OPEN_LONG || orderType == OPEN_SHORT;
+        if (opening && BUILDER_ID != 0) {
+            EXCHANGE.execOrderV2(
+                d,
+                abi.encode(ORDER_EXTENSION_VERSION, abi.encode(uint256(BUILDER_ID), uint256(BUILDER_FEE_PER_100K)))
+            );
+        } else {
+            EXCHANGE.execOrder(d);
+        }
+    }
+
+    /// @dev Builder fee on `lots` added at `pricePNS`: notional x rate, rounded up (as Perpl rounds it).
+    function _builderFee(uint256 perpId, uint256 lots, uint256 pricePNS) internal view returns (uint256) {
+        if (BUILDER_ID == 0 || BUILDER_FEE_PER_100K == 0) return 0;
+        return Math.mulDiv(_notional(perpId, lots, pricePNS), BUILDER_FEE_PER_100K, FEE_DENOMINATOR, Math.Rounding.Ceil);
     }
 
     function _leaderRule(uint32 accountId) internal view returns (bool, LeaderRule memory rule) {

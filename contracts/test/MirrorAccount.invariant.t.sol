@@ -490,6 +490,7 @@ contract MirrorInvariantTest is MirrorBase {
         assertEq(account.expiry(), policyExpiry);
         assertEq(account.maxEntryDeviationBps(), 300);
         assertTrue(account.flattenOnStop());
+        assertEq(account.maxBuilderFeePer100K(), 20);
         MirrorAccount.LeaderRule[] memory ls = account.leaders();
         assertEq(ls.length, 2);
         assertEq(ls[0].accountId, LEADER);
@@ -510,6 +511,18 @@ contract MirrorInvariantTest is MirrorBase {
             if (p.lotLNS == 0) continue;
             uint32 h = account.marketLeader(ps[i]);
             assertTrue(h == LEADER || h == LEADER2, "open position without a holder");
+        }
+    }
+
+    /// Builder attribution: no reducing order (keeper close, stop, close-all, close-market) was ever attributed,
+    /// and every attributed order named builder 26 at the fixed fee, never above the owner's signed maximum.
+    function invariant_builderFeeOnlyOnOpensAtTheFixedRate() public view {
+        assertEq(ex.attributedCloses(), 0, "a reducing order carried builder attribution");
+        uint256 id = ex.lastBuilderId();
+        assertTrue(id == 0 || id == 26, "attributed to another builder");
+        if (id != 0) {
+            assertEq(ex.lastBuilderFeePer100K(), 20);
+            assertLe(ex.lastBuilderFeePer100K(), account.maxBuilderFeePer100K());
         }
     }
 

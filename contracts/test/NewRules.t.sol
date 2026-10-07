@@ -227,12 +227,12 @@ contract MultiLeaderTest is MirrorBase {
         ausd.mint(address(ex), 10e6);
         assertTrue(_mirror(_order(OPEN_LONG, ETH, 4, 271_000, 500))); // fills at 2,700: notional 10.8, fee 0.0108
         (,, int256 r1,) = account.leaderBook(LEADER);
-        assertEq(r1, -10_800);
+        assertEq(r1, -10_800 - 2_160); // taker fee plus the 0.02% builder fee on the opening notional
         ex.setMark(ETH, 280_000);
         ex.setPosition(ETH, LEADER, LONG, 0);
         assertTrue(_mirror(_order(CLOSE_LONG, ETH, 4, 279_000, 0))); // pnl +0.40, fee 0.0112
         (,, int256 r2,) = account.leaderBook(LEADER);
-        assertEq(r2, -10_800 + 400_000 - 11_200);
+        assertEq(r2, -10_800 - 2_160 + 400_000 - 11_200); // the close pays no builder fee
         (,, int256 other,) = account.leaderBook(LEADER2);
         assertEq(other, 0);
     }
@@ -263,7 +263,7 @@ contract MultiLeaderTest is MirrorBase {
         vm.prank(owner);
         account.setPolicy(_twoLeaders(6e6, 0, 5e6, 0));
         (,, int256 r,) = account.leaderBook(LEADER);
-        assertEq(r, -10_800);
+        assertEq(r, -10_800 - 2_160);
     }
 }
 

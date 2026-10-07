@@ -48,7 +48,7 @@ contract PerplMainnetForkTest is Test {
         (owner, ownerKey) = makeAddrAndKey("fork-owner");
         registry = new KeeperRegistry(address(this));
         registry.setKeeper(keeper, true);
-        factory = new MirrorAccountFactory(EXCHANGE, AUSD, registry, 25e6);
+        factory = new MirrorAccountFactory(EXCHANGE, AUSD, registry, 25e6, 26, 20);
         account = factory.createAccount(owner, bytes32("fork"));
         // AUSD uses namespaced storage that forge's deal() cannot locate; fund from a large holder on the fork.
         vm.prank(address(EXCHANGE));
@@ -73,6 +73,7 @@ contract PerplMainnetForkTest is Test {
         p.expiry = uint40(block.timestamp + 7 days);
         p.stopSlippageBps = 200;
         p.flattenOnStop = true;
+        p.maxBuilderFeePer100K = 20;
         p.leaders = new MirrorAccount.LeaderRule[](1);
         p.leaders[0] = MirrorAccount.LeaderRule({accountId: leader, ratioBps: 100, budgetCNS: 10e6, lossStopBps: 5000});
         p.markets = new MirrorAccount.MarketRule[](1);
@@ -443,5 +444,63 @@ contract PerplMainnetForkTest is Test {
         vm.recordLogs();
         vm.prank(keeper);
         assertFalse(account.mirror(_copyOrder(0, 1, mark2 * 10_060 / 10_000, 200)));
+    }
+
+    bytes32 constant TAKER_FILLED_V2 =
+        keccak256("TakerOrderFilledV2(uint256,uint256,uint256,uint256,uint256,int256,uint256,uint256,uint256)");
+
+    function _takerBuilder(Vm.Log[] memory logs) internal pure returns (bool found, uint256 builderId, uint256 feeCNS) {
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter != address(EXCHANGE) || logs[i].topics[0] != TAKER_FILLED_V2) continue;
+            (,,,,,,, builderId, feeCNS) =
+                abi.decode(logs[i].data, (uint256, uint256, uint256, uint256, uint256, int256, uint256, uint256, uint256));
+            return (true, builderId, feeCNS);
+        }
+    }
+
+    /// Contract change 5 against the live Perpl Exchange: a copied open is attributed to builder 26 and Perpl
+    /// charges 0.02% of the opening notional (matching the proof in Mirrored); the copied close is builder-blind.
+    function test_fork_builderFeeOnLivePerpl() public {
+        if (!forked) return;
+        require(leader != 0, "no suitable live leader found");
+        _depositWithRealPermit(12e6);
+        vm.prank(owner);
+        account.setPolicy(_policy());
+        (, uint256 mark,) = EXCHANGE.getPositionV2(BTC, account.perplAccountId());
+
+        vm.recordLogs();
+        vm.prank(keeper);
+        assertTrue(account.mirror(_copyOrder(0, 1, mark * 10_060 / 10_000, 200)));
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        (bool found, uint256 bid, uint256 fee) = _takerBuilder(logs);
+        MirrorAccount.CopyProof memory proof;
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].topics[0] == MirrorAccount.Mirrored.selector) {
+                (,,,,,,, proof) = abi.decode(
+                    logs[i].data, (uint8, uint64, uint64, uint16, uint256, uint256, bytes32, MirrorAccount.CopyProof)
+                );
+            }
+        }
+        console.log("open: Perpl TakerOrderFilledV2 builderId", bid, "builderFeeCNS", fee);
+        console.log("open: Mirrored proof builderFeeCNS", proof.builderFeeCNS);
+        assertTrue(found, "no V2 taker fill");
+        assertEq(bid, 26);
+        assertGt(fee, 0);
+        assertApproxEqAbs(proof.builderFeeCNS, fee, 1, "proof differs from Perpl's charge");
+
+        // Close: the leader exits, the keeper closes; no builder attribution, no builder fee.
+        vm.mockCall(
+            address(EXCHANGE),
+            abi.encodeWithSelector(IPerplExchange.getPositionV2.selector, BTC, uint256(leader)),
+            abi.encode(IPerplExchange.PositionInfoV2(leader, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), mark, true)
+        );
+        vm.recordLogs();
+        vm.prank(keeper);
+        assertTrue(account.mirror(_copyOrder(2, 1, mark * 9_940 / 10_000, 0)));
+        (found, bid, fee) = _takerBuilder(vm.getRecordedLogs());
+        console.log("close: builderId", bid, "builderFeeCNS", fee);
+        assertEq(bid, 0, "close was attributed");
+        assertEq(fee, 0, "close paid a builder fee");
+        vm.clearMockedCalls();
     }
 }

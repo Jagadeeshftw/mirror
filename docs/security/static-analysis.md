@@ -3,7 +3,7 @@
 - Tool: Slither 0.11.6, 102 detectors, run on `contracts/src` (dependencies, tests and scripts excluded).
 - Command: `cd contracts && slither . --filter-paths "lib/|test/|script/" --exclude-dependencies`
 - Raw output: [slither-output.txt](slither-output.txt)
-- Result: 126 findings in 11 detector classes. One High was a real issue and is fixed. Everything else is explained below, finding by finding.
+- Result (after builder attribution, 7 Oct 2026): 135 findings in the same 11 detector classes as before. One High was a real issue and is fixed. Everything else is explained below, finding by finding.
 
 ## Fixed
 
@@ -27,17 +27,17 @@ The detector still matches the pattern after the fix. It is now a false positive
 |---|---|---|
 | `reentrancy-no-eth` (4) | `_deposit`, `_copy`, `_closeOne`, `triggerLevel`: state written after a call to the Perpl Exchange | The only external contracts called are the Perpl Exchange and AUSD. Both are fixed in the implementation's immutables at deployment, and neither can be swapped by anyone. Every external entry point that changes state is `nonReentrant` (OpenZeppelin's transient-storage guard), so no cross-function re-entry is possible. Post-trade state such as `marketLeader` and realised PnL has to be written after the order, because it depends on the fill. |
 | `reentrancy-benign` (5), `reentrancy-events` (9) | Same pattern: events or bookkeeping after the Exchange or token call | As above. Events come after the call because they report its result (lots after, fill price). |
-| `unused-return` (15) | `getPositionV2` tuple members not needed at that call site; `execOrder`'s order signature; `tryRecover`'s third value | Deliberate. IOC orders are read back from the position after execution, never from the return value. Every place that needs the mark checks its validity flag. |
+| `unused-return` (16) | `getPositionV2` tuple members not needed at that call site; `execOrder`'s and `execOrderV2`'s order signature; `tryRecover`'s third value | Deliberate. IOC orders are read back from the position after execution, never from the return value. Every place that needs the mark checks its validity flag. |
 | `uninitialized-local` (6) | `kept`, `levelPNS`, `kind`, `leaderEntry`, `p`, `n` | Solidity zero-initialises locals, and each one is meant to start at zero, false or the first enum value before it is set on the path that uses it. |
-| `calls-loop` (70) | `_equity`, `_leaderExposure`, `_closePositions`, `_requireTrustedMarks`, `_setPolicy`, `_targetLots`, `_bookValue` | The loops are bounded: at most 4 leaders, 16 policy markets, and the account's own open positions from Perpl's 1,024-bit position map. The only callee is the trusted Exchange. A call that reverts reverts the whole action, which is the safe outcome for both copies and stops. |
+| `calls-loop` (76) | `_equity`, `_leaderExposure`, `_closePositions`, `_requireTrustedMarks`, `_setPolicy`, `_targetLots`, `_bookValue` | The loops are bounded: at most 4 leaders, 16 policy markets, and the account's own open positions from Perpl's 1,024-bit position map. The only callee is the trusted Exchange. A call that reverts reverts the whole action, which is the safe outcome for both copies and stops. |
 | `timestamp` (5) | Policy expiry, signed-action deadlines, permit deadline, oracle freshness, setPolicy expiry check | All windows are seconds to days. Validator influence on `block.timestamp` is far below that, and oracle freshness uses Perpl's own maximum age. |
 | `low-level-calls` (1) | `_exchangeCall` | This is the owner-only escape hatch, and the result is checked (`ExchangeCallFailed`). Keepers and stop triggers cannot reach it. |
 | `cyclomatic-complexity` (3) | `_setPolicy`, `_copy`, `execute` | These are validation and dispatch functions. Every branch is covered by unit tests, and `_copy` additionally by fuzz and invariant tests. |
-| `naming-convention` (7) | Upper-case immutables; `DOMAIN_SEPARATOR` | Style only. Immutables follow the constant style, and `DOMAIN_SEPARATOR` is the ERC-2612 name. |
+| `naming-convention` (9) | Upper-case immutables (including `BUILDER_ID`, `BUILDER_FEE_PER_100K`); `DOMAIN_SEPARATOR` | Style only. Immutables follow the constant style, and `DOMAIN_SEPARATOR` is the ERC-2612 name. |
 
 ## What the tests add beyond static analysis
 
-- **132 Foundry tests:** unit tests; fuzz tests at 1,000 runs each; 10 invariant properties plus a call summary; and 4 mainnet-fork tests against the live Perpl Exchange and AUSD.
+- **144 Foundry tests:** unit tests; fuzz tests at 1,000 runs each; 11 invariant properties plus a call summary; and 5 mainnet-fork tests against the live Perpl Exchange and AUSD.
 - **Invariants checked under random two-leader sequences:**
   - No non-owner ever receives collateral.
   - Hostile calls and forged signatures never succeed.
@@ -46,3 +46,4 @@ The detector still matches the pattern after the fix. It is now a false positive
   - Only the owner changes the policy.
   - Collateral is conserved.
   - Every open position has a followed holder.
+  - No reducing order is ever attributed to a builder, and every attributed order names builder 26 at the fixed fee, within the owner's signed maximum.
