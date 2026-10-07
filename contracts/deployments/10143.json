@@ -1,0 +1,38 @@
+{
+  "chainId": 10143,
+  "keeperRegistry": "0x394B12D4355bE5B54DBCaa989cf44F8966195E41",
+  "factory": "0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39",
+  "implementation": "0x648e35cdfD4Aca744Ed33c69A0089A5621A76316",
+  "exchange": "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
+  "collateral": "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
+  "depositCap": 200000000,
+  "builderId": 26,
+  "builderFeePer100K": 20,
+  "keepers": [
+    "0x299E77E58DD37607e4890C761924D829F8ACe82C"
+  ],
+  "block": 69083005,
+  "transactions": [
+    {
+      "label": "deploy KeeperRegistry",
+      "hash": "0xc64563e53bc7baa2c0b22e996743f47d5c8ed985f749c12d3815dfd69df59321",
+      "block": 69083005,
+      "gasUsed": "502508",
+      "gasLimit": "502508"
+    },
+    {
+      "label": "deploy MirrorAccountFactory (+ MirrorAccount implementation)",
+      "hash": "0xf3fd5d67e7c6a33e431eebbbe5911c654788a8a10fb474aa5ba706e626579bdf",
+      "block": 69083015,
+      "gasUsed": "10243061",
+      "gasLimit": "10243061"
+    },
+    {
+      "label": "KeeperRegistry.setKeepers(0x299E77E58DD37607e4890C761924D829F8ACe82C)",
+      "hash": "0xec3f8874daf820e0e4786859b1086c8803c1d2047b6fde0d41f6d364b9da9979",
+      "block": 69083025,
+      "gasUsed": "70430",
+      "gasLimit": "70430"
+    }
+  ]
+}
