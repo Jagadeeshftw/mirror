@@ -5,9 +5,17 @@ description: How to verify Mirror today, and the phone path once the app and mai
 
 This page mirrors the judge access instructions in the Metropolis submission and is updated with real links, addresses and transaction hashes as they ship.
 
-## Status right now (6 Oct 2026)
+## Status right now (7 Oct 2026)
 
-Not yet usable on a phone. The Android app, copy engine and indexer are being built, and the contracts are not deployed on mainnet yet. The steps marked **pending** describe the judge path once those ship.
+Not yet usable on a phone. Here is exactly where things stand:
+
+- **Contracts**: built and tested (132 Foundry tests, Slither findings explained, localnet smoke test 9/9). **Not deployed yet**, on testnet or mainnet. Testnet deployment comes next (Perpl is funding test AUSD), then mainnet only on the project owner's go.
+- **Copy engine and indexer**: being updated for the new contract rules. Not hosted yet.
+- **Android app**: built and tested on emulators. The APK is not public yet.
+- **Team-run demo leader**: exists on Monad mainnet as Perpl account 5416, opened on 7 Oct 2026 with 10.00 AUSD. No trade placed yet. The demo follower needs the deployed contracts.
+- **Users**: none yet.
+
+The steps marked **pending** describe the judge path once those ship.
 
 ## What you can verify today
 
@@ -19,7 +27,7 @@ You need a computer with [Foundry](https://getfoundry.sh).
    git clone https://github.com/Jagadeeshftw/mirror && cd mirror
    ```
 
-2. Run the test suite (87 tests; the 3 fork tests need the next step):
+2. Run the test suite (132 tests; the 4 fork tests return early without the next step):
 
    ```bash
    git submodule update --init --recursive && cd contracts && forge test
@@ -31,7 +39,9 @@ You need a computer with [Foundry](https://getfoundry.sh).
    MONAD_RPC_URL=https://rpc.monad.xyz forge test --mc PerplMainnetFork -vv
    ```
 
-   This runs a gasless deposit, a blocked copy, a real fill on Perpl's live order book, a keeper withdrawal that reverts, a signed close-all, a follow with match now and an owner withdrawal, all against a fork of mainnet state.
+   This runs a gasless deposit, a blocked copy, a real fill on Perpl's live order book, a keeper withdrawal that reverts, a signed close-all, a follow with match now and an owner withdrawal, all against a fork of mainnet state. `test_fork_newRulesAgainstLivePerpl` also shows the entry guard blocking a copy of a leader far in profit, the follower's fill derived exactly from Perpl's average entry, and a stranger executing a reached take-profit.
+
+4. Optional: run Slither, the localnet smoke test on Perpl's real exchange, and the deployment plan. Commands and expected output are on [Run the tests](/docs/run-the-tests).
 
 ## What you need for the phone path (pending)
 
@@ -53,7 +63,7 @@ You need a computer with [Foundry](https://getfoundry.sh).
 ## What is on mainnet (pending)
 
 - MirrorAccountFactory, the MirrorAccount implementation and KeeperRegistry, all verified on MonadVision. Addresses will be on [Contracts](/docs/contracts).
-- The team-run demo leader account and demo follower MirrorAccount. See [Team-run accounts](/docs/team-run-accounts).
+- The team-run demo leader (already live: Perpl account 5416) and the demo follower MirrorAccount (after deployment). See [Team-run accounts](/docs/team-run-accounts).
 - Perpl Exchange `0x34B6552d57a35a1D042CcAe1951BD1C370112a6F` and AUSD `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` (third party, already live).
 
-Everything the app shows is real Monad mainnet state. There is no testnet or simulated mode. Live counts and every executed copy are on the [public stats page](/stats).
+Once live, everything the app shows is real Monad mainnet state, with no simulated mode. The testnet deployment that comes first is for testing before mainnet, not part of the judge path. Live counts and every executed copy are on the [public stats page](/stats).

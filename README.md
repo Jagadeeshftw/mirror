@@ -22,11 +22,15 @@ The owner is the follower's passkey (Mera, WebAuthn PRF): one prompt, no seed ph
 
 | Part | State |
 |---|---|
-| Contracts (`contracts/`) | Built. 91 tests: 73 unit, 6 fuzz, 8 invariant properties plus a call summary, 3 mainnet-fork tests against the live Perpl Exchange and AUSD. **Not deployed yet** (testnet first, then mainnet). |
-| Copy engine and relayer (`engine/`) | Built. 48 unit tests and a 20-check end-to-end run on a local mainnet fork. Not hosted yet. |
-| Indexer (`indexer/`) | Built (Envio HyperIndex). 24 tests; decoded real Perpl events from a live mainnet sync. Not hosted yet. |
-| Android app (`app/`) | Built (Expo, Mera passkeys). 38 tests. Passkey create, two PRF namespaces in one prompt, and restore on a second device verified on signed-in emulators for rpId `mirror.0xo.in`. APK not public yet. |
+| Contracts (`contracts/`) | Built. 132 tests: unit, fuzz (1,000 runs each), 10 invariant properties plus a call summary, and 4 mainnet-fork tests against the live Perpl Exchange and AUSD. Slither report: `docs/security/static-analysis.md`. **Not deployed yet** (testnet first, then mainnet). |
+| Local network (`localnet/`) | Perpl's real exchange deployed as in Perpl's dex-sdk test kit, with Mirror on top. Smoke test 9/9. |
+| Copy engine and relayer (`engine/`) | Built; being updated for the new contract rules. Not hosted yet. |
+| Indexer (`indexer/`) | Built (Envio HyperIndex), with per-copy quality proof. 37 tests. Not hosted yet. |
+| Android app (`app/`) | Built (Expo, Mera passkeys). Passkey create, two PRF namespaces in one prompt, and restore on a second device verified on signed-in emulators for rpId `mirror.0xo.in`. APK not public yet. |
 | Site, docs, stats (`web/`) | Live at https://mirror.0xo.in. |
+| Team-run demo leader | Live on mainnet: Perpl account 5416, 10.00 AUSD (`docs/funding-ledger.md`). |
+
+New contract rules: an entry filter against the leader's onchain average entry; stop-loss, take-profit and loss stops that anyone can execute once they are true onchain (reduce-only); up to four leaders per account, each with its own budget and loss stop; and the leader price, follower price and deviation in every copy event.
 
 ## Repository layout
 
@@ -64,6 +68,12 @@ cd app && npm ci && npx jest && cd ..
 
 # Site
 cd web && npm ci && npm run dev
+
+# Local network: Perpl's exchange plus Mirror, then the smoke test (needs anvil)
+cd localnet && npm install && npm run fetch && npm start      # another shell: node smoke.mjs
+
+# Deployment plan with gas from Monad's own estimator (sends nothing without --send)
+cd scripts && npm install && node deploy-contracts.mjs --network testnet --cap 200
 ```
 
 One command per public claim, with expected output: https://mirror.0xo.in/docs/run-the-tests
