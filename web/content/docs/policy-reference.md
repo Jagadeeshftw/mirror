@@ -56,7 +56,11 @@ A leader added for the first time starts with a clean loss record.
 
 Perpl nets each market into one position per account, so with several leaders a market belongs to one leader at a time: the leader whose copy opened it. It stays theirs until the position is flat again. Another leader's copy into that market is blocked (`MarketHeldByOtherLeader`). This is what makes every position, budget and loss stop attributable to exactly one leader.
 
-Removing a leader from the policy leaves its positions open and untouched. They are no longer mirrored: the keeper cannot copy that leader's exits (`LeaderNotAllowed`). This is "stop following, keep my positions". You close them yourself with `closeMarket` or `closeAll`, or with a stop-loss / take-profit level.
+Removing a leader from the policy leaves its positions open and untouched. They are no longer mirrored: the keeper cannot copy that leader's exits (`LeaderNotAllowed`). You close them yourself with `closeMarket` or `closeAll`, or with a stop-loss / take-profit level. Removing a leader also clears its detached flag.
+
+"Stop following, keep my positions" keeps the leader in the policy and sets a per-leader flag instead: `setLeaderDetached(leader, true)`, or signed action 11 (`ACTION_SET_LEADER_DETACHED`, `abi.encode(uint32 leader, bool detached)`). While it is set, your contract refuses every copy naming that leader, opens and closes, keeper or match now (`LeaderDetached`), and the positions stay attributed to the leader, so its budget, loss stop and your levels keep working. Setting a new policy keeps the flag for leaders that stay listed; `follow()` clears it for every leader it names. Only a leader in the policy can be detached (`InvalidPolicy("leader")` otherwise).
+
+Pause and stop following differ: pause is account-wide and refuses opening copies but still mirrors the leader's exits; stop following is per leader and refuses every copy from that leader, opens and closes.
 
 ## Stop-loss and take-profit levels
 

@@ -7,7 +7,7 @@ import type { LeaderWindow } from "../../lib/api";
 import { MINUS, comma, dateShort, leverage, lots, pctSigned, price, shortAddr, usdCompact } from "../../lib/format";
 import { useConfig, useFeedAll, useLeader, useMarkets, useTotals } from "../../state/data";
 import { findFollow, findUnfollowed } from "../../lib/budgets";
-import { LeaderStoppedCard, UnfollowedNote } from "../../ui/leaderStopped";
+import { DETACHED_TEXT, LeaderStoppedCard, UnfollowedNote } from "../../ui/leaderStopped";
 import { useOwnerAction } from "../../state/ownerAction";
 import { AppBar, BalanceChip } from "../../ui/chrome";
 import { Columns, LineChart } from "../../ui/charts";
@@ -64,6 +64,8 @@ function LeaderProfile() {
   const unfollowed = follow ? null : findUnfollowed(totals?.accounts, Number(id));
   const feed = useFeedAll();
   const lossStopped = follow?.book.status === "stopped";
+  // MirrorAccount.leaderDetached(this leader): "stop following, keep my positions" (contract-enforced).
+  const detached = !!follow?.book.detached;
   const act = useOwnerAction();
   const [stopping, setStopping] = useState(false);
 
@@ -333,10 +335,10 @@ function LeaderProfile() {
           Sources: Perpl fills on Monad, Nansen. Updated {Math.max(1, Math.round((Date.now() - l.updatedAt) / 60000))} min ago. Past results don't predict future returns.
         </T>
       </Scroll>
-      {following?.detached ? (
+      {detached ? (
         <View style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: c.sf, borderTopWidth: 1, borderTopColor: c.bd }}>
           <T size={12} color="mu" lh={17} testID="leader.detached">
-            You stopped following. Positions are kept and not mirrored; the follow is paused. You manage them: levels, close, withdraw.
+            {DETACHED_TEXT}
           </T>
           {act.error ? <T size={12} color="neg" testID="leader.error">{act.error}</T> : null}
         </View>
@@ -349,14 +351,14 @@ function LeaderProfile() {
               <T size={11} color="mu">
                 Status
               </T>
-              <T size={13} w={600} color={following.detached || lossStopped ? "neg" : following.paused ? "wrnI" : "posI"} testID="follow.status">
-                {following.detached ? "Stopped" : lossStopped ? "Loss stop" : following.paused ? "Paused" : "Following"}
+              <T size={13} w={600} color={detached || lossStopped ? "neg" : following.paused ? "wrnI" : "posI"} testID="follow.status">
+                {detached ? "Stopped, positions kept" : lossStopped ? "Loss stop" : following.paused ? "Paused" : "Following"}
               </T>
             </View>
-            {following.detached ? (
+            {detached ? (
               <>
                 <Button icon="close" kind="out" testID="leader.stopFollow" disabled={!!act.busy} onPress={() => setStopping(true)} style={{ width: 52, paddingHorizontal: 0 }} />
-                <Button title={act.busy === "followAgain" ? "Waiting" : "Follow again"} icon="fp" flex testID="leader.followAgain" disabled={!!act.busy} onPress={() => act.followAgain(following)} />
+                <Button title={act.busy === "followAgain" ? "Waiting" : "Follow again"} icon="fp" flex testID="leader.followAgain" disabled={!!act.busy} onPress={() => act.followAgain(following, Number(id))} />
               </>
             ) : (
               <>

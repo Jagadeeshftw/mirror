@@ -70,6 +70,7 @@ enum BlockReason {
   MarketHalted
   CloseBelowTarget
   BuilderFeeTooHigh
+  LeaderDetached
   Unknown
 }
 
@@ -124,6 +125,10 @@ enum ActivityKind {
   LEVEL_SET
   LEADER_STOPPED
   MARKET_CLOSED
+  "LeaderDetachedSet(leader, true): stop following the leader, keep its positions."
+  LEADER_DETACHED
+  "LeaderDetachedSet(leader, false): copying the leader again (owner, follow() or the leader's removal)."
+  LEADER_REATTACHED
 }
 
 # ------------------------------------------------------------------------------------------------
@@ -450,12 +455,15 @@ type MirrorAccount {
   marketCloseCount: Int!
   stopsTriggered: Int!
   leaderStops: Int!
+  "Leaders currently detached (MirrorAccount.leaderDetached): copies naming them are blocked (LeaderDetached), their positions are kept."
+  detachedLeaderAccountIds: [BigInt!]!
   lastCopyAt: Int! @index
   lastActivityAt: Int!
   leaderRules: [MirrorLeaderRule!]! @derivedFrom(field: "mirrorAccount")
   marketRules: [MirrorMarketRule!]! @derivedFrom(field: "mirrorAccount")
   levels: [MirrorLevel!]! @derivedFrom(field: "mirrorAccount")
   stops: [StopTrigger!]! @derivedFrom(field: "mirrorAccount")
+  detachEvents: [LeaderDetachEvent!]! @derivedFrom(field: "mirrorAccount")
   leaderPnl: [FollowerLeaderPnl!]! @derivedFrom(field: "mirrorAccount")
   copies: [CopyEvent!]! @derivedFrom(field: "mirrorAccount")
   blocked: [BlockedCopy!]! @derivedFrom(field: "mirrorAccount")
@@ -480,8 +488,32 @@ type MirrorLeaderRule {
   stopPnlCNS: BigInt
   stopLimitCNS: BigInt
   stopCount: Int!
+  """
+  MirrorAccount.leaderDetached: "stop following, keep my positions". Copies naming the leader (opens and closes,
+  keeper and match-now) are blocked with LeaderDetached while set. Kept by setPolicy for leaders that stay listed;
+  cleared when the leader is removed from the policy and by follow() for every leader it lists.
+  """
+  detached: Boolean! @index
+  "Last time detached was set to true (kept after it is cleared)."
+  detachedAt: Int
+  detachCount: Int!
   active: Boolean! @index
   updatedAt: Int!
+}
+
+"A per-leader detach change (LeaderDetachedSet)."
+type LeaderDetachEvent {
+  "<txHash>-<logIndex>"
+  id: ID!
+  mirrorAccount: MirrorAccount!
+  leaderAccountId: BigInt! @index
+  leader: PerplAccount!
+  detached: Boolean!
+  teamRun: Boolean!
+  blockNumber: Int!
+  timestamp: Int! @index
+  txHash: String!
+  logIndex: Int!
 }
 
 type MirrorMarketRule {

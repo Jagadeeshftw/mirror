@@ -115,22 +115,25 @@ passkey 90
 shell ${HOOK2} paused ${addr} 0
 expectResult id:follow.status "^Following$" 30
 
-step 28 Stop following, keep my positions (one passkey prompt): detached + paused; the leader's close is not copied
+step 28 Stop following, keep my positions (one passkey prompt): leaderDetached(3) set by the user's own contract (ACTION_SET_LEADER_DETACHED), not paused; the leader's exit is not copied and the contract refuses it (Blocked LeaderDetached, 22); the position is kept
 tap id:leader.stopFollow
 waitFor id:stop.sheet 15
 tap id:stop.option.keep
-expectResult id:stop.option.keep.body "." 5
+expectResult id:stop.option.keep.body "contract" 5
 tap id:stop.confirm
 passkey 90
-shell ${HOOK2} paused ${addr} 1 1
-expectResult id:follow.status "^Stopped$" 30
+shell ${HOOK2} detached ${addr} 3 1
+shell ${HOOK2} paused ${addr} 0
+expectResult id:follow.status "^Stopped, positions kept$" 30
 waitFor id:leader.detached 10
 shell ${HOOK2} trade ${addr} demo 1 2 10 none
+shell ${HOOK2} keeper-exit ${addr} 3 1
 
-step 29 Follow again (one passkey prompt) and the next leader open is copied
+step 29 Follow again (one passkey prompt): leaderDetached(3) cleared onchain, and the next leader open is copied
 tap id:leader.followAgain
 passkey 90
-shell ${HOOK2} paused ${addr} 0 0
+shell ${HOOK2} detached ${addr} 3 0
+shell ${HOOK2} paused ${addr} 0
 expectResult id:follow.status "^Following$" 30
 shell ${HOOK2} trade ${addr} demo 1 0 20 copied
 

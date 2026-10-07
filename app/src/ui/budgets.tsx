@@ -119,13 +119,14 @@ const STATUS: Record<LeaderBook["status"], { label: string; tone: "ok" | "neg" |
   copying: { label: "Copying", tone: "ok" },
   paused: { label: "Paused", tone: "wrn", icon: "pause" },
   stopped: { label: "Stopped by loss stop", tone: "neg", icon: "pause" },
+  detached: { label: "Stopped following, positions kept", tone: "neutral", icon: "pause" },
   unfollowed: { label: "Stopped following", tone: "neutral" },
 };
 export const statusChip = (b: LeaderBook, testID?: string) => <ChipS label={STATUS[b.status].label} tone={STATUS[b.status].tone} icon={STATUS[b.status].icon} testID={testID} />;
 
 /** "Loss stop at 10.20 · 2.42 away", "Loss stop off", "hit at 3.40". */
 export function lossStopText(b: LeaderBook): string {
-  if (b.status === "unfollowed") return "Not mirrored · you manage its positions";
+  if (b.status === "unfollowed" || b.status === "detached") return "Not mirrored · you manage its positions";
   if (!b.lossStopBps) return "Loss stop off";
   if (b.stopped) return `Loss stop hit at ${ausd(b.stopAtCNS)}`;
   return `Loss stop at ${ausd(b.stopAtCNS)} · ${ausd(b.lossLeftCNS > 0n ? b.lossLeftCNS : 0n)} away`;

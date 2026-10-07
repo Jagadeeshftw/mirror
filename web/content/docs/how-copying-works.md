@@ -39,6 +39,7 @@ Perpl keeps one position per market per account. So a market belongs to the lead
 
 - **Budget.** Before an open, the contract adds Perpl's margin (position deposit) of that leader's open positions to the margin the new order needs. If the sum is above `budgetCNS`, the copy is blocked (`LeaderBudgetExceeded`).
 - **Loss stop.** The contract books each leader's realised PnL, net of fees, from the change in the account's balance and position deposit around every order in that leader's markets. Realised since the leader was added, plus unrealised on its open positions, is the leader's PnL. Below `-lossStopBps × budgetCNS` the leader is stopped (`LeaderLossStop`) and stays stopped until you set a policy again. Other leaders keep copying.
+- **Stop following, keep my positions.** `setLeaderDetached(leader, true)` (signed action 11) stops copying one leader while its positions stay open. Your contract refuses every copy naming that leader, opens and closes, keeper or match now (`LeaderDetached`). The positions stay attributed to the leader, so its budget, its loss stop and your levels keep working, and you can still close them with `closeMarket`, `closeAll` or a level. Other leaders keep copying. To follow again, sign `setLeaderDetached(leader, false)` or follow the leader again (`follow()` clears the flag).
 - **Removing a leader** leaves its positions open and untouched. They are no longer mirrored: the keeper cannot copy that leader's exits (`LeaderNotAllowed`). You close them with `closeMarket`, `closeAll` or a level.
 
 ## 4. The entry guard
@@ -69,7 +70,7 @@ When you follow a leader who already has open positions, waiting for their next 
 
 ## 6. Blocked by your rule
 
-Before an opening copy is sent to Perpl, the contract checks, in order:
+Before any copy, opening or closing, the contract first checks that you have not stopped following its leader (`LeaderDetached`). Then, before an opening copy is sent to Perpl, it checks, in order:
 
 | # | Check | Block reason |
 |---|---|---|
@@ -94,7 +95,7 @@ Before an opening copy is sent to Perpl, the contract checks, in order:
 | 19 | Equity is above the daily loss floor | `DailyLossStop` |
 | 20 | Equity is above the drawdown floor | `DrawdownStop` |
 
-A keeper close is checked for: leader in your policy (`LeaderNotAllowed`), market held for that leader (`MarketHeldByOtherLeader`), not below that leader's target (`CloseBelowTarget`), valid mark (`StaleMark`) and slippage (`SlippageTooHigh`).
+A keeper close is checked for: leader not detached (`LeaderDetached`), leader in your policy (`LeaderNotAllowed`), market held for that leader (`MarketHeldByOtherLeader`), not below that leader's target (`CloseBelowTarget`), valid mark (`StaleMark`) and slippage (`SlippageTooHigh`).
 
 If a check fails, the contract **does not trade and does not revert**. It emits:
 

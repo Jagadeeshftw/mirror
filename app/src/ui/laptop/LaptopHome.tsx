@@ -17,7 +17,7 @@ import { useColors } from "../theme";
 import { LaptopWatch } from "./LaptopWatch";
 import { LCard, LaptopPage } from "./Top";
 import { Table, type Col } from "./Table";
-import { isMultiLeader, leaderBooks, splitTotals, type LeaderBook } from "../../lib/budgets";
+import { isLeaderDetached, isMultiLeader, leaderBooks, splitTotals, type LeaderBook } from "../../lib/budgets";
 import { useOwnerAction } from "../../state/ownerAction";
 import { lossStopText, statusChip, useLeaderNames } from "../budgets";
 
@@ -78,7 +78,7 @@ function FundedLaptop({ totals, mirrorDown, monadDown, onRetry, block }: { total
       const p = toBig(a.equityCNS) - toBig(a.netDepositsCNS);
       const d = a.policy?.drawdownBps ?? 0;
       const at = (toBig(a.netDepositsCNS) * BigInt(10_000 - d)) / 10_000n;
-      const status = a.stops?.drawdownHit || a.stops?.dailyLossHit ? <ChipS label="Stopped by loss stop" tone="neg" icon="pause" /> : a.paused ? <ChipS label="Paused" tone="wrn" icon="pause" /> : <ChipS label="Copying" tone="ok" />;
+      const status = a.leader && isLeaderDetached(a, a.leader.accountId) ? <ChipS label="Stopped following, positions kept" tone="neutral" icon="pause" /> : a.stops?.drawdownHit || a.stops?.dailyLossHit ? <ChipS label="Stopped by loss stop" tone="neg" icon="pause" /> : a.paused ? <ChipS label="Paused" tone="wrn" icon="pause" /> : <ChipS label="Copying" tone="ok" />;
       return [{ key: a.account, a, leaderId: a.leader?.accountId ?? 0, address: a.leader?.address ?? a.account, status, budget: toBig(a.netDepositsCNS), margin: toBig(a.marginCNS), pnl: p, loss: d ? `${ausd(at)} · ${ausd(toBig(a.equityCNS) - at)} away` : "Off", open: a.positions.length }];
     }
     return leaderBooks(a).map((b) => ({ key: `${a.account}:${b.leaderId}`, a, leaderId: b.leaderId, address: names.address(b.leaderId), book: b, status: statusChip(b), budget: b.budgetCNS, margin: b.marginCNS, pnl: b.pnlCNS, loss: lossStopText(b).replace("Loss stop at ", "").replace("Loss stop ", ""), open: b.positions.length }));

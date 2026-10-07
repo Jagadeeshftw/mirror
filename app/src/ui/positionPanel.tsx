@@ -1,6 +1,7 @@
 // One position with its onchain levels: header, price-level chart, levels card, Edit levels / Share,
 // copy proof and leader rows, Close position / Stop following. Phone detail screen and laptop side panel.
 import { leaderAddressOf } from "../lib/engineShape";
+import { isLeaderDetached } from "../lib/budgets";
 import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { View } from "react-native";
@@ -127,7 +128,7 @@ export function PositionBody({ account, p, cfg, laptop }: { account: MirrorAccou
       ) : null}
       <View style={{ borderRadius: 16, borderWidth: 1, borderColor: c.bd, backgroundColor: c.sf }}>
         <NavRow icon="activity" title="Copy proof" sub={lastCopy ? `Opened ${lastCopy.latencyMs !== undefined ? `in ${(lastCopy.latencyMs / 1000).toFixed(2)} s` : ""}${lastCopy.latencyBlocks ? ` · ${lastCopy.latencyBlocks} block${lastCopy.latencyBlocks === 1 ? "" : "s"}` : ""} · ${lastCopy.commitState}` : "The copy that opened this position"} onPress={lastCopy ? () => setProof(lastCopy) : undefined} testID="position.proof" />
-        <NavRow icon="users" title={`Leader ${shortAddr(leaderAddr) || `#${leaderId}`}`} sub={`${budget ? `Budget ${ausd(budget)} · ` : ""}${account.detached ? "stopped, not mirrored" : account.paused ? "paused" : "copying"}`} onPress={() => (laptop ? router.push({ pathname: "/leaders", params: { leader: String(leaderId) } }) : router.push({ pathname: "/leader/[id]", params: { id: String(leaderId) } }))} testID="position.leader" last />
+        <NavRow icon="users" title={`Leader ${shortAddr(leaderAddr) || `#${leaderId}`}`} sub={`${budget ? `Budget ${ausd(budget)} · ` : ""}${isLeaderDetached(account, leaderId) ? "stopped following, positions kept" : account.paused ? "paused" : "copying"}`} onPress={() => (laptop ? router.push({ pathname: "/leaders", params: { leader: String(leaderId) } }) : router.push({ pathname: "/leader/[id]", params: { id: String(leaderId) } }))} testID="position.leader" last />
       </View>
       {laptop ? null : (
         <Row gap={10}>

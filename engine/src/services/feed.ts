@@ -40,6 +40,7 @@ export interface FeedRow {
 export function feedJson(r: FeedRow, explorerTx: string) {
   const data = r.data ? (JSON.parse(r.data) as Record<string, unknown>) : null;
   // Engine-side events (thin-book guard) have no transaction; they are never onchain Blocked events.
+  // ('Detached' rows are from the retired engine-held detach; LeaderDetached rows are onchain LeaderDetachedSet.)
   const engine = r.kind.startsWith('Engine') || r.kind === 'Detached';
   return {
     id: r.id,

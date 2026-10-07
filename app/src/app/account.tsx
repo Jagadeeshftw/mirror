@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
 import { ausd, ausdSigned, shortAddr, timeHM } from "../lib/format";
+import { isLeaderDetached } from "../lib/budgets";
 import { useConfig, useTotals } from "../state/data";
 import { useOwnerAction } from "../state/ownerAction";
 import { useSession } from "../state/session";
@@ -108,7 +109,7 @@ export default function AccountControls() {
                   Pause all following
                 </T>
                 <T size={12} color="mu">
-                  {allPaused ? `Paused ${timeHM(Date.now())}. New leader trades are not copied.` : "Stop copying new trades. Open positions stay open and still follow the leader's closes."}
+                  {allPaused ? `Paused ${timeHM(Date.now())}. New leader trades are not copied.` : "Stop copying new trades. Open positions stay open and still follow the leader's closes (Stop following, keep my positions refuses those too)."}
                 </T>
               </View>
               <Switch on={allPaused} onChange={(v) => act.setPaused(accts.filter((a) => a.paused !== v), v)} disabled={!!act.busy} testID="account.pauseAll" />
@@ -120,7 +121,7 @@ export default function AccountControls() {
                   {shortAddr(a.leader?.address ?? a.account)}
                 </T>
                 <T size={12} color="mu" testID={`account.follow.${i}.status`}>
-                  {a.detached ? "Stopped, positions kept" : a.paused ? "Paused" : "Copying"}
+                  {a.leader && isLeaderDetached(a, a.leader.accountId) ? "Stopped, positions kept" : a.paused ? "Paused" : "Copying"}
                 </T>
                 <IconButton name="share" small onPress={() => setSharing(i)} testID={`account.follow.${i}.share`} />
                 <IconButton name="close" small onPress={() => setStopping(i)} testID={`account.follow.${i}.stop`} />

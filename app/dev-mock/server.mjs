@@ -19,7 +19,6 @@ import {
   MIRROR_ORDERS_PARAM,
   POLICY_PARAM,
   actionTypedData,
-  detachTypedData,
   permitTypedData,
   predictAccount,
   receiveAuthTypedData,
@@ -299,7 +298,8 @@ function serializeAccount(a) {
     depositCapCNS: CAP.toString(),
     actionNonce: a.actionNonce.toString(),
     paused: a.paused,
-    detached: !!a.detached,
+    // MirrorAccount.leaderDetached: "stop following, keep my positions" (engine: detachedLeaders).
+    detachedLeaders: [...(a.detachedLeaders ?? [])],
     expiry: a.policy?.expiry ?? 0,
     policy: a.policy,
     positions: a.positions.map((p) => {
@@ -458,7 +458,12 @@ setInterval(() => {
     const has = a.positions.find((p) => p.perpId === bySymbol.MON.perpId);
     const mark = markOf(bySymbol.MON.perpId);
     let e;
-    if (!has) {
+    if ((a.detachedLeaders ?? new Set()).has(L.accountId)) {
+      // The account's own contract refuses every copy from a detached leader, opens and closes; positions stay.
+      const ot = has ? (has.side === "long" ? 2 : 3) : 1;
+      const lots = has ? has.lots : 220n;
+      e = ev(a, "Blocked", { leaderAccountId: L.accountId, leaderAddress: cs(L.address), perpId: bySymbol.MON.perpId, orderType: ot, lotLNS: lots.toString(), pricePNS: mark.toString(), leverageHdths: 300, leaderLotLNS: lots.toString(), leaderLeverageHdths: 300, blocked: { ...detachedBlock(L.accountId), reasonCode: BLOCK_REASONS.indexOf("LeaderDetached") } }, 0, "proposed");
+    } else if (!has) {
       const lots = 220n;
       a.positions.push({ perpId: bySymbol.MON.perpId, side: "short", lots, entry: mark, lev: 300, leaderAccountId: L.accountId });
       e = ev(a, "Mirrored", { leaderAccountId: L.accountId, leaderAddress: cs(L.address), perpId: bySymbol.MON.perpId, orderType: 1, lotLNS: lots.toString(), pricePNS: mark.toString(), leverageHdths: 300, notionalCNS: notional(bySymbol.MON.perpId, lots, mark).toString(), latencyMs: 540 + Math.round(Math.random() * 140) }, 0, "proposed");
@@ -730,6 +735,17 @@ function toSig(b) {
   return `${b.r}${b.s.slice(2)}${v.toString(16).padStart(2, "0")}`;
 }
 
+const DETACH_LABELS = { true: "Stopped following this leader (positions kept)", false: "Following this leader again" };
+/** Engine feed row for LeaderDetachedSet (onchain, kind LeaderDetached, data {detached, label}). */
+function detachEvent(a, leaderId, detached, hash) {
+  const L = leaderById[leaderId];
+  const e = ev(a, "LeaderDetached", { leaderAccountId: leaderId, leaderAddress: L ? cs(L.address) : undefined, data: { detached, label: DETACH_LABELS[String(detached)] } }, 0, "proposed");
+  if (hash) e.txHash = hash;
+  return e;
+}
+/** Blocked(LeaderDetached = 22): limit 0, actual = the leader id; opens and closes alike. */
+const detachedBlock = (leaderId) => ({ reason: "LeaderDetached", limit: "0", actual: String(Number(leaderId)), rule: DETACH_LABELS.true });
+
 async function relayExecute({ account, action, signature }) {
   const a = accounts.get(lc(account));
   if (!a) return err(404, "not_found", "Account not deployed");
@@ -763,15 +779,24 @@ async function relayExecute({ account, action, signature }) {
       a.policy = policy;
       // A new policy lifts every halt a fired level set (MirrorAccount._setPolicy rebuilds the markets).
       stops.haltedOf(a).clear();
-      if (a.detached) {
-        a.detached = false;
-        events.push(ev(a, "Detached", { txHash: null, onchain: false, label: "Following again", data: { detached: false, label: "Following again", reason: "policy" } }, 0, "offchain"));
+      // MirrorAccount: a leader removed from the policy is no longer detached (LeaderDetachedSet(id, false) before
+      // PolicyUpdated); setPolicy keeps the flag for kept leaders; follow() clears it for every leader it names.
+      const det = (a.detachedLeaders ??= new Set());
+      const clearedBefore = [...det].filter((id) => !policy.leaders.some((l) => l.accountId === id));
+      const clearedAfter = kind === ACTION.FOLLOW ? [...det].filter((id) => policy.leaders.some((l) => l.accountId === id)) : [];
+      for (const id of clearedBefore) {
+        det.delete(id);
+        events.push(detachEvent(a, id, false, r.txHash));
       }
       a.leaderAccountId = policy.leaders[0]?.accountId ?? a.leaderAccountId;
       if (kind === ACTION.FOLLOW) a.paused = false;
       const pe = ev(a, kind === ACTION.FOLLOW ? "Followed" : "PolicyUpdated", { leaderAccountId: a.leaderAccountId, leaderAddress: leaderById[a.leaderAccountId] ? cs(leaderById[a.leaderAccountId].address) : undefined }, 0, "proposed");
       pe.txHash = r.txHash;
       events.push(pe);
+      for (const id of clearedAfter) {
+        det.delete(id);
+        events.push(detachEvent(a, id, false, r.txHash));
+      }
       const executed = [];
       for (const o of orders) {
         const m = byPerp[Number(o.perpId)];
@@ -781,7 +806,8 @@ async function relayExecute({ account, action, signature }) {
         const notl = notional(m.perpId, lots, mark);
         const base = { leaderAccountId: Number(o.leaderAccountId), leaderAddress: leaderById[Number(o.leaderAccountId)] ? cs(leaderById[Number(o.leaderAccountId)].address) : undefined, perpId: m.perpId, orderType: Number(o.orderType), lotLNS: lots.toString(), pricePNS: o.pricePNS.toString(), leverageHdths: Number(o.leverageHdths), matchNow: true, latencyMs: r.latencyMs };
         let block = null;
-        if (cap === 0n) block = { reason: "MarketNotAllowed", limit: "0", actual: String(m.perpId), rule: `${m.symbol} is not in your allowed markets` };
+        if ((a.detachedLeaders ?? new Set()).has(Number(o.leaderAccountId))) block = detachedBlock(o.leaderAccountId);
+        else if (cap === 0n) block = { reason: "MarketNotAllowed", limit: "0", actual: String(m.perpId), rule: `${m.symbol} is not in your allowed markets` };
         else if (Number(o.leverageHdths) > policy.maxLeverageHdths) block = { reason: "LeverageTooHigh", limit: String(policy.maxLeverageHdths), actual: String(o.leverageHdths), rule: `Max leverage ${policy.maxLeverageHdths / 100}x` };
         else if (notl > cap) block = { reason: "ExceedsMaxNotional", limit: cap.toString(), actual: notl.toString(), rule: `Copy would be ${fmtCns(notl)} AUSD. Max per market ${fmtCns(cap)}` };
         else block = leaderBlock(a, o, { marginOf, upnl, notionalAt: (perpId, l) => notional(perpId, l, byPerp[perpId].markPNS) });
@@ -842,6 +868,15 @@ async function relayExecute({ account, action, signature }) {
         e.txHash = r.txHash;
         events.push(e);
       }
+    } else if (kind === ACTION.SET_LEADER_DETACHED) {
+      // MirrorAccount._setLeaderDetached: detaching a leader that is not in the policy reverts InvalidPolicy("leader").
+      const [leader, detached] = decodeAbiParameters([{ type: "uint32" }, { type: "bool" }], msg.data);
+      const id = Number(leader);
+      if (detached && !(a.policy?.leaders ?? []).some((l) => l.accountId === id)) return err(400, "InvalidPolicy", "Invalid policy: leader", { revertReason: 'InvalidPolicy("leader")' });
+      const det = (a.detachedLeaders ??= new Set());
+      if (detached) det.add(id);
+      else det.delete(id);
+      events.push(detachEvent(a, id, detached, r.txHash));
     } else if (kind === ACTION.MATCH_NOW || kind === ACTION.SWEEP || kind === ACTION.EXCHANGE_CALL) {
       // accepted, no state change in the mock
     } else {
@@ -1083,23 +1118,12 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, a ? stops.stopsFor(a) : { items: [] });
     }
     if (req.method === "POST" && (m = p.match(/^\/v1\/accounts\/(0x[0-9a-fA-F]{40})\/detach$/))) {
-      // Engine: owner-signed Detach(bool detached,uint256 deadline) in the account's domain (services/detach.ts).
-      const a = accounts.get(lc(m[1]));
-      if (!a) return send(res, 404, { error: "Unknown account", code: "unknown_account" });
-      const b = await readBody(req);
-      const deadline = BigInt(b.deadline);
-      const nowS = BigInt(Math.floor(now() / 1000));
-      if (deadline < nowS) return send(res, 400, { error: "This approval expired. Sign again.", code: "expired" });
-      if (deadline > nowS + 3600n) return send(res, 400, { error: "Deadline more than 3600 s ahead", code: "deadline_too_far" });
-      if (a.detachDeadline !== undefined && deadline <= a.detachDeadline) return send(res, 409, { error: "This approval was already used. Sign again.", code: "replayed" });
-      const signer = await recoverTypedDataAddress({ ...detachTypedData(a.account, CHAIN_ID, !!b.detached, deadline), signature: b.signature }).catch(() => null);
-      if (!signer) return send(res, 400, { error: "Signature does not decode", code: "bad_signature" });
-      if (lc(signer) !== lc(a.owner)) return send(res, 401, { error: "Signature is not from the account owner", code: "not_owner" });
-      a.detached = !!b.detached;
-      a.detachDeadline = deadline;
-      const label = a.detached ? "Stopped following; positions kept" : "Following again";
-      emitEvent(a, ev(a, "Detached", { txHash: null, onchain: false, label, data: { detached: a.detached, label, reason: "signed" } }, 0, "offchain"));
-      return send(res, 200, { account: a.account, detached: a.detached, block });
+      // Engine (services/detach.ts DETACH_GONE): the engine-held detach moved onchain (ACTION_SET_LEADER_DETACHED).
+      return send(res, 410, {
+        error: "Stop following is enforced by your own MirrorAccount now: sign execute(ACTION_SET_LEADER_DETACHED = 11, abi.encode(uint32 leader, bool detached)) and relay it with POST /v1/relay/execute.",
+        code: "moved_onchain",
+        actionKind: ACTION.SET_LEADER_DETACHED,
+      });
     }
     if (req.method === "GET" && p === "/v1/stats") {
       const user = [...accounts.values()].filter((a) => !a.teamRun);

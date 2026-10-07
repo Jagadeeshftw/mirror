@@ -84,7 +84,7 @@ const RULES: Record<string, string> = {
   LeaderNotAllowed: 'Leader not followed', LeaderSideMismatch: 'Leader position changed', FlipNotAllowed: 'No flip', StaleMark: 'Stale price',
   ExceedsLeaderTarget: 'Copy ratio', EntryTooFar: 'Entry filter', MarketHeldByOtherLeader: 'Market held by another leader',
   LeaderBudgetExceeded: 'Leader budget', LeaderLossStop: 'Leader loss stop', MarketHalted: 'Market halted by a stop', CloseBelowTarget: 'Close below target',
-  BuilderFeeTooHigh: 'Fee cap', ThinBook: 'Thin book', BookUnavailable: 'Book unavailable',
+  BuilderFeeTooHigh: 'Fee cap', LeaderDetached: 'Stopped following this leader (positions kept)', ThinBook: 'Thin book', BookUnavailable: 'Book unavailable',
 };
 export const ruleName = (r: string) => RULES[r] ?? r.replace(/([a-z])([A-Z])/g, '$1 $2');
 
@@ -144,6 +144,7 @@ export function alertFor(e: FeedItem, ctx: AlertContext): AlertPayload | null {
         if (reason === 'LeaderLossStop') return mk('stop', `Leader loss stop hit: ${leader}`, `${sym} ${side} not copied. New trades from ${leader} are no longer copied; your other leaders keep running.`);
         return mk('stop', `${ruleName(reason)} hit`, `Equity ${ausd(e.actual)} AUSD is under ${ausd(e.limit)} AUSD. New exposure is paused; open positions still follow the leader's closes.`);
       }
+      if (reason === 'LeaderDetached') return mk('blocked', `Not copied: you stopped following ${leader}`, `${sym} ${side} refused by your own contract (positions kept). Follow ${leader} again to resume copying.`);
       const nums = blockedNumbers(e, m);
       return mk('blocked', `Blocked by your rule: ${ruleName(reason)}`, `${sym} ${side} from ${leader} not copied${nums ? ` · ${nums}` : ''}`);
     }

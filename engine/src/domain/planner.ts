@@ -179,6 +179,8 @@ export interface OpenCheckState {
   priceDecimals: number;
   leaderAllowed: boolean;
   leaderStopped: boolean;
+  /** MirrorAccount.leaderDetached(leader): checked before every other rule (actual = leader id). */
+  leaderDetached?: boolean;
   /** MirrorAccount.BUILDER_FEE_PER_100K (contract-wide) and the account's signed maxBuilderFeePer100K. */
   builderFeePer100K: number;
   maxBuilderFeePer100K: number;
@@ -220,6 +222,7 @@ const U256_MAX = (1n << 256n) - 1n;
 export function classifyOpen(o: MirrorOrder, s: OpenCheckState): BlockResult {
   const orderSide: Side = o.orderType === 0 ? LONG : SHORT;
   const r = (reason: BlockReason, limit = 0n, actual = 0n): BlockResult => ({ reason, limit, actual });
+  if (s.leaderDetached) return r('LeaderDetached', 0n, BigInt(o.leaderAccountId));
   if (s.paused) return r('Paused');
   if (s.now > s.expiry) return r('Expired', BigInt(s.expiry), BigInt(s.now));
   if (!s.marketAllowed) return r('MarketNotAllowed', 0n, BigInt(o.perpId));
@@ -273,6 +276,8 @@ export function classifyOpen(o: MirrorOrder, s: OpenCheckState): BlockResult {
 export interface CloseCheckState {
   follower: Position;
   leaderAllowed: boolean;
+  /** MirrorAccount.leaderDetached(leader): refused before the close checks (so even a close that would revert). */
+  leaderDetached?: boolean;
   marketLeader: number;
   target: bigint;
   markValid: boolean;
@@ -286,6 +291,7 @@ export interface CloseCheckState {
  */
 export function classifyClose(o: MirrorOrder, s: CloseCheckState): BlockResult | 'revert' {
   const closingSide: Side = o.orderType === 2 ? LONG : SHORT;
+  if (s.leaderDetached) return { reason: 'LeaderDetached', limit: 0n, actual: BigInt(o.leaderAccountId) };
   if (s.follower.lots === 0n || s.follower.side !== closingSide || o.lotLNS > s.follower.lots) return 'revert';
   if (!s.leaderAllowed) return { reason: 'LeaderNotAllowed', limit: 0n, actual: BigInt(o.leaderAccountId) };
   if (s.marketLeader !== o.leaderAccountId) return { reason: 'MarketHeldByOtherLeader', limit: BigInt(o.leaderAccountId), actual: BigInt(s.marketLeader) };

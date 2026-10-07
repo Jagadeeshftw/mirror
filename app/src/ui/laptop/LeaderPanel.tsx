@@ -7,11 +7,11 @@ import { MINUS, dateShort, pctSigned, shortAddr } from "../../lib/format";
 import { buildPolicy, defaultForm } from "../../lib/policy";
 import { useConfig, useFeedAll, useLeader, useTotals } from "../../state/data";
 import { findFollow, findUnfollowed } from "../../lib/budgets";
-import { LeaderStoppedCard, UnfollowedNote } from "../leaderStopped";
+import { DetachedNote, LeaderStoppedCard, UnfollowedNote } from "../leaderStopped";
 import { AdversarialFlag } from "../adversarial";
 import { LineChart } from "../charts";
 import { Icon } from "../icons";
-import { Button, IconButton, Identicon, NansenLabel, Row, T } from "../kit";
+import { Button, IconButton, Identicon, NansenLabel, Note, Row, T } from "../kit";
 import { useColors } from "../theme";
 import { WhatIfMini } from "../whatif";
 import { ShareSheet } from "../shareSheet";
@@ -89,15 +89,15 @@ export function LeaderPanel({ id, onClose }: { id: number; onClose: () => void }
       </View>
         </>
       )}
-      {follow?.book.status === "stopped" ? <LeaderStoppedCard account={follow.account} book={follow.book} events={feed.events} cfg={cfg} act={act} /> : unfollowed ? <UnfollowedNote book={unfollowed.book} /> : policy ? <WhatIfMini leaderId={id} policy={policy} depositCNS={12_000_000n} /> : null}
+      {follow?.book.detached ? <DetachedNote book={follow.book} /> : follow?.book.status === "stopped" ? <LeaderStoppedCard account={follow.account} book={follow.book} events={feed.events} cfg={cfg} act={act} /> : unfollowed ? <UnfollowedNote book={unfollowed.book} /> : policy ? <WhatIfMini leaderId={id} policy={policy} depositCNS={12_000_000n} /> : null}
       <View style={{ flex: 1 }} />
       <Row gap={10}>
         <Button icon="bell" kind={alerts ? "ton" : "out"} onPress={() => setAlerts(!alerts)} testID="leader.alerts" style={{ width: 52, paddingHorizontal: 0 }} />
         {following ? (
           <>
             <Button title="Stop following…" kind="out" flex testID="leader.stopFollow" onPress={() => setStopping(true)} />
-            {following.detached ? (
-              <Button title={act.busy === "followAgain" ? "Waiting" : "Follow again"} icon="fp" flex testID="leader.followAgain" disabled={!!act.busy} onPress={() => act.followAgain(following)} />
+            {follow?.book.detached ? (
+              <Button title={act.busy === "followAgain" ? "Waiting" : "Follow again"} icon="fp" flex testID="leader.followAgain" disabled={!!act.busy} onPress={() => act.followAgain(following, id)} />
             ) : (
               <Button title="Edit limits" icon="edit" flex testID="leader.rules" onPress={() => router.push({ pathname: "/follow/[id]", params: { id: String(id), account: following.account } })} />
             )}
@@ -106,6 +106,7 @@ export function LeaderPanel({ id, onClose }: { id: number; onClose: () => void }
           <Button title={`Follow ${shortAddr(l.address)}`} flex testID="leader.follow" onPress={() => router.push({ pathname: "/follow/[id]", params: { id: String(id) } })} />
         )}
       </Row>
+      {act.error && !stopping ? <Note tone="neg" icon="warn" testID="leader.error">{act.error}</Note> : null}
       <StopFollowSheet visible={stopping} onClose={() => setStopping(false)} account={following} leaderId={id} leaderAddress={l.address} cfg={cfg} act={act} />
     </View>
   );

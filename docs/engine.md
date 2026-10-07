@@ -30,8 +30,8 @@ Backfills from `MIRROR_DEPLOY_BLOCK` in 100-block chunks, then catches up on eve
 filter covers `AccountCreated` (accepted only from the factory) and the MirrorAccount events (accepted only
 from known clones), so a clone created in the same chunk is known before its first event. It stores
 accounts, policy (including `maxEntryDeviationBps`, `stopSlippageBps`, `flattenOnStop`, `maxBuilderFeePer100K`), leaders (ratio, budget,
-loss stop, stopped), markets (halted), owner levels and the feed (Mirrored with its copy proof, Blocked,
-Deposited, Withdrawn, PolicyUpdated, Paused, ClosedAll, LevelSet, StopTriggered, LeaderStopped, MarketClosed) in
+loss stop, stopped, detached), markets (halted), owner levels and the feed (Mirrored with its copy proof, Blocked,
+Deposited, Withdrawn, PolicyUpdated, Paused, ClosedAll, LevelSet, StopTriggered, LeaderStopped, MarketClosed, LeaderDetached) in
 SQLite, with a persisted cursor so restarts resume. New columns are added to an existing database on open.
 
 ### Watcher and copier
@@ -67,7 +67,9 @@ sequence. Per follower (`domain/planner.ts`):
   Closed; 0 for a decrease, liquidation or deleverage). It is statistics only; no rule trusts it.
 - **Paused accounts still get the leader's closes**: the contract refuses only opens while paused, and the keeper
   keeps mirroring exits so a paused follower is not left holding a position the leader has left.
-- **Detached accounts get no copies at all** (opens and closes). See "Stop following, keep my positions" below.
+- **A follower that detached a leader gets no copies of that leader** (opens and closes): its own contract would
+  refuse every one (`Blocked(LeaderDetached)`), so sending them would only cost gas. Its other leaders are copied
+  as usual. See "Stop following, keep my positions" below.
 - Deltas under one lot are skipped. Budget (`budgetCNS`) and leader loss stop (`lossStopBps`) are left to the
   contract; the engine replays them only to name a block.
 
@@ -81,7 +83,8 @@ reason is still named. Outcomes:
   notional, target, account loss stops, stale mark, `EntryTooFar`, `MarketHeldByOtherLeader`,
   `LeaderBudgetExceeded`, `LeaderLossStop`, `BuilderFeeTooHigh`; a submitted `LeaderLossStop` also latches `leaderStopped`).
   Paused/expired/market-or-leader-not-allowed/`MarketHalted` are the user's own settings and are not submitted
-  on every leader fill. Blocked closes are not submitted.
+  on every leader fill. `LeaderDetached` is never in `BLOCKED_SUBMIT_REASONS` (the copier does not plan copies of
+  a detached leader at all). Blocked closes are not submitted.
 - Simulation reverts (e.g. `NothingToClose`): skipped and logged.
 
 **Copy proof.** Every `Mirrored` event carries `CopyProof {leaderFillPNS, leaderEntryPNS, markPNS, fillPNS,
@@ -261,8 +264,9 @@ on SSE.
 ### Relayer (`services/relayer.ts`)
 
 `create` (`factory.createAccount`; returns `exists` if already deployed), `deposit` (`depositWithPermit` or
-`depositWithAuthorization`), `execute` (EIP-712 `Action`, kinds 1-10 including `ACTION_SET_LEVELS` = 9 with
-`abi.encode(Level[])` and `ACTION_CLOSE_MARKET` = 10 with `abi.encode(uint32 perpId, uint16 slippageBps)`;
+`depositWithAuthorization`), `execute` (EIP-712 `Action`, kinds 1-11 including `ACTION_SET_LEVELS` = 9 with
+`abi.encode(Level[])`, `ACTION_CLOSE_MARKET` = 10 with `abi.encode(uint32 perpId, uint16 slippageBps)` and
+`ACTION_SET_LEADER_DETACHED` = 11 with `abi.encode(uint32 leaderAccountId, bool detached)`;
 `domain/encode.ts` has the encoders), `transfer` (AUSD `transferWithAuthorization`).
 Every call is checked with `eth_call` from the relayer first; a revert returns 400 with the decoded error and
 nothing is sent. Then it is submitted, returning `{txHash, status, block, gasUsed, gasLimit}`. Rate limits are
@@ -384,17 +388,37 @@ then closes.
 
 ## Stop following, keep my positions (detach)
 
-An owner-signed, **engine-side** state. `POST /v1/accounts/:account/detach` takes an EIP-712 signature over
-`Detach(bool detached, uint256 deadline)` in the domain `{name: "Mirror Account", version: "1", chainId,
-verifyingContract: <the account>}` (the same domain as owner actions). The engine reads the account's onchain
-`owner()` and accepts the signature only from it, with a deadline at most 3600 s ahead and later than the last
-accepted one (single use). It stores `accounts.detached` (plus the head block and the deadline) and records an
-engine-side feed item `Detached` ("Stopped following; positions kept" / "Following again").
+A **per-leader flag in the follower's own MirrorAccount, enforced by the contract**:
+`mapping(uint32 => bool) public leaderDetached`. The owner sets it with `setLeaderDetached(uint32 leaderAccountId,
+bool detached)` (onlyOwner) or a signed `execute` with `ACTION_SET_LEADER_DETACHED` = 11 and data
+`abi.encode(uint32 leader, bool detached)`, which the engine relays through `POST /v1/relay/execute` like any other
+owner action. Each change emits `LeaderDetachedSet(uint32 indexed leaderAccountId, bool detached)`. Detaching a
+leader that is not in the policy reverts `InvalidPolicy("leader")`.
 
-While detached the copier sends the account no copies, opens or closes, so its positions stay exactly as they
-are. **This is keeper behaviour, not enforced by the contract**: the policy still allows the keeper to copy the
-leader, and nothing onchain changes when an account detaches. The owner keeps full control onchain: levels
-(`setLevels`, executable by anyone when hit), loss stops anyone can trigger, `closeMarket`, `closeAll`, `withdraw`.
-The app also pauses the account onchain in the same passkey prompt, so no new exposure can open even through
-match-now. A new policy (`PolicyUpdated` from setPolicy or follow, in a block after the detach) or a signed
-`detached: false` clears it (feed item "Following again").
+While a leader is detached, every copy naming it (keeper `mirror`, opens and closes, and the owner's match now)
+emits `Blocked` with `BlockReason.LeaderDetached` (22, limit 0, actual = the leader id) and trades nothing.
+Positions stay attributed to the leader (`marketLeader`), so its budget, loss stop and the owner's levels keep
+working. Unaffected: `setLevels` / `triggerLevel`, `triggerLeaderStop` and `triggerAccountStop` (anyone can
+trigger), `closeMarket`, `closeAll`, `withdraw`.
+
+Clearing: `setPolicy` keeps the flag for leaders it keeps; `follow()` clears it for every leader it names (an
+explicit re-follow); removing a leader from the policy clears it. Each clear emits `LeaderDetachedSet(id, false)`.
+To follow again: `follow()` or `setLeaderDetached(leader, false)`.
+
+Pause vs detach: pause is account-wide and refuses opening copies but still mirrors the leader's exits; detach is
+per leader and refuses all copies from that leader, opens and closes.
+
+Engine side (`services/detach.ts`, `services/registry.ts`):
+
+- The registry indexes `LeaderDetachedSet` into `account_leaders.detached` and keeps it across `PolicyUpdated` for
+  kept leaders (a removed leader is cleared by its own `LeaderDetachedSet(id, false)`). Each event is a feed row of
+  kind `LeaderDetached` (`onchain: true`, real `txHash`, `leaderAccountId`, `data: {detached, label}`; labels
+  "Stopped following this leader (positions kept)" / "Following this leader again").
+- The copier sends no copies of a detached leader to that follower (they would only be `Blocked` and waste gas).
+  When it does explain a block it reads `leaderDetached(account, leader)` from chain.
+- `Blocked` reason `LeaderDetached` is labelled "Stopped following this leader (positions kept)"; the alert is
+  "Not copied: you stopped following leader #N".
+- The account view has `detachedLeaders: number[]`, `policy.leaders[].detached` and `pnlByLeader[].detached`
+  (the account-level `detached` is gone).
+- The old engine-held route `POST /v1/accounts/:account/detach` returns 410 `{error, code: "moved_onchain",
+  actionKind: 11}`. Old `Detached` feed rows from that route are still served as engine-side rows.

@@ -50,6 +50,8 @@ const RULE_NAMES: Record<string, string> = Object.fromEntries(Object.entries(RUL
 
 /** Order of checks in MirrorAccount._checkOpen, grouped into the chips shown to the user. */
 const CHECK_GROUPS: { label: string; reasons: string[] }[] = [
+  // Checked first, for opens and closes alike: ACTION_SET_LEADER_DETACHED ("stop following, keep my positions").
+  { label: "Following", reasons: ["LeaderDetached"] },
   { label: "Active", reasons: ["Paused", "Expired"] },
   { label: "Market", reasons: ["MarketNotAllowed", "LeaderNotAllowed"] },
   { label: "Leverage", reasons: ["LeverageTooLow", "LeverageTooHigh", "FlipNotAllowed", "StaleMark"] },
@@ -136,6 +138,9 @@ export function explainBlock(cfg: AppConfig | undefined, e: FeedEvent, acct?: Mi
       sentence = `${sym} is held by ${holder}, the leader whose copy opened it. A market belongs to one leader at a time, so ${leaderName(e) || "this leader"}'s ${sym} trades are blocked until that position closes.`;
       break;
     }
+    case "LeaderDetached":
+      sentence = `You stopped following ${leaderName(e) || "this leader"}. Your contract refuses every copy from this leader, opens and closes. Your positions stay open; close them yourself or with your stop-loss / take-profit.`;
+      break;
     case "MarketHalted":
       sentence = `A stop-loss or take-profit closed your ${sym} position and paused new copies in ${sym} until you set your limits again.`;
       break;
@@ -149,6 +154,7 @@ export function explainBlock(cfg: AppConfig | undefined, e: FeedEvent, acct?: Mi
     b.reason === "MarketHeldByOtherLeader" ? `Blocked: market held by ${heldByName(actual)}`
     : b.reason === "LeaderBudgetExceeded" ? "Blocked by this leader's budget"
     : b.reason === "LeaderLossStop" ? "Blocked by this leader's loss stop"
+    : b.reason === "LeaderDetached" ? "Blocked: you stopped following this leader"
     : `Blocked by your ${name}${/filter|stop|budget/.test(name) ? "" : " rule"}`;
   return { title, sentence, compare, chips, short: b.rule ?? sentence, reasonName: RULES[b.reason] ?? b.reason };
 }
@@ -166,6 +172,7 @@ export function blockBanner(cfg: AppConfig | undefined, e: FeedEvent): string {
   if (b.reason === "MarketHeldByOtherLeader") return `Blocked: market held by ${heldByName(toBig(b.actual))}`;
   if (b.reason === "LeaderBudgetExceeded") return `Blocked: over ${leaderName(e) || "this leader"}'s ${ausd(b.limit)} budget`;
   if (b.reason === "LeaderLossStop") return `Blocked: ${leaderName(e) || "this leader"}'s loss stop`;
+  if (b.reason === "LeaderDetached") return `Blocked: you stopped following ${leaderName(e) || "this leader"} (positions kept)`;
   return `Your rule: ${shortRule(cfg, e)}`;
 }
 
@@ -312,6 +319,12 @@ export function FeedItem({ e, cfg, onBlockedPress, onCopyPress, highlight, testI
     PolicyUpdated: { icon: "edit", title: "Limits updated", tone: "ac" },
     Paused: { icon: "pause", title: e.paused ? "Following paused" : "Following resumed", tone: "nu" },
     ClosedAll: { icon: "close", title: `Closed ${e.positionsClosed ?? 0} position${e.positionsClosed === 1 ? "" : "s"}`, tone: "nu" },
+    LeaderDetached: {
+      icon: e.data?.detached ? "pause" : "check",
+      title: `${(e.data?.label as string | undefined) ?? (e.data?.detached ? "Stopped following this leader (positions kept)" : "Following this leader again")}${leaderName(e) ? `: ${leaderName(e)}` : ""}`,
+      tone: e.data?.detached ? "nu" : "ac",
+    },
+    // Retired engine-held detach (old rows, no tx).
     Detached: { icon: e.data?.detached ? "pause" : "check", title: e.label ?? (e.data?.detached ? "Stopped following; positions kept" : "Following again"), tone: e.data?.detached ? "nu" : "ac" },
     LeaderStopped: { icon: "pause", title: `Leader loss stop hit for ${leaderName(e) || "a leader"}${e.actual ? `: lost ${ausd(toBig(e.actual) < 0n ? -toBig(e.actual) : toBig(e.actual))} of ${ausd(e.limit ?? "0")}` : ""}. Copying it stopped`, tone: "nu" },
   };
@@ -330,7 +343,7 @@ export function FeedItem({ e, cfg, onBlockedPress, onCopyPress, highlight, testI
             {ago(e.timestamp)} ago · block {e.block.toLocaleString("en-US")}
           </T>
           <T size={11} w={600} color="mu" upper testID={testID ? `${testID}.type` : undefined}>
-            {e.kind === "Withdrawn" ? "Withdraw" : e.kind === "Deposited" ? "Deposit" : e.kind === "Followed" ? "Follow" : e.kind === "Detached" ? "Mirror · no tx" : e.kind}
+            {e.kind === "Withdrawn" ? "Withdraw" : e.kind === "Deposited" ? "Deposit" : e.kind === "Followed" ? "Follow" : e.kind === "LeaderDetached" ? (e.data?.detached ? "Stop following" : "Follow again") : e.kind === "Detached" ? "Mirror · no tx" : e.kind}
           </T>
         </View>
         <TxLink hash={e.txHash} onPress={() => openTx(cfg, e.txHash)} />

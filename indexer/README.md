@@ -2,7 +2,8 @@
 
 Envio HyperIndex (V3) indexer for Mirror on Monad mainnet (chain 143). It indexes the Perpl Exchange
 (every trader's positions, trade history, performance) and the Mirror contracts (follower accounts,
-copies, blocked copies, per-leader PnL, stops and levels, copy-quality proofs and aggregates), and
+copies, blocked copies, per-leader PnL, stops and levels, per-leader detach, copy-quality proofs and
+aggregates), and
 serves them over GraphQL to the engine and the public stats page.
 
 Full entity reference, derivations, engine queries and hosting: [`../docs/indexer.md`](../docs/indexer.md).
@@ -32,7 +33,7 @@ Dockerfile               self-hosting (Railway)
 pnpm install
 pnpm codegen          # after editing config.yaml or schema.graphql
 pnpm typecheck
-pnpm test             # 37 tests, no network
+pnpm test             # 43 tests, no network
 pnpm dev              # local Postgres + Hasura via Docker, HyperSync (needs ENVIO_API_TOKEN)
 pnpm dev:rpc          # same, historical sync over RPC (no token)
 pnpm start            # production: uses ENVIO_PG_* and HASURA_GRAPHQL_* from the environment
@@ -56,6 +57,15 @@ zero address keeps Mirror indexing off), and `ENVIO_TEAM_RUN_ADDRESSES` / `ENVIO
 (team-run accounts excluded from public stats). These add to the build-time list in
 `src/lib/constants.ts` (`TEAM_RUN_ADDRESSES`, `TEAM_RUN_ACCOUNT_IDS`), which mirrors the `teamRun` block
 of `shared/config.json`: fill it in when the demo leader and follower exist.
+
+## Leader detach
+
+`LeaderDetachedSet(leader, detached)` ("stop following, keep my positions") sets
+`MirrorLeaderRule.detached` / `detachedAt` / `detachCount`, keeps `MirrorAccount.detachedLeaderAccountIds`
+current, writes a `LeaderDetachEvent` row and a `LEADER_DETACHED` / `LEADER_REATTACHED` activity. While
+detached, every copy naming the leader is a `BlockedCopy` with reason `LeaderDetached` (code 22, limit 0,
+actual = leader id). `PolicyUpdated` keeps the flag for leaders that stay listed and clears it for
+removed ones; `follow()` clears it with its own `LeaderDetachedSet(id, false)` logs.
 
 ## Copy quality
 

@@ -1,101 +1,149 @@
+// "Stop following, keep my positions" is MirrorAccount.leaderDetached (per leader, contract-enforced). The engine
+// indexes LeaderDetachedSet, keeps it across setPolicy for kept leaders, sends no copies of a detached leader, and
+// labels Blocked reason 22 (LeaderDetached).
 import { describe, expect, it } from 'vitest';
-import { privateKeyToAccount } from 'viem/accounts';
-import type { Address, Hex } from 'viem';
+import pino from 'pino';
+import { decodeAbiParameters, encodeAbiParameters, encodeEventTopics, type AbiParameter, type Address, type Hex, type PublicClient } from 'viem';
+import { mirrorAccountAbi } from '../src/abi/MirrorAccount.js';
 import { Db } from '../src/db.js';
-import { applyDetach, clearDetachOnPolicy, copyTargets, detachTypedData, verifyDetach, DetachError, MAX_DETACH_TTL_SEC } from '../src/services/detach.js';
-import { planCopy } from '../src/domain/planner.js';
-import { LONG } from '../src/domain/types.js';
+import { Bus } from '../src/services/bus.js';
+import { Registry } from '../src/services/registry.js';
+import { copyTargets, DETACH_GONE } from '../src/services/detach.js';
+import { alertFor, ruleName } from '../src/services/alerts.js';
+import { reasonName } from '../src/services/feed.js';
+import { classifyClose, classifyOpen, planCopy } from '../src/domain/planner.js';
+import { encodeLeaderDetached } from '../src/domain/encode.js';
+import { ACTION, BLOCK_REASONS, LONG } from '../src/domain/types.js';
+import type { ChainLog, ChainStreams } from '../src/chain/streams.js';
 
-const owner = privateKeyToAccount('0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d');
-const stranger = privateKeyToAccount('0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a');
-const ACCOUNT = '0x00000000000000000000000000000000000000aa' as Address;
-const OTHER = '0x00000000000000000000000000000000000000bb' as Address;
-const CHAIN = 143;
-const NOW = 1_800_000_000;
+const log = pino({ level: 'silent' });
+const ACCOUNT = '0x00000000000000000000000000000000000000a1' as Address;
 
-const sign = (who = owner, account = ACCOUNT, detached = true, deadline = BigInt(NOW + 600)) =>
-  who.signTypedData(detachTypedData(account, CHAIN, detached, deadline)) as Promise<Hex>;
-const code = async (p: Promise<unknown>) => p.then(() => 'ok', (e) => (e instanceof DetachError ? e.code : String(e)));
+function encodeEventLog(eventName: string, args: Record<string, unknown>): { topics: Hex[]; data: Hex } {
+  const item = mirrorAccountAbi.find((e) => e.type === 'event' && e.name === eventName) as unknown as { inputs: Array<AbiParameter & { indexed?: boolean }> };
+  const topics = encodeEventTopics({ abi: mirrorAccountAbi, eventName, args } as never) as Hex[];
+  const rest = item.inputs.filter((i) => !i.indexed);
+  return { topics, data: encodeAbiParameters(rest, rest.map((i) => args[i.name!]) as never) };
+}
 
-describe('Detach signature (EIP-712, domain Mirror Account v1, verifyingContract = the account)', () => {
-  it('accepts the onchain owner', async () => {
-    const sig = await sign();
-    await expect(verifyDetach({ account: ACCOUNT, detached: true, deadline: BigInt(NOW + 600), signature: sig }, CHAIN, owner.address, NOW)).resolves.toBe(owner.address);
-  });
-  it('refuses a wrong signer', async () => {
-    const sig = await sign(stranger);
-    expect(await code(verifyDetach({ account: ACCOUNT, detached: true, deadline: BigInt(NOW + 600), signature: sig }, CHAIN, owner.address, NOW))).toBe('not_owner');
-  });
-  it('refuses an expired or too distant deadline', async () => {
-    const past = BigInt(NOW - 1);
-    expect(await code(verifyDetach({ account: ACCOUNT, detached: true, deadline: past, signature: await sign(owner, ACCOUNT, true, past) }, CHAIN, owner.address, NOW))).toBe('expired');
-    const far = BigInt(NOW + MAX_DETACH_TTL_SEC + 1);
-    expect(await code(verifyDetach({ account: ACCOUNT, detached: true, deadline: far, signature: await sign(owner, ACCOUNT, true, far) }, CHAIN, owner.address, NOW))).toBe('deadline_too_far');
-  });
-  it('refuses a signature made for another account (or another value)', async () => {
-    const sig = await sign(owner, OTHER);
-    expect(await code(verifyDetach({ account: ACCOUNT, detached: true, deadline: BigInt(NOW + 600), signature: sig }, CHAIN, owner.address, NOW))).toBe('not_owner');
-    const t = await sign(owner, ACCOUNT, true);
-    expect(await code(verifyDetach({ account: ACCOUNT, detached: false, deadline: BigInt(NOW + 600), signature: t }, CHAIN, owner.address, NOW))).toBe('not_owner');
-  });
+let n = 0;
+const chainLog = (block: number, ev: { topics: Hex[]; data: Hex }): ChainLog => ({
+  address: ACCOUNT, topics: ev.topics, data: ev.data, blockNumber: block, blockHash: `0x${'00'.repeat(32)}`, blockTimestamp: 2000,
+  transactionHash: `0x${(++n).toString(16).padStart(64, '0')}`, logIndex: 0, commitState: undefined, removed: false, observedMs: 0,
 });
 
-describe('applyDetach: stored state, feed item, replay, re-follow', () => {
-  const setup = () => {
-    const db = new Db(':memory:');
-    db.run("INSERT INTO accounts (address, owner, salt, created_block, created_tx) VALUES (?, ?, '0x0', 1, '0x1')", ACCOUNT, owner.address.toLowerCase());
-    const published: unknown[] = [];
-    let head = 100;
-    const deps = { db, chainId: CHAIN, explorerTx: 'https://x/tx/', readOwner: async () => owner.address, head: () => head, publish: (_a: string, ev: unknown) => published.push(ev) };
-    return { db, deps, published, setHead: (h: number) => (head = h) };
-  };
-  const feed = (db: Db) => db.all<{ kind: string; data: string }>('SELECT kind, data FROM feed ORDER BY id');
+const policy = (leaders: number[]) =>
+  encodeEventLog('PolicyUpdated', {
+    maxLeverageHdths: 1000, maxSlippageBps: 100, dailyLossBps: 0, drawdownBps: 0, expiry: 2_000_000_000, maxEntryDeviationBps: 0, stopSlippageBps: 100,
+    flattenOnStop: false, maxBuilderFeePer100K: 20,
+    leaders: leaders.map((accountId) => ({ accountId, ratioBps: 10_000, budgetCNS: 1_000_000n, lossStopBps: 0 })),
+    markets: [{ perpId: 1, maxNotionalCNS: 1_000_000_000n }],
+  });
+const detachedSet = (leaderAccountId: number, detached: boolean) => encodeEventLog('LeaderDetachedSet', { leaderAccountId, detached });
 
-  it('detaches, records "Stopped following; positions kept", refuses a replay, and a later policy clears it', async () => {
-    const { db, deps, published, setHead } = setup();
-    const deadline = BigInt(NOW + 600);
-    const r = await applyDetach(deps, { account: ACCOUNT, detached: true, deadline, signature: await sign() }, NOW);
-    expect(r.detached).toBe(true);
-    expect(db.get<{ detached: number }>('SELECT detached FROM accounts')!.detached).toBe(1);
-    expect(JSON.parse(feed(db)[0]!.data)).toMatchObject({ detached: true, label: 'Stopped following; positions kept' });
-    expect(published).toHaveLength(1);
-    expect(await code(applyDetach(deps, { account: ACCOUNT, detached: true, deadline, signature: await sign() }, NOW))).toBe('replayed');
-    // A replayed old PolicyUpdated (before the detach) does not clear it; a new one does.
-    expect(clearDetachOnPolicy(db, 'https://x/tx/', ACCOUNT, 90, '0xold')).toBeUndefined();
-    setHead(120);
-    const cleared = clearDetachOnPolicy(db, 'https://x/tx/', ACCOUNT, 101, '0xnew');
-    expect(cleared).toMatchObject({ kind: 'Detached', onchain: false, txHash: null, label: 'Following again' });
-    expect(db.get<{ detached: number }>('SELECT detached FROM accounts')!.detached).toBe(0);
+function setup() {
+  const db = new Db(':memory:');
+  db.run(`INSERT INTO accounts (address, owner, salt, created_block, created_tx, created_ts, perpl_account_id) VALUES (?, ?, '0x0', 1, '0x', 1000, 55)`, ACCOUNT.toLowerCase(), ACCOUNT.toLowerCase());
+  const reg = new Registry(db, {} as PublicClient, { head: 0 } as unknown as ChainStreams, '0x00000000000000000000000000000000000000f0', 0, new Set(), 'https://x/tx/', new Bus(), log);
+  reg.refresh(ACCOUNT.toLowerCase());
+  const items: Array<Record<string, unknown>> = [];
+  reg.onFeed = (j) => items.push(j as Record<string, unknown>);
+  const detached = (id: number) => reg.get(ACCOUNT)!.leaders.get(id)?.detached;
+  return { db, reg, items, detached };
+}
+
+describe('LeaderDetachedSet indexing', () => {
+  it('records the flag per leader and an onchain feed row (real tx, not offchain)', async () => {
+    const { reg, items, detached } = setup();
+    await reg.handle(chainLog(10, policy([7, 8])));
+    const l = chainLog(11, detachedSet(7, true));
+    await reg.handle(l);
+    expect(detached(7)).toBe(true);
+    expect(detached(8)).toBe(false);
+    const row = items.at(-1)!;
+    expect(row).toMatchObject({ kind: 'LeaderDetached', onchain: true, txHash: l.transactionHash, leaderAccountId: 7 });
+    expect(row.commitState).not.toBe('offchain');
+    expect(row.data).toMatchObject({ detached: true, label: 'Stopped following this leader (positions kept)' });
   });
-  it('a signed detached=false follows again', async () => {
-    const { db, deps } = setup();
-    await applyDetach(deps, { account: ACCOUNT, detached: true, deadline: BigInt(NOW + 600), signature: await sign() }, NOW);
-    await applyDetach(deps, { account: ACCOUNT, detached: false, deadline: BigInt(NOW + 601), signature: await sign(owner, ACCOUNT, false, BigInt(NOW + 601)) }, NOW);
-    expect(db.get<{ detached: number }>('SELECT detached FROM accounts')!.detached).toBe(0);
-    expect(feed(db).map((f) => JSON.parse(f.data).label)).toEqual(['Stopped following; positions kept', 'Following again']);
+
+  it('setPolicy keeps it for a kept leader; a signed detached=false clears it', async () => {
+    const { reg, items, detached } = setup();
+    await reg.handle(chainLog(10, policy([7, 8])));
+    await reg.handle(chainLog(11, detachedSet(7, true)));
+    await reg.handle(chainLog(12, policy([7])));
+    expect(detached(7)).toBe(true);
+    await reg.handle(chainLog(13, detachedSet(7, false)));
+    expect(detached(7)).toBe(false);
+    expect((items.at(-1)!.data as { label: string }).label).toBe('Following this leader again');
   });
-  it('unknown account and wrong owner', async () => {
-    const { deps } = setup();
-    expect(await code(applyDetach(deps, { account: OTHER, detached: true, deadline: BigInt(NOW + 600), signature: await sign(owner, OTHER) }, NOW))).toBe('unknown_account');
-    expect(await code(applyDetach({ ...deps, readOwner: async () => stranger.address }, { account: ACCOUNT, detached: true, deadline: BigInt(NOW + 600), signature: await sign() }, NOW))).toBe('not_owner');
+
+  it('removing the leader (LeaderDetachedSet(false) then PolicyUpdated) and re-adding it starts clean', async () => {
+    const { reg, detached } = setup();
+    await reg.handle(chainLog(10, policy([7, 8])));
+    await reg.handle(chainLog(11, detachedSet(7, true)));
+    await reg.handle(chainLog(12, detachedSet(7, false)));
+    await reg.handle(chainLog(12, policy([8])));
+    expect(reg.get(ACCOUNT)!.leaders.has(7)).toBe(false);
+    await reg.handle(chainLog(13, policy([7, 8])));
+    expect(detached(7)).toBe(false);
+  });
+
+  it('follow() (PolicyUpdated then LeaderDetachedSet(false)) clears it', async () => {
+    const { reg, detached } = setup();
+    await reg.handle(chainLog(10, policy([7])));
+    await reg.handle(chainLog(11, detachedSet(7, true)));
+    await reg.handle(chainLog(12, policy([7])));
+    await reg.handle(chainLog(12, detachedSet(7, false)));
+    expect(detached(7)).toBe(false);
   });
 });
 
 describe('copier targets', () => {
-  const f = (address: string, over: { paused?: boolean; detached?: boolean } = {}) => ({ address, paused: false, detached: false, ...over });
-  it('skips detached accounts entirely (opens and closes)', () => {
-    expect(copyTargets([f('a'), f('b', { detached: true })]).map((x) => x.address)).toEqual(['a']);
+  const f = (address: string, detachedIds: number[] = [], paused = false) => ({
+    address, paused, leaders: new Map([7, 8].map((id) => [id, { detached: detachedIds.includes(id) }])),
+  });
+  it('skips accounts that detached this leader only (opens and closes)', () => {
+    const all = [f('a'), f('b', [7]), f('c', [8])];
+    expect(copyTargets(all, 7).map((x) => x.address)).toEqual(['a', 'c']);
+    expect(copyTargets(all, 8).map((x) => x.address)).toEqual(['a', 'b']);
   });
   it('a paused account still receives the leader closes', () => {
-    const targets = copyTargets([f('p', { paused: true })]);
-    expect(targets.map((x) => x.address)).toEqual(['p']);
-    // The leader went flat: the plan for the paused follower is a close (the contract only refuses opens while paused).
+    expect(copyTargets([f('p', [], true)], 7).map((x) => x.address)).toEqual(['p']);
     const orders = planCopy({
       perpId: 1, follower: { side: LONG, lots: 4n }, holder: 7, holderTarget: 0n, triggerTarget: 0n,
       trigger: { leaderAccountId: 7, side: LONG, increased: false, leverageHdths: 0, leaderRef: `0x${'ab'.repeat(32)}`, leaderFillPNS: 0n, leaderEntryPNS: 0n },
       mark: 1_000_000n, maxSlippageBps: 100, safetyBps: 5, maxMatches: 10, maxEntryDeviationBps: 0,
     });
     expect(orders).toHaveLength(1);
-    expect(orders[0]!).toMatchObject({ kind: 'close', orderType: 2, lotLNS: 4n });
+    expect(orders[0]!).toMatchObject({ kind: 'close', orderType: 2, lotLNS: 4n, leaderAccountId: 7 });
+  });
+});
+
+describe('reason 22 and the action payload', () => {
+  const order = { leaderAccountId: 7, perpId: 1, orderType: 2, lotLNS: 4n, pricePNS: 1n, leverageHdths: 0, maxMatches: 0, leaderRef: `0x${'00'.repeat(32)}` as Hex, leaderFillPNS: 0n };
+  it('is LeaderDetached at index 22, labelled', () => {
+    expect(BLOCK_REASONS.indexOf('LeaderDetached')).toBe(22);
+    expect(reasonName(22)).toBe('LeaderDetached');
+    expect(ruleName('LeaderDetached')).toBe('Stopped following this leader (positions kept)');
+  });
+  it('classify replays the contract: checked first for closes and opens, actual = leader id', () => {
+    const close = classifyClose(order, { follower: { side: LONG, lots: 0n }, leaderAllowed: true, leaderDetached: true, marketLeader: 7, target: 0n, markValid: true, mark: 1n, maxSlippageBps: 100 });
+    expect(close).toEqual({ reason: 'LeaderDetached', limit: 0n, actual: 7n });
+    const open = classifyOpen({ ...order, orderType: 0 }, { leaderDetached: true, paused: true } as never);
+    expect(open).toEqual({ reason: 'LeaderDetached', limit: 0n, actual: 7n });
+  });
+  it('ACTION_SET_LEADER_DETACHED = 11 with abi.encode(uint32, bool)', () => {
+    expect(ACTION.SET_LEADER_DETACHED).toBe(11);
+    const data = encodeLeaderDetached(7, true);
+    expect(decodeAbiParameters([{ type: 'uint32' }, { type: 'bool' }], data)).toEqual([7, true]);
+    expect(DETACH_GONE.actionKind).toBe(11);
+  });
+  it('a LeaderDetached Blocked alert says the contract refused it and positions are kept', () => {
+    const a = alertFor(
+      { id: 1, account: ACCOUNT, kind: 'Blocked', reason: 'LeaderDetached', leaderAccountId: 7, perpId: null, orderType: 2, txHash: '0x1', timestamp: 1 } as never,
+      { markets: new Map(), owner: ACCOUNT, keepers: new Set() } as never,
+    );
+    expect(a).toMatchObject({ kind: 'blocked', title: 'Not copied: you stopped following leader #7' });
+    expect(a!.body).toContain('positions kept');
   });
 });

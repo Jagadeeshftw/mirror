@@ -13,7 +13,7 @@ import {
   validateSplit,
   type SplitRow,
 } from "../src/lib/budgets";
-import { POLICY_PARAM, encodeSetPolicy, encodeFollow, validatePolicy, MIRROR_ORDERS_PARAM } from "../src/lib/contracts";
+import { ACTION, POLICY_PARAM, encodeSetPolicy, encodeFollow, validatePolicy, MIRROR_ORDERS_PARAM } from "../src/lib/contracts";
 import { normalizeAccount, normalizeFeedEvent } from "../src/lib/engineShape";
 import { stopPlan } from "../src/lib/levels";
 import type { MirrorAccount, Policy } from "../src/lib/types";
@@ -165,12 +165,17 @@ describe("policy with several leaders", () => {
     expect(rearmPolicy(a)!.leaders.map((l) => l.accountId)).toEqual([A, B, C]);
     expect(rearmPolicy(a, C, 2500)!.leaders.find((l) => l.accountId === C)?.lossStopBps).toBe(2500);
   });
-  it("removing a leader keeps its positions: setPolicy without it", () => {
+  it("keep my positions detaches that leader onchain (ACTION 11); the other leaders keep copying", () => {
     const plan = stopPlan(account(), B, "keep", NOW);
-    expect(plan.how).toBe("remove");
+    expect(plan.how).toBe("detach");
+    expect(plan.actions.map((x) => x.kind)).toEqual([ACTION.SET_LEADER_DETACHED]);
+    expect(decodeAbiParameters([{ type: "uint32" }, { type: "bool" }], plan.actions[0].data)).toEqual([B, true]);
+    expect(plan.positions.map((p) => p.perpId)).toEqual([20]);
+  });
+  it("stop and close removes the leader: setPolicy without it, then its markets close", () => {
+    const plan = stopPlan(account(), B, "close", NOW);
     const [d] = decodeAbiParameters([POLICY_PARAM], plan.actions[0].data) as any;
     expect(d.leaders.map((l: any) => l.accountId)).toEqual([A, C]);
-    expect(plan.positions.map((p) => p.perpId)).toEqual([20]);
   });
 });
 

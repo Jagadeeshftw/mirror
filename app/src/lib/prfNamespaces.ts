@@ -5,7 +5,7 @@
 // payloads and seals private follow notes). Mera 0.2.0 evaluates one salt per ceremony (`eval.first`),
 // so we ask the platform for `eval.second` in the same ceremony by wrapping the native passkey call
 // Mera's React Native client makes. Google Password Manager returns both outputs in one prompt
-// (verified on device: devices/evidence/prf-signedin-*). If a provider ignores `second`, the caller
+// (verified on an Android emulator signed in to Google: devices/evidence/prf-signedin-*). If a provider ignores `second`, the caller
 // evaluates the notification namespace on its own with one more prompt.
 import { Passkey } from "react-native-passkey";
 import { decodeOutput, toBase64Url } from "./prfShared";

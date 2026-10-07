@@ -83,6 +83,11 @@ export function encodeCloseMarket(perpId: number, slippageBps: number): Hex {
   return encodeAbiParameters([{ type: 'uint32' }, { type: 'uint16' }], [perpId, slippageBps]);
 }
 
+/** abi.encode(uint32 leaderAccountId, bool detached) — the ACTION_SET_LEADER_DETACHED payload. */
+export function encodeLeaderDetached(leaderAccountId: number, detached: boolean): Hex {
+  return encodeAbiParameters([{ type: 'uint32' }, { type: 'bool' }], [leaderAccountId, detached]);
+}
+
 export const ZERO_REF = `0x${'00'.repeat(32)}` as Hex;
 
 /** Leader account ids in an ACTION_FOLLOW (Policy, MirrorOrder[]) or ACTION_SET_POLICY (Policy) payload. */

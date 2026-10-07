@@ -1,35 +1,75 @@
-import { concat, encodeAbiParameters, hashTypedData, keccak256, recoverTypedDataAddress, toHex } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { decodeAbiParameters } from "viem";
-import { ACTION, detachTypedData, mirrorDomain } from "../src/lib/contracts";
-import { stopPlan } from "../src/lib/levels";
+// "Stop following, keep my positions" is onchain: MirrorAccount.setLeaderDetached / execute(ACTION_SET_LEADER_DETACHED).
+import abi from "../src/lib/MirrorAccount.json";
+import { decodeAbiParameters, encodeFunctionData, getAbiItem, toFunctionSelector } from "viem";
+import { ACTION, BLOCK_REASONS, encodeSetLeaderDetached } from "../src/lib/contracts";
+import { RULE_NAMES } from "../src/lib/blockReasons";
+import { isLeaderDetached, leaderBooks } from "../src/lib/budgets";
+import { normalizeAccount, normalizeFeedEvent } from "../src/lib/engineShape";
+import { setLeaderDetachedAction, stopPlan } from "../src/lib/levels";
 import type { MirrorAccount } from "../src/lib/types";
 
-const ACCOUNT = "0x00000000000000000000000000000000000000aa" as const;
-const owner = privateKeyToAccount("0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
+const POLICY = { leaders: [{ accountId: 7, ratioBps: 10, budgetCNS: "1000000", lossStopBps: 0 }], markets: [], expiry: 4e9 };
 
-describe("Detach typed data (engine POST /v1/accounts/:account/detach)", () => {
-  it("is Detach(bool detached,uint256 deadline) in the account's Mirror Account v1 domain", () => {
-    const td = detachTypedData(ACCOUNT, 143, true, 1_800_000_600n);
-    expect(td.domain).toEqual(mirrorDomain(ACCOUNT, 143));
-    expect(td.domain).toMatchObject({ name: "Mirror Account", version: "1", chainId: 143, verifyingContract: ACCOUNT });
-    // Digest computed by hand: keccak256(0x1901 || domainSeparator || structHash).
-    const domainType = keccak256(toHex("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"));
-    const sep = keccak256(encodeAbiParameters([{ type: "bytes32" }, { type: "bytes32" }, { type: "bytes32" }, { type: "uint256" }, { type: "address" }], [domainType, keccak256(toHex("Mirror Account")), keccak256(toHex("1")), 143n, ACCOUNT]));
-    const typeHash = keccak256(toHex("Detach(bool detached,uint256 deadline)"));
-    const struct = keccak256(encodeAbiParameters([{ type: "bytes32" }, { type: "bool" }, { type: "uint256" }], [typeHash, true, 1_800_000_600n]));
-    expect(hashTypedData(td)).toBe(keccak256(concat(["0x1901", sep, struct])));
+describe("ACTION_SET_LEADER_DETACHED", () => {
+  it("kind 11 and abi.encode(uint32 leader, bool detached), the contract's own argument encoding", () => {
+    expect(ACTION.SET_LEADER_DETACHED).toBe(11);
+    const data = encodeSetLeaderDetached(143, true);
+    expect(decodeAbiParameters([{ type: "uint32" }, { type: "bool" }], data)).toEqual([143, true]);
+    // Same bytes as the arguments of setLeaderDetached(uint32,bool) in the regenerated ABI.
+    const call = encodeFunctionData({ abi: abi as any, functionName: "setLeaderDetached", args: [143, true] });
+    expect(call.slice(10)).toBe(data.slice(2));
+    expect(toFunctionSelector(getAbiItem({ abi: abi as any, name: "setLeaderDetached" }) as any)).toBe(call.slice(0, 10));
+    expect(setLeaderDetachedAction(9, false)).toEqual({ kind: 11, data: encodeSetLeaderDetached(9, false) });
   });
-  it("a passkey-derived signer's signature recovers to the owner, and only for that value", async () => {
-    const sig = await owner.signTypedData(detachTypedData(ACCOUNT, 143, true, 5n));
-    expect(await recoverTypedDataAddress({ ...detachTypedData(ACCOUNT, 143, true, 5n), signature: sig })).toBe(owner.address);
-    expect(await recoverTypedDataAddress({ ...detachTypedData(ACCOUNT, 143, false, 5n), signature: sig })).not.toBe(owner.address);
+  it("BlockReason 22 is LeaderDetached, labelled for the feed", () => {
+    expect(BLOCK_REASONS[22]).toBe("LeaderDetached");
+    expect(RULE_NAMES.LeaderDetached).toBe("Stopped following this leader (positions kept)");
   });
-  it("keep my positions on the only leader = detach + SET_PAUSED(true) onchain", () => {
-    const a = { policy: { leaders: [{ accountId: 7 }], markets: [], expiry: 4e9 }, positions: [], leader: null, paused: false } as unknown as MirrorAccount;
+});
+
+describe("stop following, keep my positions", () => {
+  it("only leader: one signed ACTION 11 (leader, true); nothing is paused", () => {
+    const a = { policy: POLICY, positions: [], leader: null, paused: false } as unknown as MirrorAccount;
     const p = stopPlan(a, 7, "keep");
     expect(p.how).toBe("detach");
-    expect(p.actions.map((x) => x.kind)).toEqual([ACTION.SET_PAUSED]);
-    expect(decodeAbiParameters([{ type: "bool" }], p.actions[0].data)[0]).toBe(true);
+    expect(p.actions.map((x) => x.kind)).toEqual([ACTION.SET_LEADER_DETACHED]);
+    expect(decodeAbiParameters([{ type: "uint32" }, { type: "bool" }], p.actions[0].data)).toEqual([7, true]);
+  });
+  it("a leader not in the policy is refused before signing (the contract reverts InvalidPolicy(\"leader\"))", () => {
+    const a = { policy: POLICY, positions: [], leader: null, paused: false } as unknown as MirrorAccount;
+    const p = stopPlan(a, 8, "keep");
+    expect(p.error).toBeTruthy();
+    expect(p.actions).toEqual([]);
+  });
+});
+
+describe("engine read-out", () => {
+  const raw = {
+    address: "0x00000000000000000000000000000000000000aa",
+    owner: "0x00000000000000000000000000000000000000bb",
+    paused: false,
+    detachedLeaders: [7],
+    policy: { ...POLICY, leaders: [{ ...POLICY.leaders[0], detached: true }, { accountId: 8, ratioBps: 10, budgetCNS: "1000000", lossStopBps: 0, detached: false }] },
+    positions: [],
+    pnlByLeader: [{ leaderAccountId: 7, realizedPnlCNS: "0", unrealizedPnlCNS: "0", marginCNS: "0", budgetCNS: "1000000", stopped: false, detached: true }],
+  };
+  it("detachedLeaders / policy.leaders[].detached / pnlByLeader[].detached", () => {
+    const a = normalizeAccount(raw);
+    expect(a.detachedLeaders).toEqual([7]);
+    expect(isLeaderDetached(a, 7)).toBe(true);
+    expect(isLeaderDetached(a, 8)).toBe(false);
+    expect(a.pnl.byLeader[0].detached).toBe(true);
+    const books = leaderBooks(a);
+    expect(books.find((b) => b.leaderId === 7)?.status).toBe("detached");
+    expect(books.find((b) => b.leaderId === 8)?.status).toBe("copying");
+    // Without detachedLeaders the policy flag alone is enough.
+    expect(isLeaderDetached(normalizeAccount({ ...raw, detachedLeaders: undefined, pnlByLeader: [] }), 7)).toBe(true);
+  });
+  it("LeaderDetached feed rows are onchain, and Blocked LeaderDetached carries a rule", () => {
+    const row = normalizeFeedEvent({ id: 1, kind: "LeaderDetached", onchain: true, account: raw.address, txHash: "0x" + "1".repeat(64), leaderAccountId: 7, label: null, data: { detached: true, label: "Stopped following this leader (positions kept)" }, block: 1, timestamp: 1 });
+    expect(row.kind).toBe("LeaderDetached");
+    expect(row.txHash).toMatch(/^0x1/);
+    const b = normalizeFeedEvent({ id: 2, kind: "Blocked", account: raw.address, reason: "LeaderDetached", limit: "0", actual: "7", leaderAccountId: 7, block: 1, timestamp: 1 });
+    expect(b.blocked).toMatchObject({ reason: "LeaderDetached", reasonCode: 22, rule: "Stopped following this leader (positions kept)" });
   });
 });

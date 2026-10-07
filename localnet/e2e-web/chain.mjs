@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createPublicClient, createWalletClient, defineChain, encodeAbiParameters, http, zeroHash } from "viem";
+import { createPublicClient, createWalletClient, decodeEventLog, defineChain, encodeAbiParameters, encodeAbiParameters as enc, http, keccak256, toHex, zeroHash } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -165,3 +165,26 @@ async function leaderTradeOnce(key, perpId, orderType, lots, lev) {
 }
 
 export const ausdOf = (address) => pub.readContract({ address: env.collateral, abi: T, functionName: "balanceOf", args: [address] });
+
+/**
+ * A copy sent straight to a follower's contract by a test-only keeper, bypassing the engine (which never sends
+ * copies of a leader the follower detached). The keeper is a fresh key marked in KeeperRegistry.isKeeper (slot 2)
+ * with anvil_setStorageAt, so the engine's own keeper/relayer nonces are untouched. Returns the receipt and the
+ * decoded Blocked / Mirrored logs: proof that the contract itself refuses the copy.
+ */
+export async function testKeeperMirror(account, order, label = "detach") {
+  const k = acct(keccak256(toHex(`test-keeper-${label}-${Date.now()}`)));
+  const slot = keccak256(enc([{ type: "address" }, { type: "uint256" }], [k.address, 2n]));
+  await pub.request({ method: "anvil_setStorageAt", params: [env.mirror.keeperRegistry, slot, toHex(1n, { size: 32 })] });
+  await pub.request({ method: "anvil_setBalance", params: [k.address, "0x8AC7230489E80000"] });
+  const o = { leaderRef: toHex(`e2e-${label}`, { size: 32 }), leaderFillPNS: 0n, leverageHdths: 0, maxMatches: 20, ...order };
+  const hash = await wallet(k).writeContract({ address: account, abi: MA, functionName: "mirror", args: [o], gas: 3_000_000n });
+  const r = await pub.waitForTransactionReceipt({ hash });
+  const events = [];
+  for (const l of r.logs) {
+    if (l.address.toLowerCase() !== account.toLowerCase()) continue;
+    try { events.push(decodeEventLog({ abi: MA, data: l.data, topics: l.topics })); } catch {}
+  }
+  const blocked = events.find((e) => e.eventName === "Blocked");
+  return { hash, status: r.status, keeper: k.address, blocked: blocked && { reason: Number(blocked.args.reason), leaderAccountId: Number(blocked.args.leaderAccountId), actual: blocked.args.actual.toString(), orderType: Number(blocked.args.orderType) }, mirrored: events.some((e) => e.eventName === "Mirrored") };
+}

@@ -19,7 +19,19 @@ const big = (v: unknown): bigint => {
   }
 };
 
-export type LeaderStatus = "copying" | "paused" | "stopped" | "unfollowed";
+/**
+ * "detached": the owner chose "stop following, keep my positions" (MirrorAccount.leaderDetached). The leader stays
+ * in the policy but the account's own contract refuses every copy from it, opens and closes.
+ */
+export type LeaderStatus = "copying" | "paused" | "stopped" | "detached" | "unfollowed";
+
+/** MirrorAccount.leaderDetached(leaderId), as read by the engine (detachedLeaders / policy.leaders[].detached). */
+export function isLeaderDetached(a: Pick<MirrorAccount, "detachedLeaders" | "policy" | "pnl">, leaderId: number): boolean {
+  const id = Number(leaderId);
+  if (a.detachedLeaders?.some((x) => Number(x) === id)) return true;
+  if (a.policy?.leaders?.some((l) => Number(l.accountId) === id && l.detached)) return true;
+  return !!a.pnl?.byLeader?.some((x) => Number(x.leaderAccountId) === id && x.detached);
+}
 
 export interface LeaderBook {
   account: Address;
@@ -43,6 +55,8 @@ export interface LeaderBook {
   lossLeftCNS: bigint;
   status: LeaderStatus;
   inPolicy: boolean;
+  /** MirrorAccount.leaderDetached: the contract refuses every copy from this leader (positions kept). */
+  detached: boolean;
 }
 
 const lossLimit = (budget: bigint, bps: number) => (budget * BigInt(Math.max(0, bps))) / BPS;
@@ -79,10 +93,11 @@ export function leaderBooks(a: MirrorAccount): LeaderBook[] {
     const limit = lossLimit(budgetCNS, lossStopBps);
     const stopped = !!(attr?.stopped ?? rule?.stopped);
     const inPolicy = !!rule;
-    const status: LeaderStatus = !inPolicy || a.detached ? "unfollowed" : stopped ? "stopped" : a.paused ? "paused" : "copying";
+    const detached = inPolicy && isLeaderDetached(a, id);
+    const status: LeaderStatus = !inPolicy ? "unfollowed" : detached ? "detached" : stopped ? "stopped" : a.paused ? "paused" : "copying";
     return {
       account: a.account, leaderId: id, ratioBps: Number(rule?.ratioBps ?? 0), budgetCNS, lossStopBps, marginCNS, unrealisedCNS, realisedCNS, pnlCNS, stopped, positions,
-      lossLimitCNS: limit, stopAtCNS: budgetCNS - limit, lossLeftCNS: limit + pnlCNS, status, inPolicy,
+      lossLimitCNS: limit, stopAtCNS: budgetCNS - limit, lossLeftCNS: limit + pnlCNS, status, inPolicy, detached,
     };
   };
   const rules = (a.policy?.leaders ?? []) as (LeaderRule & { stopped?: boolean })[];

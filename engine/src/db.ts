@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS account_leaders (
   budget_cns TEXT NOT NULL DEFAULT '0',
   loss_stop_bps INTEGER NOT NULL DEFAULT 0,
   stopped INTEGER NOT NULL DEFAULT 0,  -- LeaderStopped seen since the last PolicyUpdated
+  detached INTEGER NOT NULL DEFAULT 0, -- MirrorAccount.leaderDetached (LeaderDetachedSet); kept across setPolicy
   PRIMARY KEY (account, leader_id)
 );
 CREATE INDEX IF NOT EXISTS account_leaders_leader ON account_leaders(leader_id);
@@ -316,10 +317,9 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, decl: string]> = 
   ['feed', 'leader_lots', 'TEXT'],
   ['feed', 'leader_leverage', 'INTEGER'],
   ['feed', 'realised_pnl_cns', 'TEXT'],
-  // Owner-signed "stop following, keep my positions" (keeper behaviour, see services/detach.ts).
-  ['accounts', 'detached', 'INTEGER NOT NULL DEFAULT 0'],
-  ['accounts', 'detached_block', 'INTEGER'],
-  ['accounts', 'detach_deadline', 'INTEGER'],
+  // MirrorAccount.leaderDetached ("stop following, keep my positions"), indexed from LeaderDetachedSet.
+  // (The accounts.detached / detached_block / detach_deadline columns of the retired engine-held detach are unused.)
+  ['account_leaders', 'detached', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
 export type Row = Record<string, SQLInputValue>;

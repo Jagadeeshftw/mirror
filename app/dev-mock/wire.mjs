@@ -5,7 +5,8 @@
 const S = (v) => (v === null || v === undefined ? null : String(v));
 const lower = (a) => (a ? String(a).toLowerCase() : a);
 const ORDER_TYPE_NAMES = ["OpenLong", "OpenShort", "CloseLong", "CloseShort"];
-const BLOCK_REASONS = ["None", "Paused", "Expired", "LeaderNotAllowed", "LeaderSideMismatch", "MarketNotAllowed", "LeverageTooHigh", "LeverageTooLow", "ExceedsMaxNotional", "SlippageTooHigh", "DailyLossStop", "DrawdownStop", "StaleMark", "FlipNotAllowed", "ExceedsLeaderTarget", "EntryTooFar", "MarketHeldByOtherLeader", "LeaderBudgetExceeded", "LeaderLossStop", "MarketHalted"];
+// MirrorAccount.BlockReason, in enum order.
+const BLOCK_REASONS = ["None", "Paused", "Expired", "LeaderNotAllowed", "LeaderSideMismatch", "MarketNotAllowed", "LeverageTooHigh", "SlippageTooHigh", "FlipNotAllowed", "StaleMark", "ExceedsLeaderTarget", "ExceedsMaxNotional", "DailyLossStop", "DrawdownStop", "LeverageTooLow", "EntryTooFar", "MarketHeldByOtherLeader", "LeaderBudgetExceeded", "LeaderLossStop", "MarketHalted", "CloseBelowTarget", "BuilderFeeTooHigh", "LeaderDetached"];
 
 // ---------------------------------------------------------------- accounts (Views.account)
 export function wireAccount(a) {
@@ -26,9 +27,10 @@ export function wireAccount(a) {
     pnlCNS: (BigInt(a.equityCNS ?? 0) - BigInt(a.netDepositsCNS ?? 0)).toString(),
     builderFeesCNS: "0",
     paused: !!a.paused,
-    detached: !!a.detached,
+    // Views.account: MirrorAccount.leaderDetached per leader ("stop following, keep my positions").
+    detachedLeaders: [...(a.detachedLeaders ?? [])],
     expiry: a.expiry ?? null,
-    policy: a.policy ? { ...a.policy, leaders: a.policy.leaders.map((l) => ({ ...l, stopped: (a.stoppedLeaders ?? []).includes(l.accountId) })), markets: a.policy.markets.map((m) => ({ ...m, halted: (a.halted ?? []).includes(m.perpId) })) } : null,
+    policy: a.policy ? { ...a.policy, leaders: a.policy.leaders.map((l) => ({ ...l, stopped: (a.stoppedLeaders ?? []).includes(l.accountId), detached: (a.detachedLeaders ?? []).includes(l.accountId) })), markets: a.policy.markets.map((m) => ({ ...m, halted: (a.halted ?? []).includes(m.perpId) })) } : null,
     levels: (a.levels ?? []).map((l) => ({ perpId: l.perpId, side: l.side, stopLossPNS: S(l.stopLossPNS), takeProfitPNS: S(l.takeProfitPNS), slippageBps: l.slippageBps })),
     positions: (a.positions ?? []).map((p) => ({
       perpId: p.perpId, symbol: null, side: p.side, lotLNS: S(p.lotLNS), entryPricePNS: S(p.entryPNS), markPNS: S(p.markPNS),
@@ -39,6 +41,7 @@ export function wireAccount(a) {
     equityHistory: (a.equityHistory ?? []).map((p) => ({ t: Math.floor(Number(p.t) / 1000), equityCNS: String(p.v) })),
     pnlByLeader: (a.pnl?.byLeader ?? []).map((l) => ({
       leaderAccountId: l.leaderAccountId, unrealizedPnlCNS: S(l.unrealisedCNS), realizedPnlCNS: S(l.realisedCNS), marginCNS: S(l.marginCNS ?? "0"), budgetCNS: S(l.budgetCNS ?? "0"), stopped: !!l.stopped,
+      detached: (a.detachedLeaders ?? []).includes(Number(l.leaderAccountId)),
     })),
   };
 }
@@ -57,6 +60,7 @@ const numericId = (id) => (/^\d+$/.test(String(id)) ? Number(id) : ids.get(id) ?
 
 export function wireFeedEvent(e, explorerTx = "https://monadvision.com/tx/") {
   if (!e) return e;
+  // 'Detached' rows are from the retired engine-held detach; LeaderDetached rows are onchain LeaderDetachedSet.
   const engine = String(e.kind).startsWith("Engine") || e.kind === "Detached";
   const b = e.blocked;
   let data = e.data ?? null;

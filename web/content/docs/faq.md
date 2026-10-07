@@ -23,6 +23,10 @@ No. Your size is capped at your ratio times the leader's **current** position on
 
 The keeper copies the close. Closing copies are allowed even when you are paused or your policy has expired, so you can always follow a leader out.
 
+## Can I stop copying a leader without closing my positions?
+
+Yes. "Stop following, keep my positions" sets a flag for that leader in your own MirrorAccount (`setLeaderDetached`). From then on your contract refuses every copy from that leader, opens and closes, and records `Blocked` with `LeaderDetached`. Your positions stay open and you close them when you choose. Pause is different: it is account-wide, refuses only opening copies and still follows the leader out.
+
 ## Do I need MON, a seed phrase or a wallet extension?
 
 No. Your account is a passkey. Deposits use AUSD permits and owner actions are signed and relayed, so the relayer pays the gas.

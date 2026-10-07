@@ -56,6 +56,7 @@ contracts:
       - event: StopTriggered(address indexed caller, uint8 indexed kind, uint32 indexed scope, uint256 limit, uint256 actual, uint256 oraclePNS, uint256 positionsClosed)
       - event: LeaderStopped(uint32 indexed leaderAccountId, int256 pnlCNS, uint256 limitCNS)
       - event: Followed(uint256 matchOrders, uint256 matchesExecuted)
+      - event: LeaderDetachedSet(uint32 indexed leaderAccountId, bool detached)
 
 chains:
   - id: 143 # Monad mainnet

@@ -2,11 +2,12 @@
 // ACTION_SET_LEVELS), the mark moved past it, a STRANGER wallet (fresh key, MON from the faucet) calls
 // triggerLevel (the engine's stop executor is off in this run) -> the app shows the stop executed by that
 // address, the position closed, the stranger got no AUSD; "Save limits again" lifts the halt; Pause still mirrors
-// the leader's close; "Stop following, keep my positions" (signed engine Detach + onchain pause) keeps the position
-// and later leader closes are not copied; "Stop and close" closes it; "Follow again", and the user holds a copy
-// again for the exit flows.
+// the leader's close; "Stop following, keep my positions" (ACTION_SET_LEADER_DETACHED: MirrorAccount.leaderDetached
+// for this leader, enforced by the user's own contract) keeps the position: the engine sends no copy of the leader's
+// exit, and a test-only keeper sending it straight to the contract gets Blocked (LeaderDetached, 22); the owner's own
+// "Stop and close" still closes it; "Follow again", and the user holds a copy again for the exit flows.
 import { keccak256, toHex } from "viem";
-import { acct, ausdOf, env, faucet, leaderTrade, MA, position, pub, sleep, walletOf } from "./chain.mjs";
+import { acct, ausdOf, env, faucet, leaderTrade, MA, position, pub, sleep, testKeeperMirror, walletOf } from "./chain.mjs";
 import { click, findCard, text, tid, until, visible } from "./browser.mjs";
 
 const LEADER = env.teamRun.demoLeaderAccountId;
@@ -138,7 +139,7 @@ export async function stopsFlows(ctx) {
     return { ok: n === 1 && !!copied && after > 0n, prompts: n, leaderCloseTx: tx, leaderLotsClosed: (leaderLots / 2n).toString(), copiedCloseTx: copied.txHash, userLotsBefore: before.toString(), userLotsAfter: after.toString() };
   }, { needs: ["reopened"] });
 
-  await R.check("'Stop following, keep my positions' (one passkey prompt): signed Detach (engine) + paused onchain; position stays open", page, async () => {
+  await R.check("'Stop following, keep my positions' (one passkey prompt): leaderDetached set onchain by the user's own contract (ACTION_SET_LEADER_DETACHED), not paused; position stays open", page, async () => {
     await page.goto(`${WEB}/leader/${LEADER}`);
     await click(page, "leader.stopFollow", 30_000);
     await visible(page, "stop.sheet");
@@ -147,30 +148,41 @@ export async function stopsFlows(ctx) {
     await R.shot(page, "stops-stop-following-sheet");
     const p0 = await prompts();
     await click(page, "stop.confirm");
-    const engine = await until("engine: detached", async () => { const v = await api("GET", `/v1/accounts/${A}`); return v.detached === true && v; }, 60_000, 1000);
-    const paused = await until("paused onchain", async () => (await read("paused")) === true || null, 60_000, 1000);
-    await until("engine sees the pause", async () => (await api("GET", `/v1/accounts/${A}`)).paused === true || null, 30_000, 500);
-    const status = await until("Stopped in the app", async () => { const t = await text(page, "follow.status", 3000); return t === "Stopped" && t; }, 30_000, 1000);
+    const onchain = await until("leaderDetached onchain", async () => (await read("leaderDetached", [LEADER])) === true || null, 60_000, 1000);
+    const engine = await until("engine: detachedLeaders", async () => { const v = await api("GET", `/v1/accounts/${A}`); return (v.detachedLeaders ?? []).includes(LEADER) && v; }, 60_000, 1000);
+    const item = await until("LeaderDetached feed row", async () => (await feedOf(api, A)).find((i) => i.kind === "LeaderDetached" && Number(i.leaderAccountId) === LEADER && i.data?.detached === true), 30_000, 1000);
+    const status = await until("detached state in the app", async () => { const t = await text(page, "follow.status", 3000); return t && t !== "Following" && t; }, 30_000, 1000);
     const note = await text(page, "leader.detached");
-    const item = (await feedOf(api, A)).find((i) => i.kind === "Detached" && i.data?.detached === true);
     const n = (await prompts()) - p0;
     await R.shot(page, "stops-detached-profile");
-    return { ok: n === 1 && paused && engine.detached && !!item && item.onchain === false && (await lots()) > 0n, prompts: n, keep, explain, status, note, feedItem: item && { kind: item.kind, label: item.label, onchain: item.onchain }, userLots: (await lots()).toString() };
+    const paused = await read("paused");
+    return {
+      ok: n === 1 && onchain && !paused && engine.paused === false && item.onchain === true && !!item.txHash && /contract/i.test(`${keep} ${explain} ${note}`) && (await lots()) > 0n,
+      prompts: n, keep, explain, status, note, paused, feedItem: { kind: item.kind, onchain: item.onchain, tx: item.txHash, label: item.data?.label }, userLots: (await lots()).toString(),
+    };
   }, { needs: ["reopened"] });
 
-  await R.check("after 'keep my positions' (detached), the leader's close is not copied: the user's position is still open", null, async () => {
+  await R.check("after 'keep my positions', the leader's exit is not copied (the engine sends nothing) and the contract refuses it: a keeper close naming the leader is Blocked LeaderDetached (22); the position stays open", null, async () => {
     const before = await lots();
     const last = maxId(await feedOf(api, A));
     const { lots: leaderLots } = await position(1, LEADER);
     const tx = await leaderTrade(env.testKeys.demoLeader, 1, 2, leaderLots);
     await sleep(12_000);
-    const after = await lots();
-    const copiedClose = (await feedOf(api, A)).find((i) => Number(i.id) > last && i.kind === "Mirrored" && Number(i.orderType) === 2);
+    const afterLeader = await lots();
+    const engineSent = (await feedOf(api, A)).filter((i) => Number(i.id) > last && (i.kind === "Mirrored" || i.kind === "Blocked"));
     const leaderAfter = (await position(1, LEADER)).lots;
-    return { ok: after === before && after > 0n && !copiedClose && leaderAfter === 0n, leaderCloseTx: tx, leaderLotsClosed: leaderLots.toString(), userLotsBefore: before.toString(), userLotsAfter: after.toString(), copiedClose: copiedClose?.txHash ?? null };
+    // The exit sent straight to the contract by a test-only keeper (the engine would never send it).
+    const { mark } = await position(1, perplId);
+    const k = await testKeeperMirror(A, { leaderAccountId: LEADER, perpId: 1, orderType: 2, lotLNS: before, pricePNS: (mark * 970n) / 1000n }, "web");
+    const after = await lots();
+    const fed = await until("engine feed shows the Blocked", async () => (await feedOf(api, A)).find((i) => i.kind === "Blocked" && i.txHash?.toLowerCase() === k.hash.toLowerCase()), 30_000, 700).catch(() => null);
+    return {
+      ok: afterLeader === before && before > 0n && engineSent.length === 0 && leaderAfter === 0n && k.status === "success" && k.blocked?.reason === 22 && k.blocked.actual === String(LEADER) && !k.mirrored && after === before && fed?.reason === "LeaderDetached",
+      leaderCloseTx: tx, leaderLotsClosed: leaderLots.toString(), engineRows: engineSent.map((i) => i.kind), keeperTx: k.hash, blocked: k.blocked, feedReason: fed?.reason ?? null, userLotsBefore: before.toString(), userLotsAfter: after.toString(),
+    };
   }, { needs: ["reopened"] });
 
-  await R.check("'Stop and close' (one passkey prompt): every position closed onchain, ClosedAll in the feed", page, async () => {
+  await R.check("the owner's own close still works while detached: 'Stop and close' (one passkey prompt) closes every position onchain, ClosedAll in the feed", page, async () => {
     await page.goto(`${WEB}/leader/${LEADER}`);
     await click(page, "leader.stopFollow", 30_000);
     await visible(page, "stop.sheet");
@@ -189,16 +201,19 @@ export async function stopsFlows(ctx) {
     return { ok: n === 1 && flat === "0" && !!closedAll, prompts: n, body, closeTx: closedAll.txHash };
   }, { needs: ["reopened"] });
 
-  await R.check("Follow again (one prompt: Detach false + unpause) and a new leader trade is copied, so the exit flows have a position", page, async () => {
+  await R.check("Follow again (one prompt: ACTION_SET_LEADER_DETACHED false + unpause) and a new leader trade is copied, so the exit flows have a position", page, async () => {
     await page.goto(`${WEB}/leader/${LEADER}`);
+    const p0 = await prompts();
     await click(page, "leader.followAgain", 30_000);
-    await until("engine: following again", async () => { const v = await api("GET", `/v1/accounts/${A}`); return (v.detached === false && v.paused === false) || null; }, 60_000, 1000);
+    await until("leaderDetached cleared onchain", async () => (await read("leaderDetached", [LEADER])) === false || null, 60_000, 1000);
+    await until("engine: following again", async () => { const v = await api("GET", `/v1/accounts/${A}`); return (!(v.detachedLeaders ?? []).includes(LEADER) && v.paused === false) || null; }, 60_000, 1000);
     const status = await until("Following in the app", async () => { const t = await text(page, "follow.status", 3000); return t === "Following" && t; }, 30_000, 1000);
-    const again = (await feedOf(api, A)).find((i) => i.kind === "Detached" && i.data?.detached === false);
+    const n = (await prompts()) - p0;
+    const again = (await feedOf(api, A)).find((i) => i.kind === "LeaderDetached" && Number(i.leaderAccountId) === LEADER && i.data?.detached === false);
     const last = maxId(await feedOf(api, A));
     await sleep(1000);
     const tx = await leaderTrade(env.testKeys.demoLeader, 1, 0, 20);
     const copy = await until("user copy", async () => (await feedOf(api, A)).find((i) => Number(i.id) > last && i.kind === "Mirrored" && Number(i.orderType) === 0), 60_000, 700);
-    return { ok: !!copy && !!again && (await read("paused")) === false && (await lots()) > 0n, status, feedItem: again?.label, leaderTx: tx, copyTx: copy.txHash };
+    return { ok: n === 1 && !!copy && !!again && again.onchain === true && (await read("paused")) === false && (await lots()) > 0n, prompts: n, status, feedItem: again && { tx: again.txHash, label: again.data?.label }, leaderTx: tx, copyTx: copy.txHash };
   }, { needs: ["userAccount"] });
 }

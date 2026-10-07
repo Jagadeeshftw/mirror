@@ -8,14 +8,14 @@ import { getLogsChunked, normalizeLog, type ChainLog, type ChainStreams } from '
 import type { SendResult } from '../chain/sender.js';
 import { STOP_KINDS, type Level, type Side } from '../domain/types.js';
 import type { Bus } from './bus.js';
-import { clearDetachOnPolicy } from './detach.js';
+import { detachLabel } from './detach.js';
 import { feedJson, insertFeed, reasonName, type FeedInsert, type FeedRow } from './feed.js';
 import { applyCopyFacts, isCloseOrder, storePerplEvent } from './copyfacts.js';
 import { POSITION_TOPICS, decodePositionEvent } from './watcher.js';
 
 const accountEvents = [
   'PerplAccountCreated', 'PolicyUpdated', 'PausedSet', 'Deposited', 'Withdrawn', 'ClosedAll', 'Mirrored', 'Blocked',
-  'LevelSet', 'StopTriggered', 'LeaderStopped', 'MarketClosed',
+  'LevelSet', 'StopTriggered', 'LeaderStopped', 'MarketClosed', 'LeaderDetachedSet',
 ] as const;
 
 const selector = (name: string, abi: readonly unknown[]) => {
@@ -33,6 +33,8 @@ export interface LeaderRuleInfo {
   lossStopBps: number;
   /** LeaderStopped seen since the last policy update. */
   stopped: boolean;
+  /** MirrorAccount.leaderDetached(leader): "stop following, keep my positions"; the contract refuses every copy. */
+  detached?: boolean;
 }
 
 export interface FollowerInfo {
@@ -40,8 +42,6 @@ export interface FollowerInfo {
   owner: Address;
   perplAccountId: number;
   paused: boolean;
-  /** Owner-signed "stop following, keep my positions": no keeper copies (services/detach.ts). */
-  detached?: boolean;
   expiry: number;
   maxLeverageHdths: number;
   maxSlippageBps: number;
@@ -64,7 +64,6 @@ type AccountRow = {
   owner: string;
   perpl_account_id: number | null;
   paused: number;
-  detached?: number | null;
   expiry: number | null;
   max_leverage_hdths: number | null;
   max_slippage_bps: number | null;
@@ -214,19 +213,19 @@ export class Registry {
             a.maxLeverageHdths, a.maxSlippageBps, a.dailyLossBps, a.drawdownBps, Number(a.expiry), a.maxEntryDeviationBps, a.stopSlippageBps, a.flattenOnStop ? 1 : 0,
             a.maxBuilderFeePer100K, addr,
           );
+          // leaderDetached survives setPolicy for kept leaders (removed leaders are cleared by their own
+          // LeaderDetachedSet(id, false), emitted before PolicyUpdated; follow() clears with events after it).
+          const detachedBefore = new Set(this.db.all<{ leader_id: number }>('SELECT leader_id FROM account_leaders WHERE account = ? AND detached = 1', addr).map((x) => x.leader_id));
           this.db.run('DELETE FROM account_leaders WHERE account = ?', addr);
           this.db.run('DELETE FROM account_markets WHERE account = ?', addr);
           for (const ld of a.leaders) {
             this.db.run(
-              'INSERT OR REPLACE INTO account_leaders (account, leader_id, ratio_bps, budget_cns, loss_stop_bps, stopped) VALUES (?, ?, ?, ?, ?, 0)',
-              addr, Number(ld.accountId), Number(ld.ratioBps), ld.budgetCNS.toString(), Number(ld.lossStopBps),
+              'INSERT OR REPLACE INTO account_leaders (account, leader_id, ratio_bps, budget_cns, loss_stop_bps, stopped, detached) VALUES (?, ?, ?, ?, ?, 0, ?)',
+              addr, Number(ld.accountId), Number(ld.ratioBps), ld.budgetCNS.toString(), Number(ld.lossStopBps), detachedBefore.has(Number(ld.accountId)) ? 1 : 0,
             );
           }
           for (const m of a.markets) this.db.run('INSERT OR REPLACE INTO account_markets (account, perp_id, max_notional_cns, halted) VALUES (?, ?, ?, 0)', addr, Number(m.perpId), m.maxNotionalCNS.toString());
         });
-        // Re-following clears "stop following, keep my positions".
-        const cleared = clearDetachOnPolicy(this.db, this.explorerTx, addr, Number(l.blockNumber), l.transactionHash);
-        if (cleared) this.bus.publish(addr, { type: 'feed', item: cleared });
         feed = {
           ...base,
           leverage: a.maxLeverageHdths,
@@ -271,6 +270,12 @@ export class Registry {
         const a = ev.args;
         this.db.run('UPDATE account_leaders SET stopped = 1 WHERE account = ? AND leader_id = ?', addr, Number(a.leaderAccountId));
         feed = { ...base, leader_id: Number(a.leaderAccountId), limit_v: a.limitCNS.toString(), actual_v: a.pnlCNS.toString(), data: JSON.stringify({ pnlCNS: a.pnlCNS.toString(), limitCNS: a.limitCNS.toString() }) };
+        break;
+      }
+      case 'LeaderDetachedSet': {
+        const a = ev.args;
+        this.db.run('UPDATE account_leaders SET detached = ? WHERE account = ? AND leader_id = ?', a.detached ? 1 : 0, addr, Number(a.leaderAccountId));
+        feed = { ...base, kind: 'LeaderDetached', leader_id: Number(a.leaderAccountId), data: JSON.stringify({ detached: a.detached, label: detachLabel(a.detached) }) };
         break;
       }
       case 'MarketClosed': {
@@ -320,7 +325,7 @@ export class Registry {
       }
     }
     this.db.run('UPDATE accounts SET last_activity_ts = ? WHERE address = ?', ts, addr);
-    if (['PolicyUpdated', 'PerplAccountCreated', 'PausedSet', 'LevelSet', 'StopTriggered', 'LeaderStopped'].includes(ev.eventName)) {
+    if (['PolicyUpdated', 'PerplAccountCreated', 'PausedSet', 'LevelSet', 'StopTriggered', 'LeaderStopped', 'LeaderDetachedSet'].includes(ev.eventName)) {
       this.refresh(addr);
       this.onLeadersChanged?.();
     }
@@ -407,8 +412,8 @@ export class Registry {
     const r = this.db.get<AccountRow>('SELECT * FROM accounts WHERE address = ?', addr);
     if (!r) return;
     const leaders = new Map<number, LeaderRuleInfo>();
-    for (const l of this.db.all<{ leader_id: number; ratio_bps: number; budget_cns: string; loss_stop_bps: number; stopped: number }>('SELECT * FROM account_leaders WHERE account = ?', addr)) {
-      leaders.set(l.leader_id, { ratioBps: l.ratio_bps, budgetCNS: BigInt(l.budget_cns), lossStopBps: l.loss_stop_bps, stopped: l.stopped === 1 });
+    for (const l of this.db.all<{ leader_id: number; ratio_bps: number; budget_cns: string; loss_stop_bps: number; stopped: number; detached: number }>('SELECT * FROM account_leaders WHERE account = ?', addr)) {
+      leaders.set(l.leader_id, { ratioBps: l.ratio_bps, budgetCNS: BigInt(l.budget_cns), lossStopBps: l.loss_stop_bps, stopped: l.stopped === 1, detached: l.detached === 1 });
     }
     const markets = new Map<number, bigint>();
     const halted = new Set<number>();
@@ -425,7 +430,6 @@ export class Registry {
       owner: getAddress(r.owner),
       perplAccountId: r.perpl_account_id ?? 0,
       paused: r.paused === 1,
-      detached: r.detached === 1,
       expiry: r.expiry ?? 0,
       maxLeverageHdths: r.max_leverage_hdths ?? 0,
       maxSlippageBps: r.max_slippage_bps ?? 0,

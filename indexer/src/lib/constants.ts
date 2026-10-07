@@ -60,6 +60,7 @@ export const BLOCK_REASONS: readonly Enum<"BlockReason">[] = [
   "MarketHalted",
   "CloseBelowTarget",
   "BuilderFeeTooHigh",
+  "LeaderDetached",
 ];
 
 export function blockReason(code: number): Enum<"BlockReason"> {

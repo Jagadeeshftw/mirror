@@ -66,3 +66,15 @@ export function UnfollowedNote({ book }: { book: LeaderBook }) {
     </Note>
   );
 }
+
+/** Shown while MirrorAccount.leaderDetached(leader) is set: "stop following, keep my positions". */
+export const DETACHED_TEXT =
+  "You stopped following this leader. Your contract refuses every copy from this leader, opens and closes. Your positions stay open; close them yourself or with your stop-loss / take-profit.";
+export function DetachedNote({ book, testID = "leader.detached" }: { book?: LeaderBook; testID?: string }) {
+  const n = book?.positions.length ?? 0;
+  return (
+    <Note icon="info" testID={testID}>
+      {`${DETACHED_TEXT}${book ? ` ${n} position${n === 1 ? "" : "s"} held for it.` : ""}`}
+    </Note>
+  );
+}

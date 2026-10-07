@@ -61,8 +61,8 @@ The keeper can trade within the policy but cannot withdraw. This is enforced in 
 
 Verified on Android emulators signed in to Google, with rpId mirror.0xo.in (assetlinks.json live and confirmed by Google's Digital Asset Links API):
 - one fingerprint prompt creates the passkey and derives the account through Mera's PRF output
-- on a second device with the same Google account, the synced passkey restores the same account address
-- PRF-to-key derivation and EIP-712 signing work on device
+- on a second emulator signed in to the same Google account, the synced passkey restores the same account address
+- PRF-to-key derivation and EIP-712 signing work on the emulator (no physical phone has been tested yet)
 
 PENDING:
 - the same flows inside the Mirror app against the deployed contracts (verified so far in a release-signed probe app with the same package and rpId)

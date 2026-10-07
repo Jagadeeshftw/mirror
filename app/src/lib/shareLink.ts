@@ -1,5 +1,5 @@
 // Shared position links and suggested levels (design proposal-2 #share; engine docs/api.md "Shared positions").
-// Pure parts: the owner's typed data (account's "Mirror Account" v1 domain, as Detach), link ids, the friend page URL,
+// Pure parts: the owner's typed data (account's "Mirror Account" v1 domain), link ids, the friend page URL,
 // the decrypted owner list, and the level the owner signs when they accept a suggestion. Screens never build these.
 import { mirrorDomain } from "./contracts";
 import { buildLevel, checkLevels, LEVEL_SLIPPAGE_BPS, levelFor, type LevelCheck } from "./levels";

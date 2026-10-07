@@ -144,25 +144,28 @@ describe("engine account -> levels and halted markets", () => {
 });
 
 describe("stop following", () => {
-  it("only leader: keep = detach (engine) + pause (onchain), close = closeAll", () => {
+  it("only leader: keep = ACTION_SET_LEADER_DETACHED(leader, true), close = closeAll", () => {
     const a = acct(POLICY, [pos(1, 1043)]);
     const k = stopPlan(a, 1043, "keep");
     expect(k.how).toBe("detach");
-    expect(k.actions.map((x) => x.kind)).toEqual([ACTION.SET_PAUSED]);
-    expect(decodeAbiParameters([{ type: "bool" }], k.actions[0].data)[0]).toBe(true);
+    expect(k.actions.map((x) => x.kind)).toEqual([ACTION.SET_LEADER_DETACHED]);
+    expect(decodeAbiParameters([{ type: "uint32" }, { type: "bool" }], k.actions[0].data)).toEqual([1043, true]);
     const c = stopPlan(a, 1043, "close");
     expect(c.how).toBe("closeAll");
     expect(c.actions.map((x) => x.kind)).toEqual([ACTION.CLOSE_ALL]);
     expect(k.positions).toHaveLength(1);
   });
-  it("two leaders: keep = setPolicy without that leader; close also closes its markets", () => {
+  it("two leaders: keep = ACTION 11 for that leader only (stays in the policy); close removes it and closes its markets", () => {
     const two = { ...POLICY, leaders: [...POLICY.leaders, { accountId: 877, ratioBps: 10, budgetCNS: "2000000", lossStopBps: 0 }] };
     const a = acct(two, [pos(1, 1043), pos(20, 877)]);
     const k = stopPlan(a, 877, "keep", 1_000);
-    expect(k.how).toBe("remove");
-    const [p] = decodeAbiParameters([POLICY_PARAM], k.actions[0].data) as any;
-    expect(p.leaders.map((l: any) => l.accountId)).toEqual([1043]);
+    expect(k.how).toBe("detach");
+    expect(k.actions.map((x) => x.kind)).toEqual([ACTION.SET_LEADER_DETACHED]);
+    expect(decodeAbiParameters([{ type: "uint32" }, { type: "bool" }], k.actions[0].data)).toEqual([877, true]);
+    expect(k.positions.map((x) => x.perpId)).toEqual([20]);
     const c = stopPlan(a, 877, "close", 1_000);
+    const [p] = decodeAbiParameters([POLICY_PARAM], c.actions[0].data) as any;
+    expect(p.leaders.map((l: any) => l.accountId)).toEqual([1043]);
     expect(c.actions.map((x) => x.kind)).toEqual([ACTION.SET_POLICY, ACTION.CLOSE_MARKET]);
     expect(decodeAbiParameters([{ type: "uint32" }, { type: "uint16" }], c.actions[1].data)).toEqual([20, 300]);
     expect(c.positions.map((x) => x.perpId)).toEqual([20]);

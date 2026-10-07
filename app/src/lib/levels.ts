@@ -1,7 +1,7 @@
 // Owner-signed stop-loss / take-profit levels (MirrorAccount.Level) and the stop-following plans.
 // Pure functions: price <-> percent math in raw PNS integers, the contract's own level checks, and the
 // owner actions each choice signs. Screens never build a Level or a stop plan by hand.
-import { ACTION, LIMITS, encodeCloseAll, encodeCloseMarket, encodePaused, encodeSetLevels, encodeSetPolicy } from "./contracts";
+import { ACTION, LIMITS, encodeCloseAll, encodeCloseMarket, encodeSetLeaderDetached, encodeSetLevels, encodeSetPolicy } from "./contracts";
 import { notionalCNS, parseUnits } from "./format";
 import type { Hex, Level, MirrorAccount, Policy, Position, PositionLevel, Side } from "./types";
 export type { PositionLevel };
@@ -159,10 +159,12 @@ export type StopChoice = "keep" | "close";
 export interface StopPlan {
   choice: StopChoice;
   /**
-   * "remove": the leader leaves the policy. "detach": it is the only leader (a policy needs one), so the owner
-   * signs the engine's Detach (no keeper copies, opens or closes) and the account is paused onchain in the same prompt.
+   * "detach": ACTION_SET_LEADER_DETACHED(leader, true). The leader stays in the policy but the account's own
+   * contract refuses every copy from it (opens and closes; Blocked LeaderDetached); its positions stay open.
+   * "closeAll": the only leader, closed (pauses and closes every position). "removeAndClose": the leader leaves
+   * the policy and each market it holds is closed.
    */
-  how: "remove" | "detach" | "closeAll" | "removeAndClose";
+  how: "detach" | "closeAll" | "removeAndClose";
   actions: PlannedAction[];
   /** Positions this leader's copies opened (they stay, or are closed). */
   positions: Position[];
@@ -177,23 +179,27 @@ export function positionsOfLeader(a: Pick<MirrorAccount, "positions" | "policy" 
   return a.positions.filter((p) => only || p.leaderAccountId === leaderId);
 }
 
+/** ACTION_SET_LEADER_DETACHED: stop (true) or resume (false) copying one leader; positions are untouched. */
+export function setLeaderDetachedAction(leaderId: number, detached: boolean): PlannedAction {
+  return { kind: ACTION.SET_LEADER_DETACHED, data: encodeSetLeaderDetached(leaderId, detached) };
+}
+
 /**
- * "Stop following, keep my positions": setPolicy without the leader (its positions stay, no longer mirrored).
- * When it is the account's only leader the policy cannot be emptied: the owner signs the engine's Detach
- * (the keeper then sends no copies, opens or closes; keeper behaviour, not enforced onchain) and the account is
- * paused onchain so nothing new can open.
+ * "Stop following, keep my positions": ACTION_SET_LEADER_DETACHED(leader, true), one signed action. The account's
+ * own contract then refuses every copy from this leader, opens and closes; nothing is paused and the other
+ * leaders keep copying. The positions stay open with their stop-loss / take-profit.
  * "Stop and close": the only leader -> closeAll (pauses and closes every position); otherwise the leader
  * leaves the policy and each market it holds is closed (same passkey session, consecutive nonces).
  */
 export function stopPlan(a: Pick<MirrorAccount, "positions" | "policy" | "leader" | "paused">, leaderId: number, choice: StopChoice, nowSec = Math.floor(Date.now() / 1000)): StopPlan {
   const positions = positionsOfLeader(a, leaderId);
-  const only = leaderIds(a).length <= 1;
-  if (only) {
-    if (choice === "keep") return { choice, how: "detach", actions: [{ kind: ACTION.SET_PAUSED, data: encodePaused(true) }], positions };
-    return { choice, how: "closeAll", actions: [{ kind: ACTION.CLOSE_ALL, data: encodeCloseAll(CLOSE_SLIPPAGE_BPS) }], positions };
+  const ids = leaderIds(a);
+  if (choice === "keep") {
+    if (a.policy && !a.policy.leaders.some((l) => Number(l.accountId) === Number(leaderId))) return { choice, how: "detach", actions: [], positions, error: "This leader is not in your limits." };
+    return { choice, how: "detach", actions: [setLeaderDetachedAction(leaderId, true)], positions };
   }
-  if (!a.policy || Number(a.policy.expiry) <= nowSec) return { choice, how: "remove", actions: [], positions, error: "This follow has expired. Edit limits first." };
+  if (ids.length <= 1) return { choice, how: "closeAll", actions: [{ kind: ACTION.CLOSE_ALL, data: encodeCloseAll(CLOSE_SLIPPAGE_BPS) }], positions };
+  if (!a.policy || Number(a.policy.expiry) <= nowSec) return { choice, how: "removeAndClose", actions: [], positions, error: "This follow has expired. Edit limits first." };
   const remove: PlannedAction = { kind: ACTION.SET_POLICY, data: encodeSetPolicy(signablePolicy(a.policy, leaderId)) };
-  if (choice === "keep") return { choice, how: "remove", actions: [remove], positions };
   return { choice, how: "removeAndClose", actions: [remove, ...positions.map((p) => closeMarketAction(p.perpId))], positions };
 }

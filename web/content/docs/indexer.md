@@ -18,7 +18,7 @@ Mirror's read side is an [Envio](https://envio.dev) HyperIndex indexer over Perp
 |---|---|
 | Perpl Exchange `0x34B6…2a6F` | Account created, collateral deposits and withdrawals, positions opened, increased, decreased, closed, inverted, liquidated and deleveraged, funding, markets added. |
 | MirrorAccountFactory | `AccountCreated`, which registers each new clone dynamically. |
-| MirrorAccount (every clone) | `Initialized`, `PerplAccountCreated`, `PolicyUpdated`, `PausedSet`, `Deposited`, `Withdrawn`, `Mirrored`, `Blocked`, `ClosedAll`, `Followed`. |
+| MirrorAccount (every clone) | `Initialized`, `PerplAccountCreated`, `PolicyUpdated`, `PausedSet`, `Deposited`, `Withdrawn`, `Mirrored`, `Blocked`, `ClosedAll`, `Followed`, `LeaderDetachedSet`. |
 
 Indexing starts at Perpl's mainnet deploy block, **54,773,010**, so leader histories are complete. HyperSync is the primary data source, with Monad RPC as a fallback.
 

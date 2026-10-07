@@ -35,6 +35,7 @@ export const BLOCK_REASONS = [
   'MarketHalted',
   'CloseBelowTarget',
   'BuilderFeeTooHigh',
+  'LeaderDetached',
 ] as const;
 export type BlockReason = (typeof BLOCK_REASONS)[number];
 
@@ -49,6 +50,7 @@ export const ACTION = {
   MATCH_NOW: 8,
   SET_LEVELS: 9,
   CLOSE_MARKET: 10,
+  SET_LEADER_DETACHED: 11,
 } as const;
 
 /** Mirrors MirrorAccount.StopKind (index = enum value). */

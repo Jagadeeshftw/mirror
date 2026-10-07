@@ -51,9 +51,10 @@ export class Copier {
   }
 
   async onLeaderChange(c: LeaderChange): Promise<void> {
-    // Detached accounts ("stop following, keep my positions") get no copies, opens or closes. Paused accounts
-    // still get the leader's closes (the contract refuses only their opens).
-    const followers = copyTargets(this.registry.followersOf(c.leaderId, c.perpId));
+    // Accounts that detached this leader ("stop following, keep my positions") get no copies of it: their contract
+    // refuses every one (Blocked LeaderDetached), so sending would only cost gas. Paused accounts still get the
+    // leader's closes (the contract refuses only their opens).
+    const followers = copyTargets(this.registry.followersOf(c.leaderId, c.perpId), c.leaderId);
     if (!followers.length) return;
 
     // Targets are per leader, so only the changed leader's position matters for this event.
@@ -245,20 +246,21 @@ export class Copier {
 
   /** Without eth_simulateV1 logs, replays the contract's checks to name the rule. */
   private async explainBlock(f: FollowerInfo, o: PlannedOrder, follower: PerplPosition): Promise<BlockedInfo> {
-    const [s, marketLeader, leaderPos, book, block, builder] = await Promise.all([
+    const [s, marketLeader, leaderPos, book, block, builder, leaderDetached] = await Promise.all([
       this.reads.account(f.address),
       this.reads.marketLeader(f.address, o.perpId),
       this.reads.position(o.perpId, o.leaderAccountId),
       this.reads.leaderBook(f.address, o.leaderAccountId),
       this.reads.client.getBlock(),
       this.reads.builder(f.address),
+      this.reads.leaderDetached(f.address, o.leaderAccountId).catch(() => Boolean(f.leaders.get(o.leaderAccountId)?.detached)),
     ]);
     const m = s.markets.find((x) => x.perpId === o.perpId);
     const rule = s.leaders.find((l) => l.accountId === o.leaderAccountId);
     const side: Side = o.orderType === 0 || o.orderType === 2 ? LONG : SHORT;
     const target = targetLots(rule ? { ratioBps: rule.ratioBps, side: leaderPos.side, lots: leaderPos.lots } : undefined, side);
     if (!isOpen(o.orderType)) {
-      const r = classifyClose(o, { follower: { side: follower.side, lots: follower.lots }, leaderAllowed: Boolean(rule), marketLeader, target, markValid: follower.markValid, mark: follower.mark, maxSlippageBps: s.maxSlippageBps });
+      const r = classifyClose(o, { follower: { side: follower.side, lots: follower.lots }, leaderAllowed: Boolean(rule), leaderDetached, marketLeader, target, markValid: follower.markValid, mark: follower.mark, maxSlippageBps: s.maxSlippageBps });
       return r === 'revert' ? { reason: 'None', limit: 0n, actual: 0n } : { reason: r.reason, limit: r.limit, actual: r.actual };
     }
     const r = classifyOpen(o, {
@@ -272,6 +274,7 @@ export class Copier {
       priceDecimals: m?.priceDecimals ?? 0,
       leaderAllowed: Boolean(rule),
       leaderStopped: book.stopped,
+      leaderDetached,
       builderFeePer100K: builder.feePer100K,
       maxBuilderFeePer100K: s.maxBuilderFeePer100K,
       maxLeverageHdths: s.maxLeverageHdths,

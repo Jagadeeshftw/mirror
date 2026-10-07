@@ -18,9 +18,9 @@ The app and the public stats page talk only to this API and to Monad RPC, never 
 | GET | `/v1/markets` | Per market: mark, oracle, funding, open interest, best bid and ask. |
 | GET | `/v1/leaders?window=7d\|30d\|90d&sort=score\|pnl\|drawdown&market=BTC` | Ranked leaders: `{accountId, address, score, pnlUsd, pnlPct, maxDrawdownPct, winRate, avgLeverage, trades, markets[], followers, nansen:{labels[], …}, teamRun}` |
 | GET | `/v1/leaders/:accountId` | Profile and due-diligence card: equity curve, stats, open positions, recent trades, Nansen labels and cross-venue notes, risk flags. |
-| GET | `/v1/owners/:owner/accounts` | The owner's MirrorAccounts (predicted and deployed), each with balance, equity, policy, positions, PnL attributed per leader, paused, expiry. |
-| GET | `/v1/accounts/:account` | One MirrorAccount in full. |
-| GET | `/v1/accounts/:account/feed?cursor=` | Mirrored, Blocked, Deposited, Withdrawn, PolicyUpdated, Paused and ClosedAll events, each with `txHash`, `block`, `commitState` (proposed, voted, finalized), `latencyMs` (leader fill to copy tx) and the decoded block reason with limit and actual. |
+| GET | `/v1/owners/:owner/accounts` | The owner's MirrorAccounts (predicted and deployed), each with balance, equity, policy, positions, PnL attributed per leader, paused, `detachedLeaders` (leaders you stopped following while keeping positions), expiry. |
+| GET | `/v1/accounts/:account` | One MirrorAccount in full, including `detachedLeaders` and per leader `detached` in `policy.leaders` and `pnlByLeader`. |
+| GET | `/v1/accounts/:account/feed?cursor=` | Mirrored, Blocked, Deposited, Withdrawn, PolicyUpdated, Paused, ClosedAll and LeaderDetached (onchain `LeaderDetachedSet`, with `leaderAccountId` and `data.detached`) events, each with `txHash`, `block`, `commitState` (proposed, voted, finalized), `latencyMs` (leader fill to copy tx) and the decoded block reason with limit and actual. |
 | GET | `/v1/stats` | Public stats: accounts created, funded accounts, net AUSD deposited, copies executed, copies blocked per rule, median latency, active followers in the last 7 days, and every executed copy with its tx (paginated). Excludes team-run. |
 | GET | `/v1/demo` | Demo leader and demo follower state, and recent demo cycles. |
 | GET | `/v1/stream?account=…` | Server-Sent Events: feed events for an account (or `demo`) as they happen, including commit-state updates. |
@@ -39,7 +39,7 @@ The relayer pays gas; the user only signs.
 |---|---|---|
 | POST | `/v1/relay/create` | `{owner, salt}` deploys the MirrorAccount clone. |
 | POST | `/v1/relay/deposit` | `{account, mode: "permit"\|"auth", amount, deadline \| validAfter+validBefore+nonce, v, r, s}` |
-| POST | `/v1/relay/execute` | `{account, action:{kind, data, nonce, deadline}, signature}`: follow, match now, set policy, pause, close all, withdraw, sweep. |
+| POST | `/v1/relay/execute` | `{account, action:{kind, data, nonce, deadline}, signature}`: follow, match now, set policy, pause, close all, withdraw, sweep, set levels, close market, and kind 11 `ACTION_SET_LEADER_DETACHED` (stop following one leader, keep its positions, or follow it again). |
 | POST | `/v1/relay/transfer` | ERC-3009 `transferWithAuthorization` for sending AUSD from the user's address. |
 
 Every relay call simulates first (`eth_call`), submits with an explicit gas limit (estimate × 1.2, because Monad charges the gas limit), and returns `{txHash, status, block, gasUsed}` after `eth_sendRawTransactionSync`. Relay calls are rate-limited per owner and per IP.

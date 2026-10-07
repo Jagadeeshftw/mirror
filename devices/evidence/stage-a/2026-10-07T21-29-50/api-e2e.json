@@ -1,0 +1,231 @@
+{
+  "run": "2026-10-07T21-29-50",
+  "network": "localnet",
+  "perpl": "PerplFoundation/dex-sdk@01b9910 (MIT), deployed as in perpl_sdk::testing::TestExchange",
+  "checks": [
+    {
+      "name": "engine up on the localnet",
+      "ok": true,
+      "chainId": 1337,
+      "keeper": "0x976EA74026E726554dB657fA54763abd0C3a0aa9"
+    },
+    {
+      "name": "relay created the demo follower's MirrorAccount at the predicted address",
+      "ok": true,
+      "tx": "0xbd0ec837320675cb5e6ae4dc528bd2b2a7354bcbbb8a19486f5d3f6e019da208"
+    },
+    {
+      "name": "relayed permit deposit (demo follower, 50 AUSD)",
+      "ok": true,
+      "tx": "0xd9111284138d48475c79d5f988bad3c73f692788319769c55c9ab0e60e6b4923",
+      "gasUsed": "296574",
+      "gasLimit": "437207"
+    },
+    {
+      "name": "demo follower follows the demo leader (signed action, relayed)",
+      "ok": true,
+      "tx": "0x4a2c64d45e76a10fcdcfa629ea65f10758c68132f0f21024cf5c1cba5471ee1d"
+    },
+    {
+      "name": "second leader opened a Perpl account",
+      "ok": true,
+      "leader2Id": 5
+    },
+    {
+      "name": "test user: account created and 60 AUSD deposited by permit",
+      "ok": true,
+      "account": "0xC4668F465E7BD81eba43D664EFb1a23d59a534Df",
+      "tx": "0xa0b09b5a6ee001e6f1560fa0b152b1ab47b9de73a40319bd19f60997f4c9ab8c"
+    },
+    {
+      "name": "test user follows two leaders with separate budgets (30 and 2 AUSD)",
+      "ok": true,
+      "tx": "0x644c62effb269ea6454f1e2c38ea68ca81ee64e234eae77908f41b5b734dc8f7",
+      "budgets": [
+        "30000000",
+        "2000000"
+      ]
+    },
+    {
+      "name": "Run demo trade: leader trade copied into the test user and the demo follower",
+      "ok": true,
+      "userTx": "0xc8a7cf4fd10a18070f62daebc127823d083c262936633f3a783481240ccc59ea",
+      "demoTx": "0x34fc8db90bf2898d1a6550b0c1c0be832df9b9fe31f691fd1b265c7b35e2b16f",
+      "latencyMs": 397
+    },
+    {
+      "name": "price proof on the copy: leader fill, leader entry, your fill, deviation",
+      "ok": true,
+      "leaderFillPNS": "855428",
+      "leaderEntryPNS": "855428",
+      "fillPNS": "855428",
+      "entryDeviationBps": 0
+    },
+    {
+      "name": "demo leader's close is copied (down to the leader's target)",
+      "ok": true,
+      "tx": "0xb5cef507c80f18aa747856293cc02ba3b451716f5c9dd7a8754660a15e917ee3"
+    },
+    {
+      "name": "builder fee: Perpl charged builder 26 at 0.02% on the copied open",
+      "ok": true,
+      "builderId": 26,
+      "builderFeeCNS": "172",
+      "proofBuilderFeeCNS": "172"
+    },
+    {
+      "name": "builder fee: the copied close carried no builder and paid none",
+      "ok": true,
+      "builderId": 0,
+      "builderFeeCNS": "0",
+      "lotLNS": "1",
+      "price": "854573"
+    },
+    {
+      "name": "Run blocked trade: 10x copy against a 5x rule is Blocked onchain with the numbers",
+      "ok": true,
+      "reason": "LeverageTooHigh",
+      "limit": "500",
+      "actual": "1000",
+      "tx": "0xf5b4af5f14a772fde3835a3b656d1d11a3ba55313ecabd64890bbaa4fa69880e",
+      "onchain": true
+    },
+    {
+      "name": "second leader's ETH trade copied; its margin is booked to it alone",
+      "ok": true,
+      "leaderTx": "0x315d2cd9f19629b780d775a24f7afcbe70eb2d579e3265e222bcc56c1b23bfeb",
+      "copyTx": "0xee8d3fd9a86d793af84f811cd4f194671d3aad12f8807eb69bb7da3f7c7dc597",
+      "leader2MarginCNS": "1352345",
+      "demoLeaderMarginCNS": "0"
+    },
+    {
+      "name": "second leader's BTC copy blocked: BTC belongs to the first leader",
+      "ok": true,
+      "reason": "MarketHeldByOtherLeader",
+      "tx": "0x8cd85a728be83ffbd8effeda1a9d1386c0f537937b34e983a4c5d03c8ba18cce"
+    },
+    {
+      "name": "second leader's budget (2 AUSD) refuses a copy that would exceed it",
+      "ok": true,
+      "reason": "LeaderBudgetExceeded",
+      "limit": "2000000",
+      "actual": "4078395",
+      "tx": "0x0c69cbe428008b5dda455cc8ce2e5eb15768bb09d7546d8d84d2d74f27069a0e"
+    },
+    {
+      "name": "entry filter: price 3% past the leader's entry vs a 1% limit, copy refused onchain",
+      "ok": true,
+      "reason": "EntryTooFar",
+      "limit": "863982",
+      "actual": "881427",
+      "tx": "0xd656b4bb351ab62e7561b1387f92c185bf29e91ca312025b233db27d28827edb"
+    },
+    {
+      "name": "owner set a take-profit with a passkey-signed action (relayed)",
+      "ok": true,
+      "tx": "0xb685527f6349802be94add58a1177e435a74a42e23e4dadd472b61dfcb39ccb0",
+      "takeProfitPNS": "267268"
+    },
+    {
+      "name": "a stranger executed the take-profit; the position closed; the stranger got nothing",
+      "ok": true,
+      "tx": "0x1a58f4e32cde71149d3048097cb342c3d2afe10bc8e08611d6a1d2c1d8f805a7",
+      "lotsBefore": "1",
+      "lotsAfter": "0"
+    },
+    {
+      "name": "the old engine-held detach route answers 410 (moved onchain, ACTION 11)",
+      "ok": true,
+      "status": 410,
+      "code": "moved_onchain"
+    },
+    {
+      "name": "stop following the demo leader, keep positions: signed ACTION_SET_LEADER_DETACHED (relayed), set onchain, account not paused, feed row from the tx",
+      "ok": true,
+      "tx": "0xc78a282426f21f5e7cc757399244f8c7d26cb41ba1da3db9a4b2e79605ce5fb8",
+      "detachedLeaders": [
+        3
+      ],
+      "feedKind": "LeaderDetached",
+      "feedLabel": "Stopped following this leader (positions kept)"
+    },
+    {
+      "name": "the demo leader's exit is not copied to the detached follower (the engine sends nothing); the position stays open",
+      "ok": true,
+      "leaderExitTx": "0xa1a3bc0fea9cfc0543bac33016895bcf51665e544f5b961ea09ecf65dbb4dd91",
+      "leaderLotsClosed": "3",
+      "userLots": "2",
+      "engineRows": []
+    },
+    {
+      "name": "the contract refuses the leader's exit itself: a keeper close naming the detached leader is Blocked (LeaderDetached, 22), nothing traded, position kept",
+      "ok": true,
+      "tx": "0xeafa78ec67afaef1dc5e6f47c96a8d0b8024168d2a8de9ad6a0d1485a3e0658e",
+      "blocked": {
+        "reason": 22,
+        "actual": "3",
+        "orderType": 2
+      },
+      "feedReason": "LeaderDetached",
+      "userLots": "2"
+    },
+    {
+      "name": "the owner's own close still works while detached (closeMarket, relayed)",
+      "ok": true,
+      "tx": "0x833600210593e45c311ad73797419e4de6fd0e698adb8f08829da369c847c92c",
+      "lotsBefore": "2",
+      "lotsAfter": "0"
+    },
+    {
+      "name": "follow() naming the leader again clears the detach (LeaderDetachedSet false)",
+      "ok": true,
+      "tx": "0x657b10513186fab4b525ffc549bc44c1a0b7dc7e753513fa156df1ab0c69c096",
+      "feedTx": "0x657b10513186fab4b525ffc549bc44c1a0b7dc7e753513fa156df1ab0c69c096"
+    },
+    {
+      "name": "every copied open in the feed carries its price proof",
+      "ok": true,
+      "opens": 3
+    },
+    {
+      "name": "copy-quality API: aggregates exclude the team-run follower, which is listed separately",
+      "ok": true,
+      "copies": 1,
+      "teamRunCopies": 7,
+      "medianDeviationBps": 0,
+      "source": "engine"
+    },
+    {
+      "name": "what-if backtest on the leader's recorded history returns a labelled simulation",
+      "ok": true,
+      "tradesCopied": 5,
+      "tradesBlocked": {
+        "LeverageTooHigh": 1
+      },
+      "pnlCNS": "-7708",
+      "slippage": {
+        "bps": 5,
+        "source": "default assumption; not enough measured copies of this leader"
+      },
+      "assumptions": 10
+    },
+    {
+      "name": "close all and withdraw, relayed; AUSD back in the owner's wallet",
+      "ok": true,
+      "closeTx": "0xfbf5c5dd27394038f28fbf85829a43ccaf8589cba3af38dbafc9daf9021a6056",
+      "withdrawTx": "0x217575e509b5b96e1843167f1e861e0e6e51ef2376a63451fa33cc48ea129a2b",
+      "returnedCNS": "60091758"
+    }
+  ],
+  "txs": {
+    "demoTrade": {
+      "cycleId": "d9fae540-abd2-4483-9d79-bd9af2e74c20",
+      "kind": "trade",
+      "status": "started",
+      "stream": "/v1/stream?account=demo",
+      "holdMs": 5000
+    }
+  },
+  "passed": 29,
+  "failed": 0
+}

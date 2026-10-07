@@ -60,6 +60,7 @@ export default function Notifications() {
       } else if (e.kind === "Withdrawn") it = { id: e.id, kind: "account", icon: "arrup", tone: "nu", title: "Withdrawal complete", body: `${ausd(e.amountCNS ?? "0")} AUSD to your wallet`, ts: e.timestamp };
       else if (e.kind === "Deposited") it = { id: e.id, kind: "account", icon: "arrdown", tone: "nu", title: "Deposit received", body: `${ausd(e.amountCNS ?? "0")} AUSD added to your follow`, ts: e.timestamp };
       else if (e.kind === "Paused") it = { id: e.id, kind: "account", icon: "pause", tone: "nu", title: e.paused ? "Following paused" : "Following resumed", body: "From Account controls", ts: e.timestamp };
+      else if (e.kind === "LeaderDetached") it = { id: e.id, kind: "account", icon: e.data?.detached ? "pause" : "check", tone: "nu", title: String(e.data?.label ?? (e.data?.detached ? "Stopped following this leader (positions kept)" : "Following this leader again")), body: e.data?.detached ? `${L || `Perpl #${e.leaderAccountId ?? "?"}`}: your contract refuses every copy from this leader, opens and closes. Your positions stay open.` : `${L || `Perpl #${e.leaderAccountId ?? "?"}`}: copies resume`, ts: e.timestamp };
       else if (e.kind === "ClosedAll") it = { id: e.id, kind: "account", icon: "close", tone: "nu", title: "Positions closed", body: `${e.positionsClosed ?? 0} closed at market`, ts: e.timestamp };
       if (it) {
         out.push(it);

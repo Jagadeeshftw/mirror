@@ -1,8 +1,9 @@
-// "Stop following" for one leader: keep my positions (the leader leaves the policy, or the follow is paused
-// when it is the only leader) or stop and close. Either choice is one passkey prompt.
+// "Stop following" for one leader: keep my positions (ACTION_SET_LEADER_DETACHED: the account's own contract refuses
+// every copy from this leader, opens and closes) or stop and close. Either choice is one passkey prompt.
 import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import { ausdSigned, shortAddr, toBig } from "../lib/format";
+import { isLeaderDetached } from "../lib/budgets";
 import { stopPlan, type StopChoice } from "../lib/levels";
 import type { AppConfig, MirrorAccount } from "../lib/types";
 import type { useOwnerAction } from "../state/ownerAction";
@@ -28,10 +29,11 @@ function Option({ on, title, body, onPress, testID }: { on: boolean; title: stri
 }
 
 export function StopFollowSheet({ visible, onClose, account, leaderId, leaderAddress, cfg, act, onDone }: { visible: boolean; onClose: () => void; account: MirrorAccount | null | undefined; leaderId: number; leaderAddress?: string; cfg: AppConfig | undefined; act: Act; onDone?: (choice: StopChoice) => void }) {
+  const already = !!account && isLeaderDetached(account, leaderId);
   const [choice, setChoice] = useState<StopChoice>("keep");
   useEffect(() => {
     if (visible) {
-      setChoice("keep");
+      setChoice(already ? "close" : "keep");
       act.clearError();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -45,20 +47,18 @@ export function StopFollowSheet({ visible, onClose, account, leaderId, leaderAdd
   const upnl = pos.reduce((s, p) => s + toBig(p.upnlCNS), 0n);
   const n = pos.length;
   const keepBody = n
-    ? `${nameList} stay${n === 1 ? "s" : ""} open with ${n === 1 ? "its" : "their"} stop-loss and take-profit. They are no longer mirrored: close them yourself when you want.`
-    : "No open positions from this leader. Nothing is closed.";
+    ? `${nameList} stay${n === 1 ? "s" : ""} open with ${n === 1 ? "its" : "their"} stop-loss and take-profit. Your contract refuses every copy from this leader, opens and closes: close them yourself or with your stop-loss / take-profit.`
+    : "No open positions from this leader. Your contract refuses every copy from it, opens and closes.";
   const closeBody = n
     ? `Closes ${n} position${n === 1 ? "" : "s"} at market now (within 3% of the mark), about ${ausdSigned(upnl)} AUSD before fees${close.how === "closeAll" ? ", and pauses this follow" : ""}. Your AUSD stays in the account until you withdraw.`
     : `Nothing to close${close.how === "closeAll" ? "; this follow is paused" : "; the leader is removed"}.`;
   const how = choice === "keep" ? keep.how : close.how;
   const explain =
     how === "detach"
-      ? "One passkey approval: you tell Mirror to stop copying this follow (nothing is copied, not new trades and not this leader's closes), and the follow is paused onchain so nothing new can open. Stopping the copies is Mirror's keeper behaviour, not a contract rule; you keep full control of the positions: levels, close, close all, withdraw. Follow again any time from the leader's profile."
-      : how === "remove"
-        ? "The leader is removed from your limits (one signed policy). Its positions stay in your account and are no longer mirrored."
-        : how === "removeAndClose"
-          ? "The leader is removed from your limits and each of its markets is closed, in one passkey approval."
-          : "Close all: every position in this follow closes at market and the follow is paused, so nothing reopens.";
+      ? "One passkey approval. Your contract refuses every copy from this leader, opens and closes. Your positions stay open; close them yourself or with your stop-loss / take-profit. Your other leaders keep copying and nothing is paused. Follow again any time from the leader's profile."
+      : how === "removeAndClose"
+        ? "The leader is removed from your limits and each of its markets is closed, in one passkey approval."
+        : "Close all: every position in this follow closes at market and the follow is paused, so nothing reopens.";
   const busy = act.busy === "stopKeep" || act.busy === "stopClose";
   return (
     <Overlay visible={visible} onClose={onClose} testID="stop.sheet">
@@ -70,9 +70,13 @@ export function StopFollowSheet({ visible, onClose, account, leaderId, leaderAdd
         </View>
       </Row>
       <T size={13} color="mu" lh={19}>
-        No new copies from this leader either way. Choose what happens to {n === 1 ? "its open position" : `its ${n} open positions`}.
+        Your contract stops copying this leader either way. Choose what happens to {n === 1 ? "its open position" : `its ${n} open positions`}.
       </T>
-      <Option on={choice === "keep"} onPress={() => setChoice("keep")} title="Stop following, keep my positions" body={keepBody} testID="stop.option.keep" />
+      {already ? (
+        <Note icon="info" testID="stop.already">You already stopped following this leader; your contract refuses its copies. You can still close its positions.</Note>
+      ) : (
+        <Option on={choice === "keep"} onPress={() => setChoice("keep")} title="Stop following, keep my positions" body={keepBody} testID="stop.option.keep" />
+      )}
       <Option on={choice === "close"} onPress={() => setChoice("close")} title="Stop and close" body={closeBody} testID="stop.option.close" />
       <Note icon="info" testID="stop.explain">{explain}</Note>
       {act.error ? <Note tone="neg" icon="warn" testID="stop.error">{act.error}</Note> : null}

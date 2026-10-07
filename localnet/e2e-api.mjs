@@ -287,6 +287,66 @@ try {
   const strangerAusd = await pub.readContract({ address: env.collateral, abi: T, functionName: "balanceOf", args: [stranger.address] });
   check("a stranger executed the take-profit; the position closed; the stranger got nothing", tr.status === "success" && ethAfter.lots === 0n && strangerAusd === 0n, { tx: th, lotsBefore: ethPos.lots.toString(), lotsAfter: ethAfter.lots.toString() });
 
+  // ---- 7b. stop following one leader, keep the positions (MirrorAccount.leaderDetached, contract-enforced) ----
+  // The engine never sends copies of a detached leader, so a test-only keeper (a fresh key marked in
+  // KeeperRegistry.isKeeper with anvil_setStorageAt; the engine's keeper nonces are untouched) sends the leader's
+  // exit straight to the contract to show that the contract itself refuses it.
+  async function testKeeperMirror(account, order) {
+    const k = acct(keccak256(toHex(`test-keeper-${RUN}`)));
+    const slot = keccak256(encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [k.address, 2n]));
+    await pub.request({ method: "anvil_setStorageAt", params: [env.mirror.keeperRegistry, slot, toHex(1n, { size: 32 })] });
+    await pub.request({ method: "anvil_setBalance", params: [k.address, "0x8AC7230489E80000"] });
+    const o = { leaderRef: toHex("e2e-detach", { size: 32 }), leaderFillPNS: 0n, leverageHdths: 0, maxMatches: 20, ...order };
+    const hash = await wallet(k).writeContract({ address: account, abi: MA, functionName: "mirror", args: [o], gas: 3_000_000n });
+    const r = await pub.waitForTransactionReceipt({ hash });
+    const evs = r.logs.filter((l) => l.address.toLowerCase() === account.toLowerCase()).map((l) => { try { return decodeEventLog({ abi: MA, data: l.data, topics: l.topics }); } catch { return null; } }).filter(Boolean);
+    const b = evs.find((e) => e.eventName === "Blocked");
+    return { hash, status: r.status, blocked: b && { reason: Number(b.args.reason), actual: b.args.actual.toString(), orderType: Number(b.args.orderType) }, mirrored: evs.some((e) => e.eventName === "Mirrored") };
+  }
+  const leaderDetached = (id) => pub.readContract({ address: userAccount, abi: MA, functionName: "leaderDetached", args: [id] });
+  const userBtc = await waitFor("test user holds BTC for the demo leader", async () => { const q = await position(1, userPerpl); return q.lots > 0n && q; }, 30_000);
+  const gone = await api("POST", `/v1/accounts/${userAccount}/detach`, { detached: true }).then(() => null, (e) => e);
+  check("the old engine-held detach route answers 410 (moved onchain, ACTION 11)", gone?.status === 410 && gone.json?.code === "moved_onchain" && gone.json?.actionKind === 11, { status: gone?.status, code: gone?.json?.code });
+  const dt = await execute(owners.user, userAccount, 11, encodeAbiParameters([{ type: "uint32" }, { type: "bool" }], [demoLeaderId, true]));
+  const dView = await waitFor("engine indexed LeaderDetachedSet", async () => { const v = await api("GET", `/v1/accounts/${userAccount}`); return (v.detachedLeaders ?? []).includes(demoLeaderId) && v; }, 30_000);
+  const dItem = await waitFor("LeaderDetached feed row", async () => findItem(await feed(userAccount), (i) => i.kind === "LeaderDetached" && i.data?.detached === true), 30_000);
+  check("stop following the demo leader, keep positions: signed ACTION_SET_LEADER_DETACHED (relayed), set onchain, account not paused, feed row from the tx",
+    dt.status === "success" && (await leaderDetached(demoLeaderId)) === true && dView.paused === false && dItem.onchain === true && dItem.txHash?.toLowerCase() === dt.txHash?.toLowerCase()
+      && (dView.policy?.leaders ?? []).some((l) => l.accountId === demoLeaderId && l.detached === true),
+    { tx: dt.txHash, detachedLeaders: dView.detachedLeaders, feedKind: dItem.kind, feedLabel: dItem.data?.label });
+
+  const lastBefore = Math.max(0, ...(await feed(userAccount)).map((i) => Number(i.id) || 0));
+  const leaderBtc = await position(1, demoLeaderId);
+  const leaderExit = await leaderTrade(env.testKeys.demoLeader, 1, 2, leaderBtc.lots);
+  await sleep(10_000);
+  const afterLeader = await position(1, userPerpl);
+  const engineSent = (await feed(userAccount)).filter((i) => Number(i.id) > lastBefore && (i.kind === "Mirrored" || i.kind === "Blocked"));
+  check("the demo leader's exit is not copied to the detached follower (the engine sends nothing); the position stays open",
+    afterLeader.lots === userBtc.lots && engineSent.length === 0, { leaderExitTx: leaderExit, leaderLotsClosed: leaderBtc.lots.toString(), userLots: afterLeader.lots.toString(), engineRows: engineSent.map((i) => i.kind) });
+
+  const tk = await testKeeperMirror(userAccount, { leaderAccountId: demoLeaderId, perpId: 1, orderType: 2, lotLNS: userBtc.lots, pricePNS: (afterLeader.mark * 970n) / 1000n });
+  const afterKeeper = await position(1, userPerpl);
+  const tkItem = await waitFor("engine feed shows the Blocked", async () => findItem(await feed(userAccount), (i) => i.kind === "Blocked" && i.txHash?.toLowerCase() === tk.hash.toLowerCase()), 30_000).catch(() => null);
+  check("the contract refuses the leader's exit itself: a keeper close naming the detached leader is Blocked (LeaderDetached, 22), nothing traded, position kept",
+    tk.status === "success" && tk.blocked?.reason === 22 && tk.blocked.actual === String(demoLeaderId) && !tk.mirrored && afterKeeper.lots === userBtc.lots && tkItem?.reason === "LeaderDetached",
+    { tx: tk.hash, blocked: tk.blocked, feedReason: tkItem?.reason, userLots: afterKeeper.lots.toString() });
+
+  let cm;
+  let ownerClosed = afterKeeper;
+  for (let i = 0; i < 4 && ownerClosed.lots !== 0n; i++) {
+    // Refresh the makers' quotes so the reduce-only IOC finds bids.
+    await fetch(`${env.faucetUrl}/mark`, { method: "POST", body: JSON.stringify({ perpId: 1, price: Number(btcMark) / 10 }) });
+    if (i) await sleep(5000);
+    cm = await execute(owners.user, userAccount, 10, encodeAbiParameters([{ type: "uint32" }, { type: "uint16" }], [1, 300]));
+    ownerClosed = await position(1, userPerpl);
+  }
+  check("the owner's own close still works while detached (closeMarket, relayed)", cm?.status === "success" && ownerClosed.lots === 0n, { tx: cm?.txHash, lotsBefore: afterKeeper.lots.toString(), lotsAfter: ownerClosed.lots.toString() });
+
+  const rf = await follow(owners.user, userAccount, userPolicy);
+  const rView = await waitFor("engine sees the re-follow", async () => { const v = await api("GET", `/v1/accounts/${userAccount}`); return !(v.detachedLeaders ?? []).includes(demoLeaderId) && v; }, 30_000);
+  const rItem = await waitFor("LeaderDetached(false) feed row", async () => findItem(await feed(userAccount), (i) => i.kind === "LeaderDetached" && i.data?.detached === false), 30_000).catch(() => null);
+  check("follow() naming the leader again clears the detach (LeaderDetachedSet false)", rf.status === "success" && (await leaderDetached(demoLeaderId)) === false && !!rView && !!rItem, { tx: rf.txHash, feedTx: rItem?.txHash });
+
   // ---- 8. proof on every copy, copy quality, backtest -------------------------------------------------------
   const items = await feed(userAccount);
   const opens = items.filter((i) => i.kind === "Mirrored" && Number(i.orderType) <= 1);

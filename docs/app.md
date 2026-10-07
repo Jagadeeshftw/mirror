@@ -124,12 +124,17 @@ abi-encode`, and the signatures with `cast wallet sign --data`. See
 | Edit / clear levels (one position) | `Action{9 SET_LEVELS, abi.encode(Level[1])}`, `Level{perpId, side, stopLossPNS, takeProfitPNS, slippageBps 300}`; both prices 0 clears | execute |
 | Close position | `Action{10 CLOSE_MARKET, abi.encode(uint32 perpId, uint16 300)}` | execute |
 | Resume a market after a level fired | `Action{1 SET_POLICY}` with the same policy (a new policy lifts `halted`) | execute |
-| Stop following, keep my positions | other leaders left: `SET_POLICY` without the leader. Only leader: `Detach{detached: true, deadline}` (EIP-712, account domain) + `SET_PAUSED true`, one prompt; the engine then sends no copies, opens or closes (keeper behaviour) | `/v1/accounts/:account/detach` + execute |
-| Follow again (after detach) | `Detach{detached: false}` + `SET_PAUSED false` | detach + execute |
+| Stop following, keep my positions | `Action{11 SET_LEADER_DETACHED, abi.encode(uint32 leader, bool true)}` for that leader. Enforced by the user's own MirrorAccount: while set, every copy from that leader (opens and closes, keeper or match now) is refused with `Blocked(LeaderDetached)`; its positions stay open and attributed to it, so levels, loss stops, close position and close all keep working. Other leaders keep being copied | execute |
+| Follow again (after stop following) | `Action{11 SET_LEADER_DETACHED, abi.encode(uint32 leader, bool false)}`, or a new `FOLLOW` naming the leader (follow clears the flag) | execute |
 | Stop and close | only leader: `CLOSE_ALL 300`; otherwise `SET_POLICY` without the leader + `CLOSE_MARKET` per market it holds (consecutive nonces, one prompt) | execute ×N |
 | Withdraw | `Action{4 WITHDRAW, abi.encode(uint256)}`; to another address adds `TransferWithAuthorization` | execute (+ transfer) |
 | Top up a follow | `Permit` (or `ReceiveWithAuthorization`) | deposit |
 | Send AUSD | `TransferWithAuthorization` | transfer |
+
+Pause vs stop following: pause is account-wide and refuses opening copies but still mirrors the leader's exits;
+stop following (detach) is per leader and refuses every copy from that leader, opens and closes. The engine shows
+detached leaders as `detachedLeaders` / `policy.leaders[].detached` and the change as a `LeaderDetached` feed item
+(onchain, with its transaction).
 
 Domain for actions: `{name: "Mirror Account", version: "1", chainId: 143, verifyingContract: <MirrorAccount>}`.
 AUSD domain: `{name: "Agora Dollar", version: "1", chainId: 143, verifyingContract: 0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a}`.
@@ -175,7 +180,7 @@ and custom switch and slider without animated values. Charts are static SVG.
 
 ## Not finished / needs outside pieces
 
-- Real passkeys on device need a Google account on the phone and
+- Real passkeys need a Google account on the phone (or emulator) and
   `https://mirror.0xo.in/.well-known/assetlinks.json` listing `com.zeroxo.mirror` with the SHA-256
   of the release certificate.
 - Android remote push needs `app/google-services.json` and an Expo project id with the FCM V1 key (see "Android

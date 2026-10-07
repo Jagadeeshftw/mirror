@@ -178,7 +178,17 @@ query OwnerAccounts($owner: String!) {
     copiesBlocked
     matchNowCopies
     builderFeesCNS
+    detachedLeaderAccountIds
     lastCopyAt
+    leaderRules(where: { active: { _eq: true } }) {
+      leaderAccountId
+      ratioBps
+      budgetCNS
+      lossStopBps
+      stopped
+      detached
+      detachedAt
+    }
     perplAccount {
       accountId
       balanceCNS

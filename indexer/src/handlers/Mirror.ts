@@ -83,6 +83,7 @@ function newMirrorAccount(address: string, owner: string, m: Meta): MirrorAccoun
     marketCloseCount: 0,
     stopsTriggered: 0,
     leaderStops: 0,
+    detachedLeaderAccountIds: [],
     lastCopyAt: 0,
     lastActivityAt: m.timestamp,
   };
@@ -196,7 +197,8 @@ indexer.onEvent({ contract: "MirrorAccount", event: "PolicyUpdated" }, async ({ 
     if (newLeaders.has(id)) continue;
     const ruleId = `${ma.id}-${id}`;
     const rule = await context.MirrorLeaderRule.get(ruleId);
-    if (rule) context.MirrorLeaderRule.set({ ...rule, active: false, updatedAt: m.timestamp });
+    // The contract clears a removed leader's detach flag (LeaderDetachedSet(id, false) right before this log).
+    if (rule) context.MirrorLeaderRule.set({ ...rule, active: false, detached: false, updatedAt: m.timestamp });
     if (!ma.teamRun) {
       await updateLeaderStats(context, BigInt(id), m, (s) => ({ ...s, followers: Math.max(0, s.followers - 1) }));
     }
@@ -206,6 +208,8 @@ indexer.onEvent({ contract: "MirrorAccount", event: "PolicyUpdated" }, async ({ 
     const ruleId = `${ma.id}-${id}`;
     const prev = await context.MirrorLeaderRule.get(ruleId);
     // setPolicy re-arms a stopped leader and resets a newly added one, so no listed leader is stopped.
+    // It keeps the detach flag of a leader that stays listed; a newly added one starts attached.
+    const detached = oldLeaders.has(id) ? (prev?.detached ?? false) : false;
     context.MirrorLeaderRule.set({
       id: ruleId,
       mirrorAccount_id: ma.id,
@@ -219,6 +223,9 @@ indexer.onEvent({ contract: "MirrorAccount", event: "PolicyUpdated" }, async ({ 
       stopPnlCNS: prev?.stopPnlCNS,
       stopLimitCNS: prev?.stopLimitCNS,
       stopCount: prev?.stopCount ?? 0,
+      detached,
+      detachedAt: prev?.detachedAt,
+      detachCount: prev?.detachCount ?? 0,
       active: true,
       updatedAt: m.timestamp,
     });
@@ -267,6 +274,7 @@ indexer.onEvent({ contract: "MirrorAccount", event: "PolicyUpdated" }, async ({ 
     leaderLossStopsBps: p.leaders.map((l) => Number(l.lossStopBps)),
     marketIds: p.markets.map((r) => Number(r.perpId)),
     marketMaxNotionalsCNS: p.markets.map((r) => r.maxNotionalCNS),
+    detachedLeaderAccountIds: ma.detachedLeaderAccountIds.filter((x) => newLeaders.has(x.toString())),
     policyVersion: ma.policyVersion + 1,
     policyUpdatedAt: m.timestamp,
     lastActivityAt: m.timestamp,
@@ -809,6 +817,46 @@ indexer.onEvent({ contract: "MirrorAccount", event: "LeaderStopped" }, async ({ 
   await bumpScope(context, ma.teamRun, m, (s) => ({ ...s, leaderStops: s.leaderStops + 1 }));
   activity(context, updated, m, "LEADER_STOPPED", {
     detail: JSON.stringify({ leaderAccountId: leaderId, pnlCNS: p.pnlCNS.toString(), limitCNS: p.limitCNS.toString() }),
+  });
+});
+
+indexer.onEvent({ contract: "MirrorAccount", event: "LeaderDetachedSet" }, async ({ event, context }) => {
+  const m = metaOf(event);
+  const p = event.params;
+  const ma = await loadMirror(context, event.srcAddress, m);
+  const leaderId = p.leaderAccountId.toString();
+  await ensureAccount(context, p.leaderAccountId, m);
+  const rule = await context.MirrorLeaderRule.get(`${ma.id}-${leaderId}`);
+  if (rule) {
+    context.MirrorLeaderRule.set({
+      ...rule,
+      detached: p.detached,
+      detachedAt: p.detached ? m.timestamp : rule.detachedAt,
+      detachCount: rule.detachCount + (p.detached && !rule.detached ? 1 : 0),
+      updatedAt: m.timestamp,
+    });
+  }
+  context.LeaderDetachEvent.set({
+    id: eventId(m),
+    mirrorAccount_id: ma.id,
+    leaderAccountId: p.leaderAccountId,
+    leader_id: leaderId,
+    detached: p.detached,
+    teamRun: ma.teamRun,
+    blockNumber: m.block,
+    timestamp: m.timestamp,
+    txHash: m.txHash,
+    logIndex: m.logIndex,
+  });
+  const others = ma.detachedLeaderAccountIds.filter((x) => x !== p.leaderAccountId);
+  const updated: MirrorAccount = {
+    ...ma,
+    detachedLeaderAccountIds: p.detached ? [...others, p.leaderAccountId] : others,
+    lastActivityAt: m.timestamp,
+  };
+  context.MirrorAccount.set(updated);
+  activity(context, updated, m, p.detached ? "LEADER_DETACHED" : "LEADER_REATTACHED", {
+    detail: JSON.stringify({ leaderAccountId: leaderId, detached: p.detached }),
   });
 });
 

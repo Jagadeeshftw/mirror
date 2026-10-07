@@ -208,6 +208,11 @@ export class Reads {
     return { marginCNS, unrealizedCNS, realizedCNS, stopped };
   }
 
+  /** MirrorAccount.leaderDetached(leader): the owner stopped following this leader (every copy of it is refused). */
+  async leaderDetached(account: Address, leaderAccountId: number): Promise<boolean> {
+    return this.client.readContract({ address: account, abi: mirrorAccountAbi, functionName: 'leaderDetached', args: [leaderAccountId] });
+  }
+
   async level(account: Address, perpId: number): Promise<Level> {
     const l = await this.client.readContract({ address: account, abi: mirrorAccountAbi, functionName: 'level', args: [BigInt(perpId)] });
     return { perpId: Number(l.perpId), side: (l.side === 1 ? 1 : 0) as Side, stopLossPNS: l.stopLossPNS, takeProfitPNS: l.takeProfitPNS, slippageBps: l.slippageBps };

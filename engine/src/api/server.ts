@@ -13,8 +13,7 @@ import { CircuitOpenError, SimulationError, SendError } from '../chain/sender.js
 import { BacktestBody } from '../services/backtest.js';
 import { decodePolicyLeaders } from '../domain/encode.js';
 import { ACTION } from '../domain/types.js';
-import { applyDetach, DetachError } from '../services/detach.js';
-import { mirrorAccountAbi } from '../abi/MirrorAccount.js';
+import { DETACH_GONE } from '../services/detach.js';
 import { registerShareRoutes } from './share-routes.js';
 import { ShareError } from '../services/share-rules.js';
 import { PushAuthError } from '../services/pushauth.js';
@@ -40,7 +39,6 @@ export function buildServer(e: Engine, log: Logger) {
     if (err instanceof ZodError) return reply.status(400).send({ error: 'invalid request', issues: err.issues.map((i) => ({ path: i.path.join('.'), message: i.message })) });
     if (err instanceof RateLimitError) return reply.status(429).header('retry-after', Math.ceil((err.resetAt - Date.now()) / 1000)).send({ error: err.message, resetAt: err.resetAt });
     if (err instanceof RelayError || err instanceof DemoError) return reply.status(err.status).send({ error: err.message, ...(err instanceof RelayError && err.details ? { details: err.details } : {}) });
-    if (err instanceof DetachError) return reply.status(err.status).send({ error: err.message, code: err.code });
     if (err instanceof PushAuthError) return reply.status(err.statusCode).send({ error: err.message, code: err.code });
     if (err instanceof ShareError) return reply.status(err.status).send({ error: err.message, code: err.code, ...((err as ShareError & { field?: string }).field ? { field: (err as ShareError & { field?: string }).field } : {}) });
     if (err instanceof SimulationError) return reply.status(400).send({ error: err.message, revert: err.revert.name });
@@ -153,24 +151,9 @@ export function buildServer(e: Engine, log: Logger) {
     return { items: rows.map((r) => ({ kind: r.kind, scope: r.scope, status: r.status, txHash: r.tx_hash, sender: r.sender, error: r.error, gasUsed: r.gas_used, gasLimit: r.gas_limit, at: r.created_ms })) };
   });
 
-  // "Stop following, keep my positions": owner-signed Detach(bool detached, uint256 deadline) (services/detach.ts).
-  app.post('/v1/accounts/:account/detach', async (req) => {
-    limit(`detach:${req.ip}`, 30, 3_600_000, 'detach per-IP');
-    const account = addrParam((req.params as { account: string }).account);
-    const b = z.object({ detached: z.boolean(), deadline: z.union([z.string().regex(/^\d+$/), z.number().int().nonnegative()]), signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/) }).parse(req.body);
-    return applyDetach(
-      {
-        db: e.db,
-        chainId: e.cfg.chainId,
-        explorerTx: e.cfg.explorerTx,
-        readOwner: (a) => e.client.readContract({ address: a, abi: mirrorAccountAbi, functionName: 'owner' }) as Promise<`0x${string}`>,
-        head: () => e.streams.head,
-        publish: (a, ev) => e.bus.publish(a, ev as never),
-        refresh: (a) => e.registry?.refresh(a),
-      },
-      { account, detached: b.detached, deadline: BigInt(b.deadline), signature: b.signature as `0x${string}` },
-    );
-  });
+  // "Stop following, keep my positions" is per leader and enforced by the account's own contract now
+  // (MirrorAccount.setLeaderDetached / ACTION_SET_LEADER_DETACHED via POST /v1/relay/execute). The engine-held route is gone.
+  app.post('/v1/accounts/:account/detach', async (_req, reply) => reply.status(410).send(DETACH_GONE));
 
   registerShareRoutes(app as never, e, addrParam, limit);
 

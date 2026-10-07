@@ -25,6 +25,8 @@ export const RULE_NAMES: Record<string, string> = {
   LeaderBudgetExceeded: "Budget",
   LeaderLossStop: "Leader loss stop",
   MarketHalted: "Market halted by a stop",
+  // Checked before every other rule (opens and closes), so a LeaderDetached card shows no passed groups.
+  LeaderDetached: "Stopped following this leader (positions kept)",
 };
 export const ruleName = (r: string) => RULE_NAMES[r] ?? r.replace(/([a-z])([A-Z])/g, "$1 $2");
 

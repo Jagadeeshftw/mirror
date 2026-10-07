@@ -96,6 +96,8 @@ export class DemoService {
     if (!follower || !follower.leaders.has(this.leaderAccountId) || !follower.markets.has(this.opts.perpId)) {
       throw new DemoError(503, 'demo follower is not following the demo leader in this market yet');
     }
+    // Its contract refuses every copy of a detached leader (Blocked LeaderDetached); the keeper sends none.
+    if (follower.leaders.get(this.leaderAccountId)?.detached) throw new DemoError(409, 'demo follower stopped following the demo leader (positions kept); follow it again first');
     // A market belongs to the leader whose copy opened it; if another leader holds it, the demo copy would be
     // blocked with MarketHeldByOtherLeader instead of showing the intended outcome.
     const pos = await this.reads.position(this.opts.perpId, follower.perplAccountId);

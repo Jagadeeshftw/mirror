@@ -58,6 +58,7 @@ export const REASON_LABEL: Record<string, string> = {
   LeaderLossStop: "Leader loss stop",
   MarketHalted: "Market halted",
   CloseBelowTarget: "Close below target",
+  LeaderDetached: "Stopped following this leader (positions kept)",
   ThinBook: "Thin book",
 };
 

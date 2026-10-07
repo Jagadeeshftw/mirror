@@ -71,8 +71,9 @@ describe('ABI encoding of owner action payloads', () => {
     expect(levels[0]).toMatchObject(lv);
     expect(decodeAbiParameters([{ type: 'uint32' }, { type: 'uint16' }], encodeCloseMarket(16, 150))).toEqual([16, 150]);
   });
-  it('enums match the contract (BlockReason appended to 21, StopKind)', () => {
-    expect(BLOCK_REASONS.length).toBe(22);
+  it('enums match the contract (BlockReason appended to 22, StopKind)', () => {
+    expect(BLOCK_REASONS.length).toBe(23);
+    expect(BLOCK_REASONS.indexOf('LeaderDetached')).toBe(22);
     expect(BLOCK_REASONS.indexOf('BuilderFeeTooHigh')).toBe(21);
     expect(BLOCK_REASONS.indexOf('EntryTooFar')).toBe(15);
     expect(BLOCK_REASONS.indexOf('CloseBelowTarget')).toBe(20);

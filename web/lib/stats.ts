@@ -41,6 +41,14 @@ export const BLOCK_REASONS = [
   "DailyLossStop",
   "DrawdownStop",
   "LeverageTooLow",
+  "EntryTooFar",
+  "MarketHeldByOtherLeader",
+  "LeaderBudgetExceeded",
+  "LeaderLossStop",
+  "MarketHalted",
+  "CloseBelowTarget",
+  "BuilderFeeTooHigh",
+  "LeaderDetached",
 ] as const;
 
 export const BLOCK_REASON_LABEL: Record<string, string> = {
@@ -58,6 +66,7 @@ export const BLOCK_REASON_LABEL: Record<string, string> = {
   DailyLossStop: "Daily loss stop",
   DrawdownStop: "Drawdown stop",
   LeverageTooLow: "Leverage below 1x",
+  LeaderDetached: "Stopped following this leader (positions kept)",
   Unknown: "Unknown",
 };
 

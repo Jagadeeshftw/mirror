@@ -22,6 +22,8 @@ export const ACTION = {
   MATCH_NOW: 8,
   SET_LEVELS: 9,
   CLOSE_MARKET: 10,
+  /** "Stop following, keep my positions" for one leader: abi.encode(uint32 leader, bool detached). */
+  SET_LEADER_DETACHED: 11,
 } as const;
 export type ActionKind = (typeof ACTION)[keyof typeof ACTION];
 
@@ -62,6 +64,7 @@ export const BLOCK_REASONS = [
   "MarketHalted",
   "CloseBelowTarget",
   "BuilderFeeTooHigh",
+  "LeaderDetached",
 ] as const;
 export type BlockReason = (typeof BLOCK_REASONS)[number];
 
@@ -179,6 +182,13 @@ export function encodeSetLevels(levels: Level[]): Hex {
 export function encodeCloseMarket(perpId: number, slippageBps: number): Hex {
   return encodeAbiParameters([{ type: "uint32" }, { type: "uint16" }], [perpId, slippageBps]);
 }
+/**
+ * abi.encode(uint32 leader, bool detached) for ACTION_SET_LEADER_DETACHED: while detached, the account's own
+ * contract refuses every copy naming that leader (opens and closes; Blocked LeaderDetached). Positions stay.
+ */
+export function encodeSetLeaderDetached(leaderAccountId: number, detached: boolean): Hex {
+  return encodeAbiParameters([{ type: "uint32" }, { type: "bool" }], [leaderAccountId, detached]);
+}
 export function encodeWithdraw(amountCNS: bigint): Hex {
   return encodeAbiParameters([{ type: "uint256" }], [amountCNS]);
 }
@@ -246,20 +256,6 @@ export function actionTypedData(account: Address, chainId: number, a: ActionMess
 /** Same digest as MirrorAccount.actionDigest(a). */
 export function actionDigest(account: Address, chainId: number, a: ActionMessage): Hex {
   return hashTypedData(actionTypedData(account, chainId, a));
-}
-
-/**
- * "Stop following, keep my positions": an engine-side state, signed by the owner in the account's own domain.
- * Not a contract action (the engine verifies it against the account's onchain owner; docs/api.md /detach).
- */
-export const DETACH_TYPES = {
-  Detach: [
-    { name: "detached", type: "bool" },
-    { name: "deadline", type: "uint256" },
-  ],
-} as const;
-export function detachTypedData(account: Address, chainId: number, detached: boolean, deadline: bigint) {
-  return { domain: mirrorDomain(account, chainId), types: DETACH_TYPES, primaryType: "Detach" as const, message: { detached, deadline } };
 }
 
 export const AUSD_DOMAIN_NAME = "Agora Dollar";

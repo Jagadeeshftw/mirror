@@ -144,6 +144,8 @@ export interface LeaderRule {
   lossStopBps: number;
   /** Engine read-out: the leader's loss stop fired (LeaderStopped since the last policy). Not signed. */
   stopped?: boolean;
+  /** Engine read-out of MirrorAccount.leaderDetached: "stop following, keep my positions". Not signed. */
+  detached?: boolean;
 }
 export interface MarketRule {
   perpId: number;
@@ -224,6 +226,8 @@ export interface LeaderAttribution {
   budgetCNS?: string;
   /** MirrorAccount.leaderBook: the leader's loss stop fired; re-armed by a new policy. */
   stopped?: boolean;
+  /** MirrorAccount.leaderDetached: the contract refuses every copy from this leader. */
+  detached?: boolean;
 }
 
 export interface MirrorAccount {
@@ -240,8 +244,11 @@ export interface MirrorAccount {
   depositCapCNS: string;
   actionNonce: string;
   paused: boolean;
-  /** Engine-side "stop following, keep my positions": the keeper sends this account no copies (not contract-enforced). */
-  detached?: boolean;
+  /**
+   * Leaders this account stopped following while keeping its positions (MirrorAccount.leaderDetached). Enforced by
+   * the account's own contract: every copy naming one is refused (Blocked LeaderDetached), opens and closes.
+   */
+  detachedLeaders?: number[];
   expiry: number;
   policy: Policy | null;
   positions: Position[];
@@ -290,6 +297,8 @@ export type FeedKind =
   | "MarketClosed"
   | "EngineShrunk"
   | "EngineSkipped"
+  | "LeaderDetached"
+  /** Retired engine-held detach (no tx); old rows only. */
   | "Detached";
 
 /** CopyProof from the Mirrored event (all PNS; deviation positive = follower paid worse than the leader's entry). */

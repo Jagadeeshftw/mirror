@@ -29,7 +29,6 @@ type AccountRow = {
   flatten_on_stop: number;
   max_builder_fee_per_100k: number | null;
   paused: number;
-  detached?: number | null;
   net_deposits: string;
   funded_block: number | null;
   last_activity_ts: number | null;
@@ -63,7 +62,7 @@ export class Views {
   async account(address: string) {
     const r = this.db.get<AccountRow>('SELECT * FROM accounts WHERE address = ?', address.toLowerCase());
     if (!r) return undefined;
-    const leaders = this.db.all<{ leader_id: number; ratio_bps: number; budget_cns: string; loss_stop_bps: number; stopped: number }>('SELECT * FROM account_leaders WHERE account = ?', r.address);
+    const leaders = this.db.all<{ leader_id: number; ratio_bps: number; budget_cns: string; loss_stop_bps: number; stopped: number; detached: number }>('SELECT * FROM account_leaders WHERE account = ?', r.address);
     const markets = this.db.all<{ perp_id: number; max_notional_cns: string; halted: number }>('SELECT * FROM account_markets WHERE account = ?', r.address);
     const levels = this.db.all<{ perp_id: number; side: number; stop_loss_pns: string; take_profit_pns: string; slippage_bps: number }>('SELECT * FROM account_levels WHERE account = ?', r.address);
     const addr = getAddress(r.address);
@@ -113,7 +112,7 @@ export class Views {
             leaders.map(async (l) => {
               const b = await this.reads.leaderBook(addr, l.leader_id).catch(() => undefined);
               return b
-                ? { leaderAccountId: l.leader_id, unrealizedPnlCNS: b.unrealizedCNS.toString(), realizedPnlCNS: b.realizedCNS.toString(), marginCNS: b.marginCNS.toString(), budgetCNS: l.budget_cns, stopped: b.stopped }
+                ? { leaderAccountId: l.leader_id, unrealizedPnlCNS: b.unrealizedCNS.toString(), realizedPnlCNS: b.realizedCNS.toString(), marginCNS: b.marginCNS.toString(), budgetCNS: l.budget_cns, stopped: b.stopped, detached: l.detached === 1 }
                 : undefined;
             }),
           )
@@ -153,8 +152,11 @@ export class Views {
       /** Builder fees Perpl charged on this account's copies and match-now orders (sum of proof.builderFeeCNS). */
       builderFeesCNS: sumBuilderFees(feeRows).toString(),
       paused: r.paused === 1,
-      /** Owner-signed "stop following, keep my positions": the keeper sends this account no copies (not contract-enforced). */
-      detached: r.detached === 1,
+      /**
+       * Leaders this account stopped following while keeping its positions (MirrorAccount.leaderDetached, from
+       * LeaderDetachedSet). Enforced by the account's own contract: every copy naming one is refused (Blocked LeaderDetached).
+       */
+      detachedLeaders: leaders.filter((l) => l.detached === 1).map((l) => l.leader_id),
       expiry: r.expiry,
       policy: r.max_leverage_hdths
         ? {
@@ -167,7 +169,7 @@ export class Views {
             stopSlippageBps: r.stop_slippage_bps,
             flattenOnStop: r.flatten_on_stop === 1,
             maxBuilderFeePer100K: r.max_builder_fee_per_100k ?? 0,
-            leaders: leaders.map((l) => ({ accountId: l.leader_id, ratioBps: l.ratio_bps, budgetCNS: l.budget_cns, lossStopBps: l.loss_stop_bps, stopped: l.stopped === 1 })),
+            leaders: leaders.map((l) => ({ accountId: l.leader_id, ratioBps: l.ratio_bps, budgetCNS: l.budget_cns, lossStopBps: l.loss_stop_bps, stopped: l.stopped === 1, detached: l.detached === 1 })),
             markets: markets.map((m) => ({ perpId: m.perp_id, maxNotionalCNS: m.max_notional_cns, halted: m.halted === 1 })),
           }
         : null,

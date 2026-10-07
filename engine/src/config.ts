@@ -96,7 +96,11 @@ const EnvSchema = z.object({
   /** Headroom for book- and price-dependent calls (keeper copies, stop triggers, match now, demo orders). */
   BOOK_GAS_LIMIT_MULTIPLIER: z.coerce.number().min(1).default(1.3),
   TX_TIMEOUT_MS: int(20_000),
-  /** Block reasons for which a blocked opening copy is still submitted so the rule hit is recorded onchain. */
+  /**
+   * Block reasons for which a blocked opening copy is still submitted so the rule hit is recorded onchain.
+   * LeaderDetached (22, "Stopped following this leader (positions kept)") is never listed: the copier sends no
+   * copies of a leader the account detached (services/detach.ts).
+   */
   BLOCKED_SUBMIT_REASONS: z
     .string()
     .default(

@@ -9,7 +9,7 @@ Mirror is designed so that the worst a compromised keeper or backend can do is p
 
 | Role | Who | Can |
 |---|---|---|
-| Owner | Your passkey-derived address (Mera) | Everything: deposit, set policy, set levels, follow, match now, pause, close a market, close all, withdraw, sweep, exchange call. |
+| Owner | Your passkey-derived address (Mera) | Everything: deposit, set policy, set levels, follow, match now, pause, stop following a leader, close a market, close all, withdraw, sweep, exchange call. |
 | Relayer | Anyone, in practice the Mirror relayer | Submit actions the owner has **signed** (EIP-712) and gasless deposits the owner has signed. Cannot change what was signed. |
 | Keeper | Addresses in the KeeperRegistry | Call `mirror(order)` only. |
 | Anyone | Any address | Call `triggerLevel`, `triggerAccountStop` and `triggerLeaderStop`, which only succeed when the stop's condition is true onchain and only send reduce-only closes. |
@@ -101,6 +101,7 @@ The daily loss stop and the high-water-mark stop compare equity with a baseline.
 - **Pause** (`setPaused(true)`) stops new opening copies immediately. Closing copies still go through, so the keeper can follow the leader out of a position.
 - **Close a market** (`closeMarket(perpId, slippageBps)`, signed action 10, up to 20%) closes the whole position in one market with an IOC order bounded at mark ± slippage.
 - **Close all** (`closeAll(slippageBps)`, up to 20%) pauses and closes every open position the same way.
+- **Stop following, keep my positions** (`setLeaderDetached(leader, true)`, signed action 11): your contract refuses every copy from that leader, opens and closes, so its positions stay exactly as they are until you close them. This is enforced by your own MirrorAccount, not by the keeper. Pause is account-wide and still mirrors the leader's exits; stop following is per leader and mirrors nothing from it.
 - **Remove a leader**: its positions stay open and are no longer mirrored, so you decide when to close them.
 - **Withdraw** pulls collateral from Perpl as needed and sends it to the owner.
 - **Expiry**: after your policy's expiry the account only reduces exposure.

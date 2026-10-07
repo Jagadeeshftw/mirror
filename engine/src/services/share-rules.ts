@@ -1,5 +1,4 @@
-// Shared position links: the pure parts. Owner-signed typed data (the account's "Mirror Account" v1 domain, as
-// Detach), link ids, the friend's note clean-up, and the level checks a suggestion must pass before the owner
+// Shared position links: the pure parts. Owner-signed typed data (the account's "Mirror Account" v1 domain), link ids, the friend's note clean-up, and the level checks a suggestion must pass before the owner
 // ever sees it: the contract's own _setLevels rules for the position's side plus "not already hit at the mark".
 import { getAddress, recoverTypedDataAddress, type Address, type Hex } from 'viem';
 import { LONG, type Side } from '../domain/types.js';
@@ -14,7 +13,7 @@ export type ShareMessage =
   | { primaryType: 'ShareRevoke'; message: { linkId: Hex; deadline: bigint } }
   | { primaryType: 'ShareDecline'; message: { suggestionId: bigint; deadline: bigint } };
 
-/** A signature is accepted for at most this long after it is made (as Detach). */
+/** A signature is accepted for at most this long after it is made. */
 export const MAX_SHARE_TTL_SEC = 3600;
 export const NOTE_MAX = 140;
 /** uint64 (Level.stopLossPNS / takeProfitPNS). */

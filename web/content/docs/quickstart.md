@@ -45,7 +45,8 @@ One relayed transaction then sets your policy, resumes copying and places the ma
 ## 5. Stay in control
 
 - **Pause** stops new copies. Reducing positions is still allowed.
+- **Stop following, keep my positions** stops every copy from one leader, opens and closes, and leaves its positions open. Your own contract enforces it. Follow the leader again to resume.
 - **Close all** pauses and closes every open position with bounded slippage.
 - **Withdraw** sends AUSD back to you. It is gasless and always goes to the owner.
 
-All three are signed with your passkey and relayed, so they work even if you hold no MON.
+All four are signed with your passkey and relayed, so they work even if you hold no MON.

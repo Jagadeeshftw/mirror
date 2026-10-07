@@ -24,6 +24,8 @@ export const RULE_NAMES: Record<string, string> = {
   LeaderLossStop: "Leader loss stop",
   MarketHalted: "Market halted by a stop",
   CloseBelowTarget: "Close below target",
+  BuilderFeeTooHigh: "Fee cap",
+  LeaderDetached: "Stopped following this leader (positions kept)",
   ThinBook: "Thin book",
   BookUnavailable: "Book unavailable",
   LeaderSizeOrPriceUnknown: "Leader size or price unknown",

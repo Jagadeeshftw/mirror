@@ -86,10 +86,11 @@ Each succeeds only when its condition is true onchain and only sends reduce-only
 | Function | Notes |
 |---|---|
 | `setPolicy(Policy)` | See [Policy reference](/docs/policy-reference). |
-| `follow(Policy, MirrorOrder[] matches)` | Set policy, unpause, match now. |
+| `follow(Policy, MirrorOrder[] matches)` | Set policy, unpause, clear the detached flag of every leader it names, match now. |
 | `matchNow(MirrorOrder[] matches)` | Opening orders only, up to 16. |
 | `setLevels(Level[] levels)` | Set or clear stop-loss / take-profit levels per market. |
 | `setPaused(bool)` | Pause or resume opening copies. |
+| `setLeaderDetached(uint32 leaderAccountId, bool detached)` | "Stop following, keep my positions" for one leader. While set, every copy naming that leader (keeper opens and closes, and match now) is refused with `LeaderDetached`; its positions stay open and attributed to it. Reverts `InvalidPolicy("leader")` when detaching a leader not in the policy. |
 | `closeMarket(uint32 perpId, uint16 slippageBps)` | Close the whole position in one market. |
 | `closeAll(uint16 slippageBps)` | Pause and close every position. |
 | `withdraw(uint256 amount)` | Always pays the owner. |
@@ -99,7 +100,7 @@ Each succeeds only when its condition is true onchain and only sends reduce-only
 
 ### Views
 
-`owner()`, `perplAccountId()`, `paused()`, `netDeposits()`, `actionNonce()`, `leaders()`, `marketIds()`, `markets(perpId)`, `level(perpId)`, `marketLeader(perpId)`, `leaderBook(leader) → (marginCNS, unrealizedCNS, realizedCNS, stopped)`, `leaderRealizedCNS(leader)`, `leaderStopped(leader)`, `equity()`, `targetLots(perpId, leader, side)`, `frontRunPermitUsed(digest)`, `actionDigest(Action)`, `DEPOSIT_CAP()`, `MAX_LEADERS()`, `MAX_MARK_ORACLE_GAP_BPS()`, and a getter for every policy scalar (`maxEntryDeviationBps()`, `stopSlippageBps()`, `flattenOnStop()` and so on).
+`owner()`, `perplAccountId()`, `paused()`, `netDeposits()`, `actionNonce()`, `leaders()`, `marketIds()`, `markets(perpId)`, `level(perpId)`, `marketLeader(perpId)`, `leaderBook(leader) → (marginCNS, unrealizedCNS, realizedCNS, stopped)`, `leaderRealizedCNS(leader)`, `leaderStopped(leader)`, `leaderDetached(leader)`, `equity()`, `targetLots(perpId, leader, side)`, `frontRunPermitUsed(digest)`, `actionDigest(Action)`, `DEPOSIT_CAP()`, `MAX_LEADERS()`, `MAX_MARK_ORACLE_GAP_BPS()`, and a getter for every policy scalar (`maxEntryDeviationBps()`, `stopSlippageBps()`, `flattenOnStop()` and so on).
 
 ## Events
 
@@ -117,6 +118,7 @@ Each succeeds only when its condition is true onchain and only sends reduce-only
 | `LevelSet(uint32 indexed perpId, uint8 side, uint64 stopLossPNS, uint64 takeProfitPNS, uint16 slippageBps)` | A level was set or cleared. |
 | `StopTriggered(address indexed caller, StopKind indexed kind, uint32 indexed scope, uint256 limit, uint256 actual, uint256 oraclePNS, uint256 positionsClosed)` | A stop was executed. `scope` is the perpId (levels), the leader (leader stop) or 0 (account stop). For levels, `limit` is the level, `actual` the mark, `oraclePNS` the Chainlink price if fresh (else 0) and the last field the lots closed. |
 | `LeaderStopped(uint32 indexed leaderAccountId, int256 pnlCNS, uint256 limitCNS)` | A leader's loss stop was hit. |
+| `LeaderDetachedSet(uint32 indexed leaderAccountId, bool detached)` | A leader was detached (stop following, keep positions) or attached again: by the owner, by `follow()` naming it, or by its removal from the policy. |
 | `MarketClosed(uint32 indexed perpId, uint16 slippageBps, uint256 lotsBefore, uint256 lotsAfter)` | The owner closed one market. |
 | `ClosedAll(uint16 slippageBps, uint256 positionsClosed)` | Close all completed. |
 | `ExchangeCalled(bytes data, bytes result)` | The owner used the escape hatch. |
@@ -165,6 +167,7 @@ struct CopyProof {
 | 19 | `MarketHalted` | 0 / perpId |
 | 20 | `CloseBelowTarget` | target lots / lots after the close |
 | 21 | `BuilderFeeTooHigh` | your signed `maxBuilderFeePer100K` / the account's fixed builder fee (20) |
+| 22 | `LeaderDetached` | 0 / leader account id. You stopped following this leader; applies to opens and closes |
 
 ## Action kinds
 
@@ -182,6 +185,7 @@ Signed owner actions run through `execute(Action, signature)`. `data` is the ABI
 | 8 | `ACTION_MATCH_NOW` | `abi.encode(MirrorOrder[])` |
 | 9 | `ACTION_SET_LEVELS` | `abi.encode(Level[])` |
 | 10 | `ACTION_CLOSE_MARKET` | `abi.encode(uint32 perpId, uint16 slippageBps)` |
+| 11 | `ACTION_SET_LEADER_DETACHED` | `abi.encode(uint32 leaderAccountId, bool detached)` |
 
 ## EIP-712 domain
 

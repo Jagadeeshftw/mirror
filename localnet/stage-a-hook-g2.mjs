@@ -16,7 +16,12 @@
 //   trigger <owner> <perp>                       mark past the take-profit, a STRANGER calls triggerLevel
 //   mark-reset <perp>                            the mark saved by trigger / suggest
 //   halted <owner> <perp> <0|1>                  wait for the market halt flag onchain
-//   paused <owner> <0|1> [detached 0|1]          wait for paused onchain (and the engine's detached flag)
+//   paused <owner> <0|1>                         wait for paused onchain and in the engine view
+//   detached <owner> <leaderId> <0|1>            wait for MirrorAccount.leaderDetached(leader) onchain, the engine's
+//                                                detachedLeaders and the LeaderDetached feed row (from the tx)
+//   keeper-exit <owner> <leaderId> <perp>        a test-only keeper sends the leader's exit (close of the user's whole
+//                                                position) straight to the contract: expect Blocked LeaderDetached (22)
+//                                                and the position kept
 //   leader2                                      second leader: fresh key, faucet, its own Perpl account (l2Id)
 //   leaders <owner> <l2Id>                       two leaders onchain with their budgets
 //   book <owner> <leaderId> [var]                leaderBook margin of one leader (VAR margin_<id> or var)
@@ -27,7 +32,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { keccak256, toHex } from "viem";
-import { LOCALNET, MA, T, X, acct, apiClient, ausdOf, env, faucet, leaderTrade, position, pub, waitFor, walletOf } from "./e2e-web/chain.mjs";
+import { LOCALNET, MA, T, X, acct, apiClient, ausdOf, env, faucet, leaderTrade, position, pub, testKeeperMirror, waitFor, walletOf } from "./e2e-web/chain.mjs";
 
 const PORT = Number(process.env.E2E_ENGINE_PORT ?? 8828);
 const SITE = `http://127.0.0.1:${process.env.STAGEA_SITE_PORT ?? 8819}`;
@@ -215,8 +220,36 @@ switch (cmd) {
     const A = await userAccount(a[0]);
     const want = a[1] === "1";
     await waitFor("paused onchain", async () => ((await read(A, "paused")) === want ? "ok" : null), 60_000, 1000);
-    const v = await waitFor("engine view", async () => { const x = await api("GET", `/v1/accounts/${A}`); return x.paused === want && (a[2] === undefined || x.detached === (a[2] === "1")) && x; }, 60_000, 1000);
-    console.log(J({ paused: v.paused, detached: v.detached }));
+    const v = await waitFor("engine view", async () => { const x = await api("GET", `/v1/accounts/${A}`); return x.paused === want && x; }, 60_000, 1000);
+    console.log(J({ paused: v.paused, detachedLeaders: v.detachedLeaders }));
+    break;
+  }
+  case "detached": {
+    const A = await userAccount(a[0]);
+    const id = Number(a[1]);
+    const want = a[2] === "1";
+    await waitFor("leaderDetached onchain", async () => ((await read(A, "leaderDetached", [id])) === want ? "ok" : null), 60_000, 1000);
+    const v = await waitFor("engine view", async () => { const x = await api("GET", `/v1/accounts/${A}`); return (x.detachedLeaders ?? []).includes(id) === want && x; }, 60_000, 1000);
+    const item = await waitFor("LeaderDetached feed row", async () => (await feed(A)).find((i) => i.kind === "LeaderDetached" && Number(i.leaderAccountId) === id && i.data?.detached === want), 60_000, 1000);
+    console.log(J({ leaderDetached: want, paused: v.paused, detachedLeaders: v.detachedLeaders, feed: { onchain: item.onchain, tx: item.txHash, label: item.data?.label } }));
+    out("detachTx", short(item.txHash));
+    if (!item.onchain || !item.txHash) fail("the LeaderDetached row is not from an onchain transaction");
+    break;
+  }
+  case "keeper-exit": {
+    const A = await userAccount(a[0]);
+    const id = Number(a[1]);
+    const perp = Number(a[2]);
+    const p = await position(perp, Number(await read(A, "perplAccountId")));
+    if (p.lots === 0n) fail("the user holds no position to exit");
+    // Close long (2) for a long, close short (3) for a short; a bound 3% through the mark.
+    const long = p.side === 0;
+    const r = await testKeeperMirror(A, { leaderAccountId: id, perpId: perp, orderType: long ? 2 : 3, lotLNS: p.lots, pricePNS: long ? (p.mark * 970n) / 1000n : (p.mark * 1030n) / 1000n }, "g2");
+    const after = await lotsOf(A, perp);
+    const item = await waitFor("engine feed shows the Blocked", async () => (await feed(A)).find((i) => i.kind === "Blocked" && i.txHash?.toLowerCase() === r.hash.toLowerCase()), 30_000, 700).catch(() => null);
+    console.log(J({ tx: r.hash, status: r.status, blocked: r.blocked, mirrored: r.mirrored, before: p.lots, after, feedReason: item?.reason ?? null }));
+    out("blockedTx", short(r.hash));
+    if (r.status !== "success" || r.blocked?.reason !== 22 || r.mirrored || after !== p.lots) fail("the contract did not refuse the detached leader's exit");
     break;
   }
   case "leader2": {

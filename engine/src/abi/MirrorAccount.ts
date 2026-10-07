@@ -108,6 +108,19 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "function",
+    "name": "ACTION_SET_LEADER_DETACHED",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "ACTION_SET_LEVELS",
     "inputs": [],
     "outputs": [
@@ -1047,6 +1060,25 @@ export const mirrorAccountAbi = [
   },
   {
     "type": "function",
+    "name": "leaderDetached",
+    "inputs": [
+      {
+        "name": "leaderAccountId",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "leaderRealizedCNS",
     "inputs": [
       {
@@ -1496,6 +1528,24 @@ export const mirrorAccountAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "setLeaderDetached",
+    "inputs": [
+      {
+        "name": "leaderAccountId",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "detached",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -1975,6 +2025,25 @@ export const mirrorAccountAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "LeaderDetachedSet",
+    "inputs": [
+      {
+        "name": "leaderAccountId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "detached",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
       }
     ],
     "anonymous": false

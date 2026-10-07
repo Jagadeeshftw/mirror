@@ -101,6 +101,7 @@ export function normalizeAccount(raw: any): MirrorAccount {
     ...(l.marginCNS !== undefined && l.marginCNS !== null ? { marginCNS: str(l.marginCNS) } : {}),
     ...(l.budgetCNS !== undefined && l.budgetCNS !== null ? { budgetCNS: str(l.budgetCNS) } : {}),
     ...(l.stopped !== undefined ? { stopped: !!l.stopped } : {}),
+    ...(l.detached !== undefined ? { detached: !!l.detached } : {}),
   }));
   const sum = (k: "realisedCNS" | "unrealisedCNS") => byLeader.reduce((s, l) => s + big(l[k]), 0n).toString();
   const policy = raw?.policy ?? null;
@@ -122,6 +123,10 @@ export function normalizeAccount(raw: any): MirrorAccount {
     depositCapCNS: str(raw?.depositCapCNS ?? depositCap),
     actionNonce: str(raw?.actionNonce),
     paused: !!raw?.paused,
+    // Engine: MirrorAccount.leaderDetached per leader ("stop following, keep my positions"; contract-enforced).
+    detachedLeaders: Array.isArray(raw?.detachedLeaders)
+      ? raw.detachedLeaders.map(Number)
+      : (policy?.leaders ?? []).filter((l: any) => l?.detached).map((l: any) => Number(l.accountId)),
     expiry: Number(raw?.expiry ?? policy?.expiry ?? 0),
     policy,
     positions,
@@ -165,6 +170,7 @@ function blockRule(reason: string, limit: unknown, data: Record<string, unknown>
   // LeaderBudgetExceeded(limit = budget, actual = margin with this copy), LeaderLossStop(limit = loss limit, actual = loss).
   if (reason === "MarketHeldByOtherLeader") return `Market held by ${leaderText(big(data?.actual))}`;
   if (reason === "LeaderBudgetExceeded") return `Leader budget ${cnsText(lim)} (copy needs ${cnsText(big(data?.actual))})`;
+  if (reason === "LeaderDetached") return "Stopped following this leader (positions kept)";
   if (reason === "LeaderLossStop") return lim > 0n ? `Leader loss stop: lost ${cnsText(big(data?.actual))} of ${cnsText(lim)}` : "Leader loss stop hit";
   if (reason === "LeverageTooHigh") p.maxLeverageHdths = Number(lim);
   else if (reason === "ExceedsMaxNotional") p.markets = [{ perpId: 0, maxNotionalCNS: lim.toString() }];
