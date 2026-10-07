@@ -86,6 +86,13 @@ if (networkName === "local" && !/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$
 const send = flag("send");
 const headroom = Number(opt("headroom", "1.15"));
 const capAusd = Number(opt("cap", networkName === "mainnet" ? "25" : "200"));
+// Perpl builder attribution: Mirror is builder 26; 20 per 100,000 = 0.02% of opening size (confirmed 7 Oct 2026).
+const builderId = Number(opt("builder-id", "26"));
+const builderFee = Number(opt("builder-fee", "20"));
+if (!Number.isInteger(builderId) || builderId < 0 || builderId > 255) throw new Error("--builder-id must be 0..255");
+if (!Number.isInteger(builderFee) || builderFee < 0 || builderFee > 1000 || (builderId === 0 && builderFee !== 0)) {
+  throw new Error("--builder-fee must be 0..1000 per 100,000, and 0 without a builder");
+}
 const keepers = (opt("keepers", "") || "").split(",").filter(Boolean).map((k) => {
   if (!isAddress(k)) throw new Error(`bad keeper address ${k}`);
   return getAddress(k);
@@ -175,7 +182,7 @@ const steps = [
   {
     label: "deploy MirrorAccountFactory (+ MirrorAccount implementation)",
     to: undefined,
-    data: encodeDeployData({ abi: factoryArt.abi, bytecode: factoryArt.bytecode, args: [exchange, collateral, registryAddr, cap] }),
+    data: encodeDeployData({ abi: factoryArt.abi, bytecode: factoryArt.bytecode, args: [exchange, collateral, registryAddr, cap, builderId, builderFee] }),
     expectCodeAt: factoryAddr,
   },
 ];
@@ -228,6 +235,7 @@ console.log(`network    ${networkName} (chain ${chainId}) via ${net.rpc}`);
 console.log(`deployer   ${account.address}  nonce ${nonce}  balance ${fmt(await client.getBalance({ address: account.address }))}`);
 console.log(`perpl      ${exchange}  collateral ${collateral}  min open ${Number(minOpen) / 1e6} AUSD`);
 console.log(`cap        ${capAusd} AUSD per account`);
+console.log(`builder    id ${builderId}, fee ${builderFee} per 100,000 (${(builderFee / 1000).toFixed(3)}%) on opening size only`);
 console.log(`predicted  KeeperRegistry ${registryAddr}`);
 console.log(`           MirrorAccountFactory ${factoryAddr}`);
 console.log(`           MirrorAccount implementation ${implAddr}`);
@@ -285,6 +293,8 @@ const deployment = {
   exchange,
   collateral,
   depositCap: Number(cap),
+  builderId,
+  builderFeePer100K: builderFee,
   keepers,
   block: results[0].block,
   transactions: results,
@@ -295,5 +305,5 @@ writeFileSync(out, JSON.stringify(deployment, null, 2) + "\n");
 console.log(`\nwrote ${out}`);
 console.log("verify (no transaction):");
 console.log(`  cd contracts && forge verify-contract ${registryAddr} src/KeeperRegistry.sol:KeeperRegistry --chain ${chainId} --verifier sourcify --constructor-args $(cast abi-encode "c(address)" ${account.address})`);
-console.log(`  cd contracts && forge verify-contract ${factoryAddr} src/MirrorAccountFactory.sol:MirrorAccountFactory --chain ${chainId} --verifier sourcify --constructor-args $(cast abi-encode "c(address,address,address,uint256)" ${exchange} ${collateral} ${registryAddr} ${cap})`);
-console.log(`  cd contracts && forge verify-contract ${implAddr} src/MirrorAccount.sol:MirrorAccount --chain ${chainId} --verifier sourcify --constructor-args $(cast abi-encode "c(address,address,address,address,uint256)" ${exchange} ${collateral} ${registryAddr} ${factoryAddr} ${cap})`);
+console.log(`  cd contracts && forge verify-contract ${factoryAddr} src/MirrorAccountFactory.sol:MirrorAccountFactory --chain ${chainId} --verifier sourcify --constructor-args $(cast abi-encode "c(address,address,address,uint256,uint8,uint16)" ${exchange} ${collateral} ${registryAddr} ${cap} ${builderId} ${builderFee})`);
+console.log(`  cd contracts && forge verify-contract ${implAddr} src/MirrorAccount.sol:MirrorAccount --chain ${chainId} --verifier sourcify --constructor-args $(cast abi-encode "c(address,address,address,address,uint256,uint8,uint16)" ${exchange} ${collateral} ${registryAddr} ${factoryAddr} ${cap} ${builderId} ${builderFee})`);
