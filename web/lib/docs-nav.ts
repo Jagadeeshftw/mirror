@@ -16,6 +16,7 @@ export const DOC_GROUPS: DocGroup[] = [
     items: [
       { slug: "how-copying-works", title: "How copying works" },
       { slug: "safety-model", title: "Safety model" },
+      { slug: "adversarial-walkthrough", title: "Adversarial walk-through" },
       { slug: "policy-reference", title: "Policy reference" },
       { slug: "why-monad", title: "Why Monad" },
     ],
