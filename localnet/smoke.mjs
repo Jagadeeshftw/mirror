@@ -72,7 +72,7 @@ check("relayed permit deposit opened a Perpl account owned by the contract", per
 const leader = env.teamRun.demoLeaderAccountId;
 const policy = {
   maxLeverageHdths: 500, maxSlippageBps: 100, dailyLossBps: 0, drawdownBps: 0,
-  expiry: Math.floor(Date.now() / 1000) + 30 * 86400, maxEntryDeviationBps: 200, stopSlippageBps: 300, flattenOnStop: true,
+  expiry: Math.floor(Date.now() / 1000) + 30 * 86400, maxEntryDeviationBps: 200, stopSlippageBps: 300, flattenOnStop: true, maxBuilderFeePer100K: 20,
   leaders: [{ accountId: leader, ratioBps: 10_000, budgetCNS: 50_000_000n, lossStopBps: 0 }],
   markets: [{ perpId: 1, maxNotionalCNS: 100_000_000n }, { perpId: 20, maxNotionalCNS: 100_000_000n }],
 };

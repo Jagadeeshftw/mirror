@@ -3,7 +3,7 @@
 // the public API the app uses (plus direct leader trades and a stranger's trigger, as in real life).
 //
 //   cd localnet && npm start          (another shell)
-//   node e2e-api.mjs                  (starts and stops its own engine on port 8787)
+//   node e2e-api.mjs                  (starts and stops its own engine on port 8797, E2E_ENGINE_PORT)
 //
 // Writes devices/evidence/stage-a/<run>/api-e2e.json with every check, tx hash and number.
 import { spawn } from "node:child_process";
@@ -11,7 +11,7 @@ import { mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  createPublicClient, createWalletClient, defineChain, encodeAbiParameters, http, keccak256, parseSignature, toHex, zeroHash,
+  createPublicClient, createWalletClient, decodeEventLog, defineChain, encodeAbiParameters, http, keccak256, parseSignature, toHex, zeroHash,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -25,7 +25,8 @@ const T = abiOf("MockAUSD");
 const X = JSON.parse(readFileSync(join(HERE, "vendor", "perpl", "Exchange.json"), "utf8")).abi;
 const fnInputs = (name) => MA.find((f) => f.type === "function" && f.name === name).inputs;
 
-const API = process.env.API ?? "http://127.0.0.1:8787";
+const API_PORT = process.env.E2E_ENGINE_PORT ?? "8797";
+const API = `http://127.0.0.1:${API_PORT}`;
 const RUN = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const OUT = join(ROOT, "devices", "evidence", "stage-a", RUN);
 mkdirSync(OUT, { recursive: true });
@@ -40,7 +41,7 @@ const report = { run: RUN, network: "localnet", perpl: env.perplSource, checks: 
 let failures = 0;
 function check(name, ok, info = {}) {
   report.checks.push({ name, ok: !!ok, ...info });
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${Object.keys(info).length ? "  " + JSON.stringify(info).slice(0, 220) : ""}`);
+  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${Object.keys(info).length ? "  " + JSON.stringify(info, (_, v) => (typeof v === "bigint" ? v.toString() : v)).slice(0, 220) : ""}`);
   if (!ok) failures++;
 }
 async function api(method, path, body) {
@@ -72,7 +73,7 @@ const demoAccount = await predict(owners.demo.address);
 const dbPath = join(OUT, "engine.db");
 const engineEnv = {
   ...process.env,
-  NETWORK: "localnet", PORT: "8787", LOG_SUBSCRIPTION: "standard", LOG_LEVEL: "info",
+  NETWORK: "localnet", PORT: API_PORT, LOG_SUBSCRIPTION: "standard", LOG_LEVEL: "info",
   PERPL_WS_ENABLED: "0", PERPL_API_URL: "http://127.0.0.1:9/none", THIN_BOOK_GUARD_ENABLED: "0",
   KEEPER_PRIVATE_KEYS: env.testKeys.ops, RELAYER_PRIVATE_KEY: env.testKeys.ops, DEMO_LEADER_PRIVATE_KEY: env.testKeys.demoLeader,
   DEMO_FOLLOWER_ACCOUNT: demoAccount, DEMO_HOLD_MS: "5000", DEMO_IP_HOURLY: "50", DEMO_DAILY_CAP: "500",
@@ -116,7 +117,7 @@ try {
   }
   const policyBody = (leaders, maxLev = 500, dev = 100) => ({
     maxLeverageHdths: maxLev, maxSlippageBps: 100, dailyLossBps: 0, drawdownBps: 2000,
-    expiry: Math.floor(Date.now() / 1000) + 30 * 86400, maxEntryDeviationBps: dev, stopSlippageBps: 300, flattenOnStop: true,
+    expiry: Math.floor(Date.now() / 1000) + 30 * 86400, maxEntryDeviationBps: dev, stopSlippageBps: 300, flattenOnStop: true, maxBuilderFeePer100K: 20,
     leaders, markets: [{ perpId: 1, maxNotionalCNS: 100_000_000n }, { perpId: 20, maxNotionalCNS: 100_000_000n }],
   });
   const follow = (owner, account, policy, orders = []) => execute(owner, account, 7, encodeAbiParameters(fnInputs("follow"), [policy, orders]));
@@ -200,6 +201,21 @@ try {
     { leaderFillPNS: p.leaderFillPNS, leaderEntryPNS: p.leaderEntryPNS, fillPNS: p.fillPNS, entryDeviationBps: p.entryDeviationBps });
   const userClose = await waitFor("copied close after the demo hold", async () => findItem(await feed(userAccount), (i) => i.kind === "Mirrored" && Number(i.orderType) === 2), 60_000);
   check("demo leader's close is copied (down to the leader's target)", !!userClose, { tx: userClose.txHash });
+  const takerBuilder = async (hash) => {
+    const r = await pub.getTransactionReceipt({ hash });
+    for (const l of r.logs) {
+      try {
+        const e = decodeEventLog({ abi: X, data: l.data, topics: l.topics });
+        if (e.eventName === "TakerOrderFilledV2") return { builderId: Number(e.args.builderId), builderFeeCNS: e.args.builderFeeCNS, lotLNS: e.args.lotLNS, price: e.args.entryPricePNS };
+      } catch {}
+    }
+    return { builderId: 0, builderFeeCNS: 0n };
+  };
+  const openFee = await takerBuilder(userOpen.txHash);
+  const closeFee = await takerBuilder(userClose.txHash);
+  check("builder fee: Perpl charged builder 26 at 0.02% on the copied open", openFee.builderId === 26 && openFee.builderFeeCNS > 0n,
+    { builderId: openFee.builderId, builderFeeCNS: openFee.builderFeeCNS, proofBuilderFeeCNS: userOpen.proof?.builderFeeCNS });
+  check("builder fee: the copied close carried no builder and paid none", closeFee.builderId === 0 && closeFee.builderFeeCNS === 0n, closeFee);
 
   // ---- 4. blocked trade ----------------------------------------------------------------------------------
   await waitFor("demo idle", async () => (await api("GET", "/v1/demo")).busy === false || !(await api("GET", "/v1/demo")).active, 60_000, 1000).catch(() => {});
