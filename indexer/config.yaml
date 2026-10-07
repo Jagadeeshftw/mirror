@@ -60,6 +60,10 @@ contracts:
 chains:
   - id: 143 # Monad mainnet
     start_block: ${ENVIO_START_BLOCK:-54773010}
+    # The free HyperSync token allows 15 requests/min: run scripts/hypersync-proxy.mjs and set
+    # ENVIO_HYPERSYNC_URL=http://127.0.0.1:8930 so the indexer stays under the limit.
+    hypersync_config:
+      url: ${ENVIO_HYPERSYNC_URL:-https://143.hypersync.xyz}
     # HyperSync (https://143.hypersync.xyz) is the primary source when ENVIO_API_TOKEN is set.
     # ENVIO_RPC_MODE=sync switches historical sync to RPC (no token needed). Monad RPCs cap
     # eth_getLogs at 100 blocks per call, so the block interval is pinned to 100.

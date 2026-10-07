@@ -430,3 +430,15 @@ the connection is over the public proxy, `HASURA_GRAPHQL_ENDPOINT=http://<hasura
   or the transaction is outside the indexed range, the actual leader fill and latency are null and the
   deviation falls back to the keeper-reported fill (`leaderFillBasis = REPORTED`). `RiskUpdated`,
   `ExchangeCalled`, `Swept` and `ActionExecuted` are not indexed.
+
+## History load with the free HyperSync token (15 requests/min)
+
+Mirror has one free HyperSync token, limited to 15 requests per minute. Envio has no request-rate setting, so:
+
+- `indexer/scripts/hypersync-proxy.mjs` forwards HyperSync requests at 14 per minute, queues the rest in order, and waits a minute and retries on a 429. Run it next to the indexer and set `ENVIO_HYPERSYNC_URL=http://127.0.0.1:8930` (`config.yaml` reads it). The token comes from the environment (`ENVIO_API_TOKEN` or `ENVIO_TOKEN`) and is never logged or committed.
+- Measured on 7 Oct 2026 against Monad mainnet, filtering to the Perpl position events the indexer uses, one request returns about 1,000 to 1,250 events:
+  - Near Perpl's launch one request covers about 16,000 blocks; recently about 2,200 blocks (about 0.5 position events per block).
+- **Full history since Perpl's launch:** roughly 25,000 requests, about 30 hours at 14/min. Too slow for the hackathon.
+- **Plan: start about 30 days back** (`ENVIO_START_BLOCK` = head − 6,500,000 blocks): roughly 3,000 requests, about 3½ hours. That covers the 7, 30 and 90-day leader windows except the oldest part of 90 days. Positions opened before the start block are priced from the last trade (`PriceSource.LAST_TRADE`), as already handled.
+- **Testnet:** Perpl's testnet activity is far lower, so a sync from the testnet deploy block takes minutes.
+- **Live sync** after the backfill is a few requests per minute, well under the limit.
