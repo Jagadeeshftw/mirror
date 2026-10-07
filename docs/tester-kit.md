@@ -23,7 +23,7 @@ Ready to send once stage B passes. The fields in `{braces}` are filled in on the
    - Expect: a balance in the header.
 4. **Look back.** Open a leader and set your limits. Read "What if I had followed".
    - Expect: a simulation labelled as one, with copied vs blocked trades.
-5. **Follow.** Deposit 120 AUSD (the testnet minimum to open a Perpl account is 100), then Follow with match now.
+5. **Follow.** Deposit the 100 test AUSD you were sent (exactly the testnet minimum to open a Perpl account), then Follow with match now.
    - Expect: your account opens a position matching the leader at your ratio.
 6. **Set a stop.** On the position, set a stop-loss and a take-profit. Approve the passkey prompt.
    - Expect: the levels show as onchain.
@@ -43,6 +43,9 @@ Reply in the thread or by DM with any of these:
 Please don't send passkeys, recovery codes or private keys. Mirror never asks for them.
 
 ## For me: running the round
+
+- **Tester pool: 25 outside testers at 100 test AUSD each.** Perpl sent 2,500 test AUSD to the ops wallet on 7 Oct ([0x743e8690…ca4b02](https://testnet.monadvision.com/tx/0x743e86900d73d5e3fb4c13b6a316887a4bb85f135b344f8d38f8b9fd55ca4b02)). The ops wallet's first 200 stay with the team-run demo leader; the demo follower and the test user have their own 150 each. Send each tester 100 from the ops wallet to their Mirror owner address, only after the contracts are deployed, and log every send in docs/funding-ledger.md.
+- Gas for testers is paid by Mirror's relayer and keeper (the ops wallet's test MON), not by testers; watch its MON balance during the round.
 
 - Track testers in the stats page's tester view (by account address), never by name.
 - Team-run accounts are excluded from traction numbers.
