@@ -21,6 +21,7 @@ import {
 } from "@/lib/stats";
 import { API_CONFIGURED, EXPLORER_ADDRESS, EXPLORER_TX } from "@/lib/site";
 import { cn } from "@/lib/utils";
+import { CopyQuality } from "./copy-quality";
 
 const PAGE_SIZE = 25;
 
@@ -141,6 +142,8 @@ export const StatsView = () => {
           “—” means the figure is not available yet. Nothing on this page is estimated or illustrative.
         </p>
       </section>
+
+      <CopyQuality config={config} />
 
       <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_2fr]">
         <BlockedByRule stats={stats} />

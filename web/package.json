@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "build:app": "bash scripts/build-app.sh",
     "prebuild": "node scripts/sync-assetlinks.mjs",
     "build": "next build",
     "start": "next start",

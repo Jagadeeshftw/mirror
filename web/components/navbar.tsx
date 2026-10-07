@@ -3,10 +3,10 @@ import React, { useEffect, useState } from "react";
 import { Logo } from "./logo";
 import { Container } from "./container";
 import { Button } from "./ui/button";
-import { IconBrandAndroid, IconMenu2, IconX } from "@tabler/icons-react";
+import { IconBrandAndroid, IconMenu2, IconWorld, IconX } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
 import { ModeToggle } from "./mode-toggle";
-import { DOCS_URL, DOWNLOAD_URL, STATS_URL } from "@/lib/site";
+import { DOCS_URL, DOWNLOAD_URL, STATS_URL, WEB_APP_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const navlinks = [
@@ -101,11 +101,18 @@ export const MobileNavbar = () => {
                 ))}
               </div>
             </div>
-            <Button asChild size="lg" className="w-full shadow-brand">
-              <a href={DOWNLOAD_URL} onClick={() => setOpen(false)}>
-                <IconBrandAndroid /> Download for Android
-              </a>
-            </Button>
+            <div className="flex flex-col gap-3">
+              <Button asChild size="lg" variant="outline" className="w-full">
+                <a href={WEB_APP_URL} onClick={() => setOpen(false)}>
+                  <IconWorld /> Open web app
+                </a>
+              </Button>
+              <Button asChild size="lg" className="w-full shadow-brand">
+                <a href={DOWNLOAD_URL} onClick={() => setOpen(false)}>
+                  <IconBrandAndroid /> Download for Android
+                </a>
+              </Button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -130,6 +137,11 @@ export const DesktopNavbar = () => {
       </nav>
       <div className="flex items-center gap-3">
         <ModeToggle />
+        <Button asChild variant="outline">
+          <a href={WEB_APP_URL}>
+            <IconWorld /> Open web app
+          </a>
+        </Button>
         <Button asChild className="shadow-brand">
           <a href={DOWNLOAD_URL}>
             <IconBrandAndroid /> Download APK

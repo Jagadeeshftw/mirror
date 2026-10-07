@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { IconBrandAndroid, IconCheck, IconDownload } from "@tabler/icons-react";
+import { IconCheck } from "@tabler/icons-react";
 import { SiteHeader } from "@/components/site-header";
+import { DownloadActions, NotPublished, ReleaseCard } from "@/components/download/release-card";
 import { APK, BETA_DEPOSIT_CAP, BRAND, DOWNLOAD_URL, MIN_DEPOSIT } from "@/lib/site";
+import { RELEASE, apkFileName } from "@/lib/release";
 
 export const metadata: Metadata = {
   title: "Download for Android",
-  description: `Install the ${BRAND} beta APK on Android 9+: install steps, requirements and the SHA-256 checksum.`,
+  description: `Install the ${BRAND} ${RELEASE.version} beta APK on Android 9+: install steps, requirements and the SHA-256 checksum.`,
   alternates: { canonical: "/download" },
 };
 
@@ -24,7 +26,7 @@ const STEPS = [
   },
   {
     title: "Open the file",
-    text: "Open it from the download notification, or from Files → Downloads → mirror.apk.",
+    text: `Open it from the download notification, or from Files → Downloads → ${apkFileName()}.`,
   },
   {
     title: "Allow installs from this source",
@@ -53,54 +55,22 @@ export default function DownloadPage() {
                 {BRAND} for Android
               </h1>
               <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-                Copy the best traders on Perpl with your limits enforced onchain. The beta is distributed as an APK
-                you install directly, outside the Play Store.
+                Copy the best traders on Perpl with your limits enforced onchain. The beta is an APK you install directly, outside the
+                Play Store.
               </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-                {APK.available ? (
-                  <a
-                    href={APK.url}
-                    download
-                    className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 text-[15px] font-medium text-primary-foreground shadow-brand hover:bg-primary/90"
-                  >
-                    <IconDownload className="size-5" aria-hidden /> Download APK
-                  </a>
-                ) : (
-                  <span
-                    aria-disabled="true"
-                    className="inline-flex h-12 cursor-not-allowed items-center justify-center gap-2 rounded-full border border-border bg-muted px-6 text-[15px] font-medium text-muted-foreground"
-                  >
-                    <IconBrandAndroid className="size-5" aria-hidden /> APK coming soon
-                  </span>
-                )}
-                <Link
-                  href="/docs/quickstart"
-                  className="inline-flex h-12 items-center justify-center rounded-full border border-border bg-card px-6 text-[15px] font-medium hover:bg-muted"
-                >
-                  Read the quickstart
+              <DownloadActions />
+              <NotPublished />
+              <p className="mt-4 max-w-xl text-sm text-muted-foreground">
+                New here? Read the{" "}
+                <Link href="/docs/quickstart" className="text-brand underline underline-offset-2">
+                  quickstart
                 </Link>
-              </div>
-              {!APK.available && (
-                <p className="mt-4 max-w-xl rounded-2xl border border-warning/40 bg-warning/[0.06] px-4 py-3 text-sm text-foreground">
-                  The APK is not published yet. It will appear here, with its checksum, as soon as the beta build and
-                  the mainnet contracts are live.
-                </p>
-              )}
+                . On a laptop, open the web app in your browser instead.
+              </p>
             </div>
 
-            <dl className="rounded-3xl border border-border bg-card p-5 text-sm md:p-6">
-              <Row k="Version" v={APK.version} />
-              <Row k="Package" v={APK.packageName} mono />
-              <Row k="Size" v={APK.sizeLabel || "published with the release"} />
-              <Row k="Requires" v={`${APK.minAndroid}+`} />
-              <div className="pt-3">
-                <dt className="text-muted-foreground">SHA-256</dt>
-                <dd className="mt-1 break-all font-mono text-xs leading-relaxed text-foreground">
-                  {APK.sha256 || "published with the release"}
-                </dd>
-              </div>
-            </dl>
+            <ReleaseCard />
           </div>
 
           <section aria-labelledby="req-h" className="mt-16">
@@ -151,11 +121,11 @@ export default function DownloadPage() {
               </p>
               <pre className="mt-3 overflow-x-auto rounded-2xl border border-border bg-card p-4 font-mono text-xs">
                 <code>{`# macOS
-shasum -a 256 mirror.apk
+shasum -a 256 ${apkFileName()}
 # Linux
-sha256sum mirror.apk
+sha256sum ${apkFileName()}
 # Windows (PowerShell)
-Get-FileHash mirror.apk -Algorithm SHA256`}</code>
+Get-FileHash ${apkFileName()} -Algorithm SHA256`}</code>
               </pre>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 The app&apos;s signing certificate is also published in{" "}
@@ -189,10 +159,3 @@ Get-FileHash mirror.apk -Algorithm SHA256`}</code>
     </>
   );
 }
-
-const Row = ({ k, v, mono }: { k: string; v: string; mono?: boolean }) => (
-  <div className="flex items-baseline justify-between gap-4 border-b border-border py-3 first:pt-0">
-    <dt className="text-muted-foreground">{k}</dt>
-    <dd className={mono ? "font-mono text-xs text-foreground" : "text-foreground"}>{v}</dd>
-  </div>
-);

@@ -14,19 +14,14 @@ export const DOCS_URL = "/docs";
 export const CONTRACTS_URL = "/docs/contracts";
 export const STATS_URL = "/stats";
 
-/**
- * The APK. Point APK_URL at /downloads/mirror.apk (file in public/downloads/) or at a GitHub
- * release asset, set APK_AVAILABLE to true and fill in version, size and SHA-256.
- */
+/** Static facts about the Android app. Version, size, SHA-256 and URL come from public/release.json (lib/release.ts). */
 export const APK = {
-  available: false,
-  url: "/downloads/mirror.apk",
-  version: "0.1.0-beta",
-  sizeLabel: "",
-  sha256: "",
   minAndroid: "Android 9 (API 28)",
   packageName: "com.zeroxo.mirror",
 };
+
+/** The Expo web build, exported into public/app by scripts/build-app.sh and served as a SPA under /app. */
+export const WEB_APP_URL = "/app";
 
 export const GITHUB_URL = "https://github.com/Jagadeeshftw/mirror";
 export const X_HANDLE = "@MirrorOnMonad";

@@ -7,6 +7,7 @@ import {
   IconFingerprint,
   IconGasStationOff,
   IconLockAccess,
+  IconWorld,
 } from "@tabler/icons-react";
 import { Container } from "./container";
 import { Button } from "./ui/button";
@@ -15,7 +16,7 @@ import { DottedGlowBackground } from "./ui/dotted-glow-background";
 import { PhoneFrame } from "./phone/app-ui";
 import { HomeScreen } from "./phone/home-screen";
 import { FollowSheetScreen } from "./phone/follow-sheet";
-import { BRAND, DOCS_URL, DOWNLOAD_URL } from "@/lib/site";
+import { BRAND, DOCS_URL, DOWNLOAD_URL, WEB_APP_URL } from "@/lib/site";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -88,6 +89,11 @@ export const Hero = () => {
               </a>
             </Button>
             <Button asChild size="lg" variant="outline">
+              <a href={WEB_APP_URL}>
+                <IconWorld className="size-5" /> Open web app
+              </a>
+            </Button>
+            <Button asChild size="lg" variant="ghost">
               <a href={DOCS_URL}>
                 Read the docs <IconArrowRight />
               </a>

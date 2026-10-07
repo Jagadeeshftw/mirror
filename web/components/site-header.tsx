@@ -1,9 +1,9 @@
 import Link from "next/link";
 import React from "react";
-import { IconBrandAndroid, IconMenu2 } from "@tabler/icons-react";
+import { IconBrandAndroid, IconMenu2, IconWorld } from "@tabler/icons-react";
 import { Logo } from "./logo";
 import { ModeToggle } from "./mode-toggle";
-import { DOCS_URL, DOWNLOAD_URL, STATS_URL } from "@/lib/site";
+import { DOCS_URL, DOWNLOAD_URL, STATS_URL, WEB_APP_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -60,6 +60,12 @@ export const SiteHeader = ({
         <div className="ml-auto flex items-center gap-2 md:ml-4">
           {center && <div className="md:hidden">{center}</div>}
           <ModeToggle still />
+          <a
+            href={WEB_APP_URL}
+            className="hidden h-9 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted lg:inline-flex"
+          >
+            <IconWorld className="size-4" aria-hidden /> Open web app
+          </a>
           <Link
             href={DOWNLOAD_URL}
             className="hidden h-9 items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 lg:inline-flex"
@@ -86,6 +92,9 @@ export const SiteHeader = ({
                   {l.title}
                 </Link>
               ))}
+              <a href={WEB_APP_URL} className="block rounded-xl px-3 py-2 text-sm font-medium text-brand hover:bg-muted">
+                Open web app
+              </a>
             </div>
           </details>
         </div>
