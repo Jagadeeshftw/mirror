@@ -56,7 +56,9 @@ const EnvSchema = z.object({
   LOG_LEVEL: z.string().default('info'),
   CORS_ORIGINS: z.string().default('*'),
 
-  NETWORK: z.enum(['mainnet', 'localFork']).default('mainnet'),
+  NETWORK: z.enum(['mainnet', 'testnet', 'localFork', 'localnet']).default('mainnet'),
+  /** localnet: the env file written by localnet/start.mjs (Perpl's exchange from Perpl's test kit plus Mirror). */
+  LOCALNET_ENV_PATH: z.string().optional(),
   SHARED_CONFIG_PATH: z.string().optional(),
   RPC_URL: z.string().url().optional(),
   WS_RPC_URL: z.string().optional(),
@@ -70,10 +72,11 @@ const EnvSchema = z.object({
   PERPL_EXCHANGE: optAddress,
   COLLATERAL_TOKEN: optAddress,
 
-  PERPL_API_URL: z.string().default('https://app.perpl.xyz/api'),
-  PERPL_WS_URL: z.string().default('wss://app.perpl.xyz'),
+  /** Default: the selected network's Perpl API (mainnet app.perpl.xyz, testnet testnet.perpl.xyz). */
+  PERPL_API_URL: z.string().optional(),
+  PERPL_WS_URL: z.string().optional(),
   PERPL_WS_ENABLED: z.string().default('1').transform((v) => v !== '0' && v !== 'false'),
-  PERPL_CHAIN_ID: int(143),
+  PERPL_CHAIN_ID: z.coerce.number().int().optional(),
 
   KEEPER_PRIVATE_KEYS: keyList,
   RELAYER_PRIVATE_KEY: privateKey.optional(),
@@ -194,12 +197,44 @@ const NetworkSchema = z.object({
     })
     .optional(),
   markets: z.array(MarketSchema).optional(),
+  perplApi: z.string().optional(),
+  perplWs: z.string().optional(),
 });
 
 const SharedSchema = z.object({
   product: z.string(),
-  networks: z.object({ mainnet: NetworkSchema, localFork: NetworkSchema.partial() }),
+  networks: z.object({ mainnet: NetworkSchema, testnet: NetworkSchema.optional(), localFork: NetworkSchema.partial() }),
 });
+
+/** localnet/out/env.json, as written by localnet/start.mjs. */
+const LocalnetSchema = z.object({
+  chainId: z.number(),
+  rpcUrl: z.string(),
+  wsUrl: z.string().optional(),
+  perplExchange: z.string(),
+  collateral: z.string(),
+  minAccountOpenCNS: z.string().optional(),
+  mirror: z.object({ factory: z.string(), keeperRegistry: z.string(), implementation: z.string(), deployBlock: z.number() }),
+  teamRun: z.object({ demoLeaderAddress: z.string(), demoLeaderAccountId: z.number() }),
+  markets: z.array(MarketSchema),
+});
+
+function localnetNetwork(path: string): z.infer<typeof NetworkSchema> {
+  const l = LocalnetSchema.parse(JSON.parse(readFileSync(path, 'utf8')));
+  return {
+    chainId: l.chainId,
+    rpc: l.rpcUrl,
+    wss: l.wsUrl,
+    perplExchange: l.perplExchange,
+    perplDeployBlock: 0,
+    collateral: l.collateral,
+    collateralDecimals: 6,
+    minAccountOpenCNS: l.minAccountOpenCNS ?? '10000000',
+    mirror: { factory: l.mirror.factory, implementation: l.mirror.implementation, keeperRegistry: l.mirror.keeperRegistry, deployBlock: l.mirror.deployBlock },
+    teamRun: { demoLeaderAddress: l.teamRun.demoLeaderAddress, demoLeaderAccountId: l.teamRun.demoLeaderAccountId, demoFollowerAccount: null },
+    markets: l.markets,
+  };
+}
 
 export type MarketMeta = z.infer<typeof MarketSchema>;
 
@@ -224,6 +259,9 @@ export interface Config {
   demoLeaderKey: Hex | undefined;
   demoFollowerAccount: Address | undefined;
   teamRun: Set<string>;
+  perplApiUrl: string;
+  perplWsUrl: string;
+  perplChainId: number;
 }
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
@@ -234,7 +272,13 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
   const env = parsed.data;
   const sharedPath = env.SHARED_CONFIG_PATH ?? join(engineRoot, '..', 'shared', 'config.json');
   const shared = SharedSchema.parse(JSON.parse(readFileSync(sharedPath, 'utf8')));
-  const main = shared.networks.mainnet;
+  // `main` is the selected network's full description; localFork overlays the mainnet one (same chain state).
+  const main =
+    env.NETWORK === 'testnet'
+      ? (shared.networks.testnet ?? (() => { throw new Error('shared config has no testnet network'); })())
+      : env.NETWORK === 'localnet'
+        ? localnetNetwork(env.LOCALNET_ENV_PATH ?? join(engineRoot, '..', 'localnet', 'out', 'env.json'))
+        : shared.networks.mainnet;
   const net = { ...main, ...(env.NETWORK === 'localFork' ? shared.networks.localFork : {}) };
 
   const addr = (v: string | null | undefined): Address | undefined => (v && isAddress(v) ? getAddress(v) : undefined);
@@ -253,7 +297,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     env,
     chainId: net.chainId ?? 143,
     rpcUrl: env.RPC_URL ?? net.rpc ?? main.rpc,
-    wsRpcUrl: env.WS_RPC_URL || (env.NETWORK === 'mainnet' ? main.wss : undefined),
+    wsRpcUrl: env.WS_RPC_URL || (env.NETWORK !== 'localFork' ? main.wss : undefined),
     explorerTx: main.explorerTx ?? 'https://monadvision.com/tx/',
     explorerAddress: main.explorerAddress ?? 'https://monadvision.com/address/',
     exchange,
@@ -270,5 +314,8 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     demoLeaderKey: env.DEMO_LEADER_PRIVATE_KEY as Hex | undefined,
     demoFollowerAccount: env.DEMO_FOLLOWER_ACCOUNT ?? addr(main.teamRun?.demoFollowerAccount),
     teamRun,
+    perplApiUrl: env.PERPL_API_URL ?? main.perplApi ?? 'https://app.perpl.xyz/api',
+    perplWsUrl: env.PERPL_WS_URL ?? main.perplWs ?? 'wss://app.perpl.xyz',
+    perplChainId: env.PERPL_CHAIN_ID ?? net.chainId ?? 143,
   };
 }

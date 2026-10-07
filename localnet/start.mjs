@@ -284,4 +284,4 @@ createServer(async (req, res) => {
   } catch (err) {
     return reply(500, { error: String(err.shortMessage ?? err.message) });
   }
-}).listen(FAUCET_PORT, "127.0.0.1");
+}).listen(FAUCET_PORT, "127.0.0.1", () => console.log(`faucet listening on ${env.faucetUrl}; localnet fully up`));

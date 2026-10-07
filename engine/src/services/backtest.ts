@@ -3,6 +3,8 @@ import { LONG, SHORT } from '../domain/types.js';
 import { backtestAssumptions, runBacktest } from '../domain/backtest-run.js';
 import type { BtEvent, BtKind, BtMarket, BtParams } from '../domain/backtest-types.js';
 import type { IndexerClient } from './indexer.js';
+import type { Db } from '../db.js';
+import type { MarketMeta } from '../config.js';
 import type { CopyQualityService } from './quality.js';
 
 const u = z.union([z.string(), z.number()]).transform((v) => BigInt(v));
@@ -64,9 +66,12 @@ export class BacktestService {
     private readonly indexer: IndexerClient,
     private readonly quality: CopyQualityService,
     private readonly opts: BacktestOptions,
+    /** Without an indexer: the leader events the engine itself recorded (perpl_events), e.g. on a localnet. */
+    private readonly local?: { db: Db; markets: MarketMeta[] },
   ) {}
 
   async history(leaderId: number, since: number): Promise<{ events: BtEvent[]; markets: BtMarket[]; truncated: boolean }> {
+    if (!this.indexer.enabled && this.local) return this.localHistory(leaderId, since);
     if (!this.indexer.enabled) throw err(503, 'history unavailable: no indexer configured (INDEXER_GRAPHQL_URL) and no Perpl REST history client');
     const events: BtEvent[] = [];
     const markets = new Map<number, BtMarket>();
@@ -94,6 +99,54 @@ export class BacktestService {
       if (d.PositionEvent.length < PAGE) return { events, markets: [...markets.values()], truncated: false };
     }
     return { events, markets: [...markets.values()], truncated: true };
+  }
+
+  /**
+   * History from the engine's own perpl_events. Average entry is rebuilt from the fills; a decrease carries no
+   * price in Perpl's event, so its price is the market's last recorded trade before it (else the entry).
+   */
+  private localHistory(leaderId: number, since: number): { events: BtEvent[]; markets: BtMarket[]; truncated: boolean } {
+    const { db, markets } = this.local!;
+    type LRow = { perp_id: number; kind: string; position_type: number | null; lots_after: string | null; lots_before: string | null; price: string | null; leverage: number | null; ts: number | null; block: number };
+    const rows = db.all<LRow>(
+      `SELECT perp_id, kind, position_type, lots_after, lots_before, price, leverage, ts, block FROM perpl_events
+       WHERE account_id = ? AND (ts IS NULL OR ts >= ?) ORDER BY block, log_index LIMIT ?`,
+      leaderId, since, this.opts.maxEvents,
+    );
+    const entry = new Map<number, bigint>();
+    const events: BtEvent[] = [];
+    for (const r of rows) {
+      const kind = r.kind.toUpperCase() as BtKind;
+      const before = r.lots_before != null ? BigInt(r.lots_before) : 0n;
+      const after = r.lots_after != null ? BigInt(r.lots_after) : 0n;
+      let price = r.price != null ? BigInt(r.price) : undefined;
+      if (price === undefined) {
+        const last = db.get<{ price: string }>(
+          'SELECT price FROM perpl_events WHERE perp_id = ? AND price IS NOT NULL AND block <= ? ORDER BY block DESC, log_index DESC LIMIT 1',
+          r.perp_id, r.block,
+        );
+        price = last ? BigInt(last.price) : entry.get(r.perp_id) ?? 0n;
+      }
+      const prev = entry.get(r.perp_id) ?? 0n;
+      if (kind === 'OPEN' || kind === 'INVERT' || prev === 0n) entry.set(r.perp_id, price);
+      else if (kind === 'INCREASE' && after > before) entry.set(r.perp_id, (prev * before + price * (after - before)) / after);
+      if (price === 0n) continue;
+      events.push({
+        perpId: r.perp_id,
+        kind,
+        side: r.position_type === SHORT ? SHORT : LONG,
+        lotsAfter: after,
+        lotsKnown: r.lots_after != null,
+        pricePNS: price,
+        entryPricePNS: entry.get(r.perp_id) ?? price,
+        leverageHdths: r.leverage ?? 0,
+        timestamp: r.ts ?? 0,
+        block: r.block,
+      });
+      if (after === 0n) entry.delete(r.perp_id);
+    }
+    const ms: BtMarket[] = markets.map((m) => ({ perpId: m.perpId, lotDecimals: m.lotDecimals, priceDecimals: m.priceDecimals, lastPricePNS: null }));
+    return { events, markets: ms, truncated: rows.length >= this.opts.maxEvents };
   }
 
   async run(leaderId: number, b: z.infer<typeof BacktestBody>, nowSec = Math.floor(Date.now() / 1000)) {

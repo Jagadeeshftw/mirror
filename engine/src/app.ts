@@ -84,7 +84,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     client,
     cfg.exchange,
     cfg.markets,
-    { apiUrl: env.PERPL_API_URL, wsUrl: env.PERPL_WS_URL, wsEnabled: env.PERPL_WS_ENABLED, chainId: env.PERPL_CHAIN_ID, bookMarkets },
+    { apiUrl: cfg.perplApiUrl, wsUrl: cfg.perplWsUrl, wsEnabled: env.PERPL_WS_ENABLED, chainId: cfg.perplChainId, bookMarkets },
     log.child({ mod: 'perpl' }),
   );
 
@@ -171,7 +171,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     flagScore: env.ADVERSARIAL_FLAG_SCORE,
     minIncidents: env.ADVERSARIAL_MIN_INCIDENTS,
   }, isTeamRun);
-  const backtest = new BacktestService(indexer, quality, { defaultSlippageBps: env.BACKTEST_DEFAULT_SLIPPAGE_BPS, takerFeeBps: env.BACKTEST_TAKER_FEE_BPS, safetyBps: env.SLIPPAGE_SAFETY_BPS, maxEvents: env.BACKTEST_MAX_EVENTS });
+  const backtest = new BacktestService(indexer, quality, { defaultSlippageBps: env.BACKTEST_DEFAULT_SLIPPAGE_BPS, takerFeeBps: env.BACKTEST_TAKER_FEE_BPS, safetyBps: env.SLIPPAGE_SAFETY_BPS, maxEvents: env.BACKTEST_MAX_EVENTS }, { db, markets: cfg.markets });
   const quote = relayer
     ? new QuoteService(client, reads, market, relayer, env.SLIPPAGE_SAFETY_BPS, env.MAX_MATCHES, { guard, adversarial, refuseFlagged: env.ADVERSARIAL_REFUSE_FOLLOWS })
     : undefined;
