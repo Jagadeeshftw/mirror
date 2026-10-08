@@ -13,6 +13,8 @@ Kept current while Stage B runs. Last updated: 2026-10-08 19:00 IST (18:55 local
 
 ## Decisions taken without review
 
+- Every node_modules in the repo, web/.next and part of the Playwright browser cache were deleted around 18:53 local time on 8 Oct by something outside this session (a large external rm while disk was full; disk went from 0.1 to 69 GB free). I reinstalled from the lockfiles and rebuilt; nothing in git was affected.
+
 - The post-deploy check takes `--down <origin>` (deploy.sh: `ENGINE_DOWN=1`) while the hosted engine is not deployed: errors naming the engine's origin are listed as expected, every other error still fails the check.
 - Judges who ask (GitHub issue "test AUSD") get 100 test AUSD from the tester pool; each counts toward the 25.
 - Minimum Android stated as 14 everywhere (passkey PRF in Google Password Manager); testing was on Android 15 emulators.
@@ -27,7 +29,7 @@ Kept current while Stage B runs. Last updated: 2026-10-08 19:00 IST (18:55 local
 - **Contracts (Monad testnet, verified on Sourcify):** KeeperRegistry `0x394B12D4355bE5B54DBCaa989cf44F8966195E41`, MirrorAccountFactory `0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39`, implementation `0x648e35cdfD4Aca744Ed33c69A0089A5621A76316`, block 69,083,005. Deployed as the ops wallet's first testnet transactions. Verified on sourcify.dev and on MonadVision's Sourcify (status "match"). Demo leader: Perpl testnet account 1000 (ops wallet, 200 test AUSD). Mainnet: nothing deployed; plan, scripts and fork rehearsal ready in docs/runbook-mainnet.md (needs the go; ops nonce must still be 4).
 - **Stage A (final contracts):** Android emulators 34/34, API 29/29, web 64/64.
 - **Railway project `mirror-testnet`:** services created with every non-secret variable set; nothing deployed yet (needs item 2). Engine domain `https://engine-production-0fd2.up.railway.app`.
-- **Site:** mirror.0xo.in still serves the pre-Stage-B deploy.
+- **Site:** deployed 8 Oct 13:48 UTC with the web app at /app (testnet build, engine down: watch mode read from Monad), share cards, the suggestion page and /perpl. Post-deploy check against the public URL: 36/36 (9 pages × desktop Chrome, Chrome phone, desktop Safari, Safari phone), evidence devices/evidence/stage-b/postdeploy-20261008T140454Z. Fonts served from /app/assets/assets/fonts (no node_modules paths).
 - **Test funds:** ops wallet 2,500 test AUSD (the tester pool = 25 testers at 100; untouched), 63.86 test MON. Demo leader Perpl account 1000 holds 200.
 
 ## Work queue (in order)

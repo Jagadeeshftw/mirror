@@ -165,7 +165,16 @@ async function safariRun() {
         let sid;
         const r = { expectWidth: width };
         try {
-          sid = (await call("POST", "/session", { capabilities: { alwaysMatch: { browserName: "safari" } } })).sessionId;
+          // Safari releases the previous automation session asynchronously; retry while it is still paired.
+          for (let attempt = 0; ; attempt++) {
+            try {
+              sid = (await call("POST", "/session", { capabilities: { alwaysMatch: { browserName: "safari" } } })).sessionId;
+              break;
+            } catch (e) {
+              if (attempt >= 20 || !/already paired/i.test(String(e.message))) throw e;
+              await new Promise((res) => setTimeout(res, 1500));
+            }
+          }
           await call("POST", `/session/${sid}/timeouts`, { pageLoad: 45_000, script: 60_000 });
           await call("POST", `/session/${sid}/window/rect`, { x: 0, y: 0, width, height });
           // Correct for window chrome so the page itself is `width` CSS px wide (or as close as Safari allows).
