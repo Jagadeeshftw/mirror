@@ -6,6 +6,8 @@ import { View } from "react-native";
 import { getApiBase } from "../lib/api";
 import { hostOf, useMirrorHealth, useRpcHealth } from "../state/conn";
 import { useConfig } from "../state/data";
+import { rpcConfig } from "../state/configCache";
+import { failTitle } from "../lib/conn";
 import { Icon, type IconName } from "./icons";
 import { Card, Link, Row, T } from "./kit";
 import { LiveDot } from "./kit2";
@@ -29,7 +31,7 @@ function NetRow({ icon, title, sub, right, testID }: { icon: IconName; title: st
 
 export function NetworkRows() {
   const qc = useQueryClient();
-  const cfg = useConfig().data;
+  const cfg = rpcConfig(useConfig().data);
   const rpc = useRpcHealth(30_000);
   const api = useMirrorHealth(30_000);
   const at = Math.max(rpc.dataUpdatedAt, rpc.errorUpdatedAt, api.dataUpdatedAt, api.errorUpdatedAt);
@@ -39,15 +41,15 @@ export function NetworkRows() {
         <NetRow
           testID="settings.net.monad"
           icon="globe"
-          title={`Monad RPC · chain ${cfg?.chainId ?? 143} · checked from this device`}
+          title={`Monad RPC · chain ${cfg.chainId} · checked from this device`}
           sub={rpc.data ? `${rpc.data.host} · ${rpc.data.ms} ms · block ${Number(rpc.data.block).toLocaleString("en-US")}` : rpc.isError ? "Can't reach Monad" : "Checking"}
           right={<LiveDot on={!!rpc.data && !rpc.isError} label={rpc.isError ? "Offline" : rpc.data ? "Online" : "Checking"} />}
         />
         <NetRow
           testID="settings.net.mirror"
           icon="activity"
-          title="Mirror server"
-          sub={api.data ? `${hostOf(getApiBase())} · ${api.data.ms} ms` : api.isError ? "Can't reach Mirror" : "Checking"}
+          title="Mirror's service"
+          sub={api.data ? `${hostOf(getApiBase())} · ${api.data.ms} ms` : api.isError ? failTitle("mirror") : "Checking"}
           right={<LiveDot on={!!api.data && !api.isError} label={api.isError ? "Offline" : api.data ? "Online" : "Checking"} />}
         />
         <NetRow
@@ -59,7 +61,7 @@ export function NetworkRows() {
         />
       </Card>
       <Row>
-        <T size={12} color="mu">If only one is down, the app says which: "Can't reach Monad" for the RPC, "Can't reach Mirror" for our server.</T>
+        <T size={12} color="mu">If only one is down, the app says which: "Can't reach Monad" for the RPC, "Can't reach Mirror's service" for our server.</T>
       </Row>
     </>
   );

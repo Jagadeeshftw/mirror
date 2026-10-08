@@ -5,14 +5,19 @@ import type { AppConfig, MarketConfig } from "./types";
 
 export const TESTNET_CHAIN_ID = 10143;
 
+/** MonadVision for the chain: testnet.monadvision.com on testnet (10143), monadvision.com otherwise. */
+export function explorerBase(chainId: unknown): string {
+  return Number(chainId) === TESTNET_CHAIN_ID ? "https://testnet.monadvision.com" : "https://monadvision.com";
+}
+
 export function normalizeConfig(raw: any): AppConfig {
   const c = raw?.contracts ?? {};
   const t = raw?.teamRun ?? {};
   return {
     chainId: Number(raw.chainId),
     rpc: String(raw.rpc),
-    explorerTx: raw.explorerTx ?? "https://monadvision.com/tx/",
-    explorerAddress: raw.explorerAddress ?? "https://monadvision.com/address/",
+    explorerTx: raw.explorerTx || `${explorerBase(raw.chainId)}/tx/`,
+    explorerAddress: raw.explorerAddress || `${explorerBase(raw.chainId)}/address/`,
     contracts: {
       factory: c.factory ?? null,
       implementation: c.implementation ?? null,

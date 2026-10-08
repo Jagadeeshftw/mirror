@@ -8,7 +8,9 @@ import type { LeaderSummary } from "../../lib/types";
 import { useLeaders } from "../../state/data";
 import { AdversarialFlag } from "../adversarial";
 import { Spark } from "../charts";
-import { Chip, ErrorBanner, Identicon, NansenLabel, Row, Seg, T } from "../kit";
+import { leadersErrorCopy } from "../../lib/conn";
+import { DemoTryCard, LeadersError } from "../serviceDown";
+import { Chip, Identicon, NansenLabel, Row, Seg, T } from "../kit";
 import { useColors } from "../theme";
 import { LeaderPanel } from "./LeaderPanel";
 import { LCard, LaptopPage } from "./Top";
@@ -58,7 +60,8 @@ export function LaptopLeaders() {
   ];
   return (
     <LaptopPage testID="leaders.screen" title="Leaders" sub="Ranked by Mirror score from onchain Perpl fills · labels by Nansen">
-      {q.isError ? <ErrorBanner title="Can't reach Mirror" body="The leaderboard comes from our server. Try again in a moment." onRetry={() => q.refetch()} /> : null}
+      {q.isError ? <LeadersError error={q.error} onRetry={() => q.refetch()} /> : null}
+      {q.isError && leadersErrorCopy(q.error).down ? <DemoTryCard down /> : null}
       <View style={{ flexDirection: "row", gap: 16, flex: 1 }}>
         <LCard style={{ flex: 1 }} testID="leaders.list">
           <Row gap={10} style={{ flexWrap: "wrap" }}>

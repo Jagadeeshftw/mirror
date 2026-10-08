@@ -1,4 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useRelayGate } from "../state/conn";
+import { RelayNote, relayBlocked } from "../ui/serviceDown";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { TextInput, View } from "react-native";
@@ -22,6 +24,7 @@ export default function Withdraw() {
   const c = useColors();
   const qc = useQueryClient();
   const { account: me } = useSession();
+  const gate = useRelayGate();
   const cfg = useConfig().data;
   const { totals } = useTotals();
   const accts = totals?.accounts ?? [];
@@ -235,7 +238,8 @@ export default function Withdraw() {
           </Note>
           {phase === "busy" ? <Checklist items={[{ key: "sign", title: "Waiting for your passkey", state: "now" }]} /> : null}
           {error ? <Note tone="neg" icon="warn">{error}</Note> : null}
-          <Button title={phase === "busy" ? "Confirming" : "Confirm with passkey"} icon="fp" onPress={go} disabled={phase === "busy"} testID="withdraw.confirm" />
+          <RelayNote gate={gate} testID="withdraw.notLive" />
+          <Button title={phase === "busy" ? "Confirming" : "Confirm with passkey"} icon="fp" onPress={go} disabled={phase === "busy" || relayBlocked(gate)} testID="withdraw.confirm" />
         </View>
       </Sheet>
     </Screen>

@@ -1,16 +1,18 @@
 // Data hooks over the API client (react-query). Polling is modest; live updates come over SSE.
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api, type LeaderSort, type LeaderWindow } from "../lib/api";
-import { ausdBalance } from "../lib/chain";
+import { ausdBalance, publicClient } from "../lib/chain";
+import { classifyError, FAST_FAIL_MS } from "../lib/conn";
+import { readOwnFromRpc, type OwnSnapshot } from "../lib/watchRpc";
 import { toBig } from "../lib/format";
 import type { Address, AppConfig, FeedEvent, LeaderSummary, MarketConfig, MirrorAccount } from "../lib/types";
 import { useSession } from "./session";
-import shared from "../lib/shared-config.json";
-import { cachedConfig, saveConfigCache } from "./configCache";
+import { networkConfig } from "../lib/network";
+import { cachedConfig, rpcConfig, saveConfigCache } from "./configCache";
 
-// Bundled market list (symbol and decimals), used until /v1/config has loaded.
-const BUNDLED_MARKETS = shared.networks.mainnet.markets as unknown as MarketConfig[];
+// Bundled market list (symbol and decimals) for this build's network, used until /v1/config has loaded.
+const bundledMarkets = (): MarketConfig[] => networkConfig().markets;
 
 /** /v1/config, with the last good copy as a placeholder so Monad reads keep working while Mirror is down. */
 export function useConfig() {
@@ -20,8 +22,9 @@ export function useConfig() {
     staleTime: 5 * 60_000,
     retry: 2,
     // The last good config stays as data when /v1/config fails (placeholderData is dropped on error, which
-    // left the app without the RPC and markets exactly when Mirror is down). Updated-at 0: refetched at once.
-    initialData: cachedConfig() ?? undefined,
+    // left the app without the RPC and markets exactly when Mirror is down). A device that never reached Mirror
+    // starts from the bundled config for its build's network (EXPO_PUBLIC_NETWORK). Updated-at 0: refetched at once.
+    initialData: cachedConfig() ?? networkConfig(),
     initialDataUpdatedAt: 0,
   });
 }
@@ -30,8 +33,8 @@ export function useMarkets(cfg: AppConfig | undefined) {
   return useMemo(() => {
     const bySymbol = new Map<string, MarketConfig>();
     const byPerp = new Map<number, MarketConfig>();
-    // Markets come from /v1/config (any network); the bundled mainnet list is only the offline fallback.
-    for (const m of cfg?.markets?.length ? cfg.markets : BUNDLED_MARKETS) {
+    // Markets come from /v1/config (any network); the bundled list for this build's network is the offline fallback.
+    for (const m of cfg?.markets?.length ? cfg.markets : bundledMarkets()) {
       bySymbol.set(m.symbol, { ...byPerp.get(m.perpId), ...m });
       byPerp.set(m.perpId, { ...byPerp.get(m.perpId), ...m });
     }
@@ -44,7 +47,8 @@ export function useOwner() {
   const owner = account?.address as Address | undefined;
   return useQuery({
     queryKey: ["owner", owner],
-    queryFn: () => api.ownerAccounts(owner!),
+    // Fails fast (FAST_FAIL_MS): Home shows balances read from Monad instead of waiting on Mirror's service.
+    queryFn: () => api.ownerAccounts(owner!, FAST_FAIL_MS),
     enabled: !!owner,
     refetchInterval: 15_000,
     retry: 1,
@@ -55,17 +59,17 @@ export function useOwner() {
 /** AUSD in the owner's own wallet (EOA): Monad RPC first, API value as fallback. */
 export function useWallet() {
   const { account } = useSession();
-  const cfg = useConfig().data;
+  const cfg = rpcConfig(useConfig().data);
   const owner = useOwner().data;
   const q = useQuery({
-    queryKey: ["wallet", account?.address, cfg?.rpc],
-    queryFn: async () => (await ausdBalance(cfg!, account!.address)).toString(),
-    enabled: !!cfg && !!account,
+    queryKey: ["wallet", account?.address, cfg.rpc],
+    queryFn: async () => (await ausdBalance(cfg, account!.address)).toString(),
+    enabled: !!account && !!cfg.contracts.collateral,
     refetchInterval: 15_000,
     retry: 1,
   });
   const value = q.data ?? owner?.walletBalanceCNS ?? "0";
-  return { cns: toBig(value), source: q.data ? "rpc" : "api", isLoading: q.isLoading && !owner };
+  return { cns: toBig(value), source: q.data ? "rpc" : "api", isLoading: q.isLoading && !owner, isError: q.isError && !q.data };
 }
 
 export interface Totals {
@@ -113,7 +117,7 @@ export function useFeedAll() {
   const results = useQueries({
     queries: accts.map((a) => ({
       queryKey: ["feed", a.account],
-      queryFn: () => api.feed(a.account),
+      queryFn: () => api.feed(a.account, null, FAST_FAIL_MS),
       refetchInterval: 30_000,
     })),
   });
@@ -128,9 +132,10 @@ export function useFeedAll() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results.map((r) => r.dataUpdatedAt).join(",")]);
   const isError = results.some((r) => r.isError) || owner.isError;
+  const error = owner.error ?? results.find((r) => r.error)?.error ?? null;
   const isLoading = owner.isLoading || results.some((r) => r.isLoading);
   const updatedAt = Math.max(0, ...results.map((r) => r.dataUpdatedAt));
-  return { events, isError, isLoading, updatedAt, refetch: () => results.forEach((r) => r.refetch()) };
+  return { events, isError, error, isLoading, updatedAt, refetch: () => { void owner.refetch(); results.forEach((r) => r.refetch()); } };
 }
 
 export function useLeaders(window: LeaderWindow, sort: LeaderSort, market?: string) {
@@ -149,4 +154,41 @@ export function useLeaderDirectory(): Map<number, LeaderSummary> {
 
 export function useDemo() {
   return useQuery({ queryKey: ["demo"], queryFn: () => api.demo(), refetchInterval: 10_000 });
+}
+
+/**
+ * The owner's own follow accounts read straight from Monad (equity and latest copies), for when Mirror's service
+ * is down: accounts found at the factory's CREATE2 addresses, logs read in 100-block chunks (bounded).
+ */
+export function useOwnRpc(enabled: boolean) {
+  const { account } = useSession();
+  const qc = useQueryClient();
+  const cfg = rpcConfig(useConfig().data);
+  const owner = account?.address as Address | undefined;
+  const key = ["ownRpc", cfg.rpc, owner];
+  return useQuery({
+    queryKey: key,
+    queryFn: () => readOwnFromRpc(publicClient(cfg) as any, cfg, owner!, { prev: qc.getQueryData<OwnSnapshot>(key) }),
+    enabled: enabled && !!owner && !!cfg.contracts.factory && !!cfg.contracts.implementation,
+    refetchInterval: 20_000,
+    retry: 1,
+  });
+}
+
+/**
+ * The Feed's events: from Mirror's service, or (service down, nothing cached) the owner's own copies read straight
+ * from Monad. `via` says which, so the screen labels it.
+ */
+export function useFeedView() {
+  const feed = useFeedAll();
+  const down = feed.isError && classifyError(feed.error).source === "mirror";
+  const rpcMode = down && feed.events.length === 0;
+  const own = useOwnRpc(rpcMode);
+  return {
+    ...feed,
+    down,
+    via: (rpcMode ? "rpc" : "api") as "rpc" | "api",
+    events: rpcMode ? (own.data?.events ?? []) : feed.events,
+    own,
+  };
 }

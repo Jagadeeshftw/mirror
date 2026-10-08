@@ -1,7 +1,8 @@
 // High-level owner flows: one passkey prompt signs everything a flow needs, then the
 // relayer submits (gasless; the user never needs MON).
 import { toHex, type LocalAccount } from "viem";
-import { api } from "./api";
+import { api, ApiError } from "./api";
+import { FAST_FAIL_MS, relayGate } from "./conn";
 import { actionNonce, permitNonce, predictAccountOnchain } from "./chain";
 import {
   ACTION,
@@ -22,6 +23,20 @@ import { withSigner } from "./wallet";
 
 export type StepState = "pending" | "now" | "done" | "failed";
 export type Progress = (key: string, state: StepState, info?: Partial<RelayResult> & { detail?: string }) => void;
+
+/**
+ * Every flow here ends at the relayer. Check that Mirror's service answers before any passkey prompt, so the user
+ * never approves something that can't be sent. Throws ApiError(0, "relay_unavailable") with the "not live yet" text.
+ */
+export async function ensureRelay(health: (timeoutMs: number) => Promise<unknown> = (t) => api.health(t)): Promise<void> {
+  try {
+    await health(FAST_FAIL_MS);
+  } catch (e) {
+    if (e instanceof ApiError && e.status > 0 && e.status < 500) return; // answered: let the relay call report it
+    const g = relayGate({ ok: false, failed: true, checking: false });
+    throw new ApiError(0, "relay_unavailable", g.body, { body: { title: g.title } });
+  }
+}
 
 const nowSec = () => BigInt(Math.floor(Date.now() / 1000));
 
@@ -70,6 +85,7 @@ export function nextAccountFor(cfg: AppConfig, owner: Address, existing: MirrorA
  * abi.encode(Policy, MirrorOrder[]). Permit and action are signed in the same passkey session.
  */
 export async function follow(cfg: AppConfig, plan: FollowPlan, progress: Progress) {
+  await ensureRelay();
   const { salt, account: computed } = nextAccountFor(cfg, plan.owner, plan.existing);
   const account = (computed ?? plan.predicted ?? (await predictAccountOnchain(cfg, plan.owner, salt).catch(() => null))) as Address;
   if (!account) throw new Error("Can't determine the account address");
@@ -137,6 +153,7 @@ export interface AddLeaderPlan {
  * The deposit lands first so the new budget is backed before the policy that assigns it.
  */
 export async function addLeader(cfg: AppConfig, plan: AddLeaderPlan, progress: Progress) {
+  await ensureRelay();
   const account = plan.account.account;
   const deadline = nowSec() + 1800n;
   const withOrders = plan.orders.length > 0;
@@ -169,6 +186,7 @@ export async function addLeader(cfg: AppConfig, plan: AddLeaderPlan, progress: P
 
 /** Top up an existing account with an AUSD permit (gasless). */
 export async function deposit(cfg: AppConfig, owner: Address, account: Address, amountCNS: bigint, progress: Progress) {
+  await ensureRelay();
   const deadline = nowSec() + 1800n;
   progress("sign", "now");
   const nonce = await permitNonce(cfg, owner);
@@ -184,6 +202,7 @@ export async function deposit(cfg: AppConfig, owner: Address, account: Address, 
 
 /** Alternative deposit: ERC-3009 receiveWithAuthorization signed by the owner (to = the account). */
 export async function depositWithAuthorization(cfg: AppConfig, owner: Address, account: Address, amountCNS: bigint, progress: Progress) {
+  await ensureRelay();
   const validAfter = 0n;
   const validBefore = nowSec() + 1800n;
   const nonce = randomNonce32();
@@ -219,6 +238,7 @@ export interface OwnerAction {
  * account get consecutive nonces (the contract increments actionNonce on each), so they must land in order.
  */
 export async function executeActions(cfg: AppConfig, actions: OwnerAction[], progress: Progress) {
+  await ensureRelay();
   const deadline = nowSec() + 900n;
   progress("sign", "now");
   const base = await Promise.all(actions.map((a) => nonceFor(cfg, a.account)));
@@ -259,6 +279,7 @@ export async function executeActions(cfg: AppConfig, actions: OwnerAction[], pro
 
 /** Send AUSD from the owner's wallet with an ERC-3009 transferWithAuthorization (gasless). */
 export async function sendAusd(cfg: AppConfig, owner: Address, to: Address, amountCNS: bigint, progress: Progress) {
+  await ensureRelay();
   const validAfter = 0n;
   const validBefore = nowSec() + 1800n;
   const nonce = randomNonce32();
@@ -289,6 +310,7 @@ export async function sendAusd(cfg: AppConfig, owner: Address, to: Address, amou
  * also signs an ERC-3009 transferWithAuthorization from the wallet to `to`, relayed after.
  */
 export async function withdrawTo(cfg: AppConfig, owner: Address, acct: MirrorAccount, amountCNS: bigint, to: Address, progress: Progress) {
+  await ensureRelay();
   const deadline = nowSec() + 900n;
   const forward = to.toLowerCase() !== owner.toLowerCase();
   progress("sign", "now");

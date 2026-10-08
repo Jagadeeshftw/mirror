@@ -15,7 +15,7 @@ import { envelopeFrom } from "./pushEnvelope";
 import { channelHash, keyRegistered, sameReg, type PushChannel } from "./pushAuth";
 import { loadPushReg, registerSigned, savePushReg, unregisterSigned } from "./pushRegistration";
 import { addNotification } from "../state/notifications";
-import { getAlertsPref } from "../state/alertsPref";
+import { channelAtStartup, getAlertsPref } from "../state/alertsPref";
 import type { Address, PushEnvelope, PushPayload } from "./types";
 import { loadNotifyKey } from "./wallet";
 
@@ -78,14 +78,21 @@ TaskManager.defineTask(BACKGROUND_TASK, async ({ data, error }) => {
   if (env) await presentEncrypted(env, false);
 });
 
+async function ensureChannel() {
+  if (Platform.OS !== "android") return;
+  await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+    name: "Copies and blocked trades",
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 120],
+    lightColor: "#4B3BFF",
+  });
+}
+
+/** App start: the background task always; the channel only after alerts were turned on (see channelAtStartup). */
 export async function setupNotifications() {
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-      name: "Copies and blocked trades",
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 120],
-      lightColor: "#4B3BFF",
-    });
+    const [pref, perm] = await Promise.all([getAlertsPref(), Notifications.getPermissionsAsync().then((p) => p.status as string).catch(() => "undetermined")]);
+    if (channelAtStartup(pref, perm)) await ensureChannel().catch(() => {});
   }
   try {
     await Notifications.registerTaskAsync(BACKGROUND_TASK);
@@ -122,6 +129,8 @@ export async function registerForPush(owner: Address, opts: { ask?: boolean } = 
   try {
     const cur = await Notifications.getPermissionsAsync();
     permission = cur.status;
+    // Turning alerts on: the channel first (Android shows the prompt against it), then the one permission prompt.
+    if (opts.ask) await ensureChannel().catch(() => {});
     if (cur.status !== "granted" && opts.ask) permission = (await Notifications.requestPermissionsAsync()).status;
   } catch {}
   let token = !on ? "unavailable:alerts-off" : permission === "granted" ? "unavailable" : "unavailable:not-permitted";

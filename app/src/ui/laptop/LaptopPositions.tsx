@@ -1,5 +1,6 @@
 // Laptop Positions: KPIs, open positions as a table traced to their leader, PnL by leader, recent
 // closes, and the selected position in the panel on the right.
+import { failTitle, mirrorDownBody } from "../../lib/conn";
 import { useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -55,7 +56,7 @@ export function LaptopPositions() {
   if (!totals) {
     return (
       <LaptopPage testID="portfolio.screen" title="Positions">
-        {isError ? <ErrorBanner title="Can't reach Mirror" body="Your positions are safe onchain." onRetry={refetch} /> : <T size={13} color="mu">Reading your positions</T>}
+        {isError ? <ErrorBanner title={failTitle("mirror")} body={mirrorDownBody("positions")} onRetry={refetch} /> : <T size={13} color="mu">Reading your positions</T>}
       </LaptopPage>
     );
   }

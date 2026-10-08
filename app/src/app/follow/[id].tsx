@@ -1,6 +1,8 @@
 // Follow sheet: every policy control, "Match the leader now" with a live quote, review, and
 // one passkey approval (permit + ACTION_FOLLOW). With ?account=0x… it edits an existing
 // follow's limits instead (ACTION_SET_POLICY, single step).
+import { useRelayGate } from "../../state/conn";
+import { RelayNote, relayBlocked } from "../../ui/serviceDown";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -81,6 +83,7 @@ export default function FollowSheet() {
   const { id, account: editAccount } = useLocalSearchParams<{ id: string; account?: string }>();
   const leaderId = Number(id);
   const { account: me } = useSession();
+  const gate = useRelayGate();
   const cfg = useConfig().data;
   const limits = followLimits(cfg);
   const { bySymbol, byPerp } = useMarkets(cfg);
@@ -255,7 +258,8 @@ export default function FollowSheet() {
       await qc.invalidateQueries({ queryKey: ["feed"] });
       setStep("done");
     } catch (e) {
-      if (e instanceof ApiError) setError({ title: e.code === "rate_limited" ? "Too many requests" : "The relayer rejected it", detail: `${e.message}${e.revertReason ? ` (${e.revertReason})` : ""}` });
+      if (e instanceof ApiError && e.code === "relay_unavailable") setError({ title: (e.body as any)?.title ?? "Not live yet", detail: e.message });
+      else if (e instanceof ApiError) setError({ title: e.code === "rate_limited" ? "Too many requests" : "The relayer rejected it", detail: `${e.message}${e.revertReason ? ` (${e.revertReason})` : ""}` });
       else {
         const d = describeError(e);
         if (d.cancelled) {
@@ -470,7 +474,10 @@ export default function FollowSheet() {
           </T>
         </Row>
       </View>,
-      <Button title="Approve with passkey" icon="fp" onPress={approve} testID="follow.confirm" disabled={form.matchNow && quote.isFetching && !q} />,
+      <View style={{ gap: 8 }}>
+        <RelayNote gate={gate} testID="follow.notLive" />
+        <Button title="Approve with passkey" icon="fp" onPress={approve} testID="follow.confirm" disabled={(form.matchNow && quote.isFetching && !q) || relayBlocked(gate)} />
+      </View>,
     );
   }
 
@@ -717,7 +724,10 @@ export default function FollowSheet() {
       ) : null}
     </View>,
     isEdit ? (
-      <Button title="Save with passkey" icon="fp" onPress={approve} disabled={errors.length > 0 || !!policyErr} testID="rules.save" />
+      <View style={{ gap: 8 }}>
+        <RelayNote gate={gate} testID="rules.notLive" />
+        <Button title="Save with passkey" icon="fp" onPress={approve} disabled={errors.length > 0 || !!policyErr || relayBlocked(gate)} testID="rules.save" />
+      </View>
     ) : (
       laptop ? (
         <Button title="Review follow" onPress={() => setStep("review")} disabled={errors.length > 0 || !!policyErr} testID="follow.review" />

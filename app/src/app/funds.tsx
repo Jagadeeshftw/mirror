@@ -9,7 +9,9 @@ import { ausd, groupedAddress, parseUnits, shortAddr, toBig } from "../lib/forma
 import { followLimits } from "../lib/policy";
 import type { RelayResult } from "../lib/types";
 import { describeError } from "../lib/wallet";
-import { useConfig, useTotals } from "../state/data";
+import { useConfig, useTotals, useWallet } from "../state/data";
+import { useRelayGate } from "../state/conn";
+import { RelayNote, relayBlocked } from "../ui/serviceDown";
 import { useSession } from "../state/session";
 import { AppBar } from "../ui/chrome";
 import { QR } from "../ui/charts";
@@ -26,13 +28,16 @@ export default function AddFunds() {
   const cfg = useConfig().data;
   const BETA_CAP_CNS = followLimits(cfg).capCNS;
   const { totals } = useTotals();
+  const walletRpc = useWallet();
+  const gate = useRelayGate();
   const [step, setStep] = useState<0 | 1>(params.step === "1" ? 1 : 0);
   const [copied, setCopied] = useState(false);
   const accounts = totals?.accounts ?? [];
   const [target, setTarget] = useState<string | undefined>(params.account ?? accounts.find((a) => toBig(a.netDepositsCNS) < BETA_CAP_CNS)?.account);
   const acct = accounts.find((a) => a.account === target) ?? accounts[0];
   const room = acct ? BETA_CAP_CNS - toBig(acct.netDepositsCNS) : 0n;
-  const wallet = totals?.wallet ?? 0n;
+  // Read from Monad when Mirror's service hasn't answered.
+  const wallet = totals?.wallet ?? (walletRpc.source === "rpc" ? walletRpc.cns : 0n);
   const maxDep = wallet < room ? wallet : room;
   const [amount, setAmount] = useState<string>("");
   // The prefilled amount is maxDep itself, not its 2-decimal text (rounding up could exceed the wallet).
@@ -132,7 +137,7 @@ export default function AddFunds() {
                 Deposits happen when you follow
               </T>
               <T size={13} color="mu" center>
-                Each follow gets its own account. Choose a leader and set an allocation of 10 to 25 AUSD; the deposit is part of the same passkey approval.
+                Each follow gets its own account. Choose a leader and set an allocation of {ausd(followLimits(cfg).minCNS, 0)} to {ausd(BETA_CAP_CNS, 0)} AUSD; the deposit is part of the same passkey approval.
               </T>
               <Button title="Browse leaders" onPress={() => router.push("/leaders")} style={{ alignSelf: "stretch" }} />
             </Card>
@@ -246,9 +251,10 @@ export default function AddFunds() {
               <KV k="Network fee" v={<T size={13}><T size={13} w={600} color="posI">Free</T> · sponsored</T>} last />
             </View>
             {amt > room ? <Hint warn>{`Over the ${ausd(BETA_CAP_CNS, 0)} AUSD beta limit for this follow.`}</Hint> : amt > wallet ? <Hint warn>More than your wallet balance.</Hint> : null}
-            {error ? <Note tone="neg" icon="warn">{error}</Note> : null}
+            {error ? <Note tone="neg" icon="warn" testID="funds.error">{error}</Note> : null}
+            <RelayNote gate={gate} testID="funds.notLive" />
             <View style={{ flex: 1 }} />
-            <Button title={status === "busy" ? "Waiting for your passkey" : "Deposit with passkey"} icon="fp" onPress={doDeposit} disabled={status === "busy" || amt === 0n || amt > room || amt > wallet} testID="funds.confirm" />
+            <Button title={status === "busy" ? "Waiting for your passkey" : "Deposit with passkey"} icon="fp" onPress={doDeposit} disabled={status === "busy" || amt === 0n || amt > room || amt > wallet || relayBlocked(gate)} testID="funds.confirm" />
           </>
         )}
       </Scroll>

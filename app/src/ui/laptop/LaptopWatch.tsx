@@ -3,6 +3,7 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
+import { failTitle, mirrorDownBody, noCopiesLine } from "../../lib/conn";
 import { ausd } from "../../lib/format";
 import type { FeedEvent } from "../../lib/types";
 import type { useHomeState } from "../../state/home";
@@ -12,7 +13,7 @@ import { BlockedSheet, FeedItem } from "../feed";
 import { Button, ErrorBanner, Link, Row, T } from "../kit";
 import { LiveDot, SecHead } from "../kit2";
 import { CycleCard, DemoCard, DepositNudge, RunButtons } from "../watch";
-import { HomeSkeleton, SlowCard } from "../watchHome";
+import { balanceLine, HomeSkeleton, SlowCard } from "../watchHome";
 import { LCard, LaptopPage } from "./Top";
 import { useColors } from "../theme";
 
@@ -43,18 +44,18 @@ function WatchColumns({ s, down }: { s: ReturnType<typeof useHomeState>; down: b
   const quiet = !down && !w.isLoading && !w.busy && (!last || Date.now() - last.timestamp > 2 * 3600e3);
   return (
     <LaptopPage testID="home.screen" title="Home" sub={down ? "Watch mode, read straight from Monad" : "Watch real copies land on the team-run demo account"}>
-      {down ? <ErrorBanner testID="home.offline" title="Can't reach Mirror" body="Our server isn't answering. Your account lives on Monad, so your balance and limits are fine." onRetry={s.retry} /> : null}
+      {down ? <ErrorBanner testID="home.offline" title={failTitle("mirror")} body={mirrorDownBody("account")} onRetry={s.retry} /> : null}
       <View style={{ flexDirection: "row", gap: 16, flex: 1 }} testID="home.watch">
         <View style={{ flex: 1, gap: 16, minWidth: 0 }}>
-          <LCard>
+          <LCard testID="home.account">
             <Row align="flex-end" gap={24}>
               <View style={{ flex: 1 }}>
                 <T size={12} w={500} color="mu" upper>Your account</T>
                 <Row align="flex-end" gap={6}>
-                  <T testID="home.equity" size={40} w={500} mono lh={44} style={{ letterSpacing: -1.4 }}>{s.walletCNS === null ? "—" : ausd(s.walletCNS)}</T>
+                  <T testID="home.equity" size={40} w={500} mono lh={44} style={{ letterSpacing: -1.4 }}>{s.walletCNS === null ? "—" : ausd(s.walletCNS + (down && s.followsCNS ? s.followsCNS : 0n))}</T>
                   <T size={14} w={500} color="mu" style={{ marginBottom: 6 }}>AUSD</T>
                 </Row>
-                <T size={13} color="mu">Nothing deposited yet. Watch real copies land on the right.</T>
+                <T size={13} color="mu" testID="home.balance.source">{balanceLine({ walletCNS: s.walletCNS, followsCNS: s.followsCNS, down, walletLoading: s.walletLoading, walletError: s.walletError }).replace("land below", "land on the right")}</T>
               </View>
               <Button title="Add funds" icon="arrdown" size="md" onPress={() => router.push("/funds")} testID="watch.addFunds" />
               <Button title="Browse leaders" icon="leaders" kind="out" size="md" onPress={() => router.navigate("/leaders")} testID="watch.browseLeaders" />
@@ -67,21 +68,29 @@ function WatchColumns({ s, down }: { s: ReturnType<typeof useHomeState>; down: b
               <RunButtons w={w} onRun={run} busy={busy} error={error} down={down} />
             </View>
             <View style={{ flex: 1, gap: 10, minWidth: 0 }}>
-              <SecHead title="Demo runs" right={down ? "need the Mirror server" : undefined} />
+              <SecHead title="Demo runs" right={down ? "need Mirror's service" : undefined} />
               {quiet ? (
                 <View testID="watch.quiet" style={{ padding: 16, borderRadius: 16, borderWidth: 1, borderStyle: "dashed", borderColor: c.bd, gap: 6 }}>
                   <T size={15} w={600}>No demo copies in the last 2 hours</T>
                   <T size={13} color="mu">The demo leader only trades when someone runs a demo. Start one: the copy lands in about a second.</T>
                 </View>
               ) : null}
-              {shown.length ? shown.map((cy) => <CycleCard key={cy.id} cy={cy} cfg={s.cfg} />) : <T size={13} color="mu">{down ? "Starting and following a demo run needs the Mirror server." : "No runs yet today. Run one: the copy lands in about a second."}</T>}
+              {shown.length ? shown.map((cy) => <CycleCard key={cy.id} cy={cy} cfg={s.cfg} />) : <T size={13} color="mu">{down ? "Starting and following a demo run needs Mirror's service. The copies on the right are read straight from Monad." : "No runs yet today. Run one: the copy lands in about a second."}</T>}
               {!down ? <DepositNudge /> : null}
             </View>
           </View>
         </View>
         <LCard style={{ width: 440 }} testID="watch.feed">
           <SecHead title="Copies landing now" right={down ? "from Monad" : <Link title="Feed" onPress={() => router.push("/demo")} testID="watch.feed.link" />} />
-          {w.events.length === 0 ? <T size={13} color="mu">{w.isLoading ? "Reading the demo account" : "No demo copies in the last 2 hours. Run a demo trade to see one land."}</T> : null}
+          {w.events.length === 0 ? (
+            <T size={13} color="mu" testID="watch.empty">
+              {w.isLoading
+                ? down ? "Reading the demo account from Monad" : "Reading the demo account"
+                : down || w.via === "rpc"
+                  ? !w.account ? "The demo account's address isn't known for this network yet." : w.rpcError ? "Can't reach Monad to read the demo account. Retrying." : `${noCopiesLine(w.scannedMinutes)} on the demo account (read from Monad).`
+                  : "No demo copies in the last 2 hours. Run a demo trade to see one land."}
+            </T>
+          ) : null}
           {w.events.slice(0, 5).map((e, i) => (
             <FeedItem key={e.id} e={e} cfg={s.cfg} testID={`watch.feed.${i}`} onBlockedPress={setBlocked} onCopyPress={setCopy} />
           ))}

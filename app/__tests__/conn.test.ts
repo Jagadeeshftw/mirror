@@ -1,7 +1,22 @@
 jest.mock("@react-native-async-storage/async-storage", () => ({ getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn() }));
 jest.mock("expo-constants", () => ({ expoConfig: { extra: {} } }));
 import { ApiError } from "../src/lib/api";
-import { DOWN_AFTER_MS, SLOW_AFTER_MS, backendPhase, classifyError, failTitle } from "../src/lib/conn";
+import {
+  DOWN_AFTER_MS,
+  FAST_FAIL_MS,
+  SLOW_AFTER_MS,
+  backendPhase,
+  balanceLine,
+  classifyError,
+  demoDownLine,
+  failTitle,
+  feedBanners,
+  leadersErrorCopy,
+  mirrorDownBody,
+  noCopiesLine,
+  relayGate,
+  runNote,
+} from "../src/lib/conn";
 
 describe("classifyError", () => {
   it("attributes API failures to Mirror", () => {
@@ -19,7 +34,7 @@ describe("classifyError", () => {
     expect(classifyError(new Error("boom")).source).toBe("other");
   });
   it("names each side consistently", () => {
-    expect(failTitle("mirror")).toBe("Can't reach Mirror");
+    expect(failTitle("mirror")).toBe("Can't reach Mirror's service");
     expect(failTitle("monad")).toBe("Can't reach Monad");
   });
 });
@@ -29,7 +44,10 @@ describe("backendPhase", () => {
   it("is ok once data arrives", () => {
     expect(backendPhase({ hasData: true, failed: false, since, now: since + 60_000 })).toBe("ok");
   });
-  it("connects for 5 s, is slow until 30 s, then down", () => {
+  it("fails fast: connecting for 3 s, slow until 8 s, then down (never ~30 s of Loading)", () => {
+    expect(SLOW_AFTER_MS).toBe(3_000);
+    expect(DOWN_AFTER_MS).toBeLessThanOrEqual(8_000);
+    expect(FAST_FAIL_MS).toBeLessThan(DOWN_AFTER_MS);
     expect(backendPhase({ hasData: false, failed: false, since, now: since + 100 })).toBe("connecting");
     expect(backendPhase({ hasData: false, failed: false, since, now: since + SLOW_AFTER_MS })).toBe("slow");
     expect(backendPhase({ hasData: false, failed: false, since, now: since + DOWN_AFTER_MS - 1 })).toBe("slow");
@@ -67,5 +85,76 @@ describe("normalizeConfig", () => {
   it("labels testnet AUSD", () => {
     expect(ausdUnit(10143)).toBe("test AUSD");
     expect(ausdUnit(143)).toBe("AUSD");
+  });
+});
+
+const viemErr = () => Object.assign(new Error("HTTP request failed."), { name: "HttpRequestError" });
+
+describe("feedBanners", () => {
+  it("backend down: Mirror's service, not Monad", () => {
+    expect(feedBanners({ feedError: new ApiError(0, "network", "x"), rpcError: false })).toEqual(["mirror"]);
+  });
+  it("RPC down only: Monad", () => {
+    expect(feedBanners({ feedError: null, rpcError: true })).toEqual(["monad"]);
+  });
+  it("both down: both, each named once", () => {
+    expect(feedBanners({ feedError: new ApiError(0, "timeout", "x"), rpcError: true })).toEqual(["mirror", "monad"]);
+    expect(feedBanners({ feedError: viemErr(), rpcError: true })).toEqual(["monad"]);
+  });
+  it("nothing down: no banner", () => {
+    expect(feedBanners({ feedError: null, rpcError: false })).toEqual([]);
+  });
+});
+
+describe("engine-down copy", () => {
+  it("watch mode Run note says why, and that copies come from Monad", () => {
+    expect(runNote("testnet")).toBe("Mirror's testnet service isn't live yet; these copies are read straight from Monad.");
+    expect(runNote("mainnet")).toMatch(/isn't reachable.*read straight from Monad/);
+  });
+  it("no copies in the scanned window is said plainly", () => {
+    expect(noCopiesLine(19)).toBe("No copies in the last 19 minutes");
+    expect(noCopiesLine(1)).toBe("No copies in the last 1 minute");
+    expect(noCopiesLine(180)).toBe("No copies in the last 3 hours");
+    expect(noCopiesLine(null)).toBe("No copies in the last few minutes");
+  });
+  it("leaders: a refused or 5xx backend is 'not live yet', a 4xx is a plain error", () => {
+    const t = leadersErrorCopy(new ApiError(0, "network", "x"), "testnet");
+    expect(t).toMatchObject({ down: true, title: "Leaders aren't live yet" });
+    expect(t.body).toMatch(/testnet service isn't live yet/);
+    expect(leadersErrorCopy(new ApiError(502, "http_502", "x"), "mainnet")).toMatchObject({ down: true, title: "Can't reach Mirror's service" });
+    expect(leadersErrorCopy(new ApiError(400, "bad", "x"), "testnet")).toMatchObject({ down: false, title: "Can't load leaders" });
+  });
+  it("the demo card explains why it can't run", () => {
+    expect(demoDownLine("testnet")).toMatch(/^Mirror's testnet service isn't live yet, so a demo can't be started\./);
+  });
+  it("banner bodies name the service and what is still read from Monad", () => {
+    expect(mirrorDownBody("account", "testnet")).toMatch(/testnet service isn't live yet.*read straight from Monad/);
+    expect(mirrorDownBody("feed", "mainnet")).toMatch(/read straight from Monad/);
+  });
+});
+
+describe("balanceLine (Home with Mirror down)", () => {
+  it("reading, failed, wallet only, and wallet plus follow accounts", () => {
+    expect(balanceLine({ walletCNS: null })).toBe("Reading your balance from Monad");
+    expect(balanceLine({ walletCNS: null, walletError: true })).toMatch(/Can't reach Monad/);
+    expect(balanceLine({ walletCNS: 100_000_000n, down: true })).toBe("In your wallet, read from Monad. Nothing deposited yet.");
+    expect(balanceLine({ walletCNS: 5_000_000n, followsCNS: 20_000_000n, down: true })).toBe("Read from Monad: 5.00 in your wallet, 20.00 in your follow accounts.");
+    expect(balanceLine({ walletCNS: 0n })).toBe("Nothing deposited yet. Watch real copies land below.");
+  });
+});
+
+describe("relayGate", () => {
+  it("ready once Mirror's service answers", () => {
+    expect(relayGate({ ok: true, failed: false, checking: false })).toMatchObject({ ready: true });
+  });
+  it("down: not live yet, nothing signed", () => {
+    const g = relayGate({ ok: false, failed: true, checking: false }, "testnet");
+    expect(g.ready).toBe(false);
+    expect(g.title).toBe("Not live yet");
+    expect(g.body).toMatch(/^Mirror's testnet service isn't live yet, so this can't be sent\. Nothing was signed/);
+    expect(relayGate({ ok: false, failed: true, checking: false }, "mainnet").title).toBe("Can't reach Mirror's service");
+  });
+  it("still checking: not ready, not blocked", () => {
+    expect(relayGate({ ok: false, failed: false, checking: true })).toMatchObject({ ready: false, checking: true });
   });
 });

@@ -3,6 +3,9 @@ import { router } from "expo-router";
 import React from "react";
 import { View } from "react-native";
 import { ausd, bps, leverage, shortAddr } from "../lib/format";
+import { runNote } from "../lib/conn";
+import { followLimits } from "../lib/policy";
+import { useConfig } from "../state/data";
 import type { AppConfig, DemoCycle } from "../lib/types";
 import type { RunError, WatchData } from "../state/watch";
 import { openTx } from "./feed";
@@ -44,9 +47,9 @@ export function DemoCard({ w, cfg, live }: { w: WatchData; cfg: AppConfig | unde
             {w.leaderAccountId ? ` · copies Perpl #${w.leaderAccountId}` : ""}
           </T>
         </View>
-        {w.source === "rpc" ? (
+        {w.via === "rpc" ? (
           <T size={12} color="mu" testID="watch.source">
-            From Monad
+            Read from Monad
           </T>
         ) : (
           <LiveDot on={live} label={live ? "Live" : "Connecting"} testID="watch.source" />
@@ -54,7 +57,7 @@ export function DemoCard({ w, cfg, live }: { w: WatchData; cfg: AppConfig | unde
       </Row>
       <Row>
         {[
-          ["Balance", w.equityCNS ? ausd(w.equityCNS) : "—", "watch.balance"],
+          ["Balance", w.equityCNS ? ausd(w.equityCNS) : w.isLoading ? "Reading" : "—", "watch.balance"],
           ["Open", open, "watch.open"],
           ["Copies today", String(today), "watch.today"],
         ].map(([k, v, id]) => (
@@ -82,8 +85,8 @@ export function DemoCard({ w, cfg, live }: { w: WatchData; cfg: AppConfig | unde
 
 export function RunButtons({ w, onRun, busy, error, down }: { w: WatchData; onRun: (k: "trade" | "blocked") => void; busy: "trade" | "blocked" | null; error: RunError | null; down?: boolean }) {
   const disabled = down || w.busy || !!busy || w.source !== "api";
-  const note = down
-    ? "Starting a demo needs the Mirror server. The copies below are read straight from Monad and stay current."
+  const note = down || w.via === "rpc"
+    ? runNote()
     : w.busy
       ? "One run at a time. The buttons come back when this one is final."
       : `Uses the team's money on Perpl, never yours.${w.limits ? ` ${w.limits.perIpPerHour} runs per hour per network · ${w.limits.dailyRemaining} left today.` : ""}`;
@@ -143,6 +146,7 @@ export function CycleCard({ cy, cfg }: { cy: DemoCycle; cfg: AppConfig | undefin
 
 export function DepositNudge({ testID = "watch.deposit" }: { testID?: string }) {
   const c = useColors();
+  const cap = followLimits(useConfig().data).capCNS;
   return (
     <View style={{ padding: 14, gap: 12, borderRadius: 16, borderWidth: 1, borderColor: c.ac, backgroundColor: c.sf }}>
       <Row gap={10} align="flex-start">
@@ -152,7 +156,7 @@ export function DepositNudge({ testID = "watch.deposit" }: { testID?: string }) 
             Copy with your own limits
           </T>
           <T size={12} color="mu">
-            Deposit up to 25.00 AUSD during beta. One passkey signature, no gas.
+            {`Deposit up to ${ausd(cap)} AUSD during beta. One passkey signature, no gas.`}
           </T>
         </View>
       </Row>

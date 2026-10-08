@@ -5,7 +5,7 @@ import type { LeaderSort, LeaderWindow } from "../../lib/api";
 import { MINUS, pctSigned, shortAddr } from "../../lib/format";
 import { ALL_MARKETS } from "../../lib/policy";
 import type { LeaderSummary } from "../../lib/types";
-import { useLeaders } from "../../state/data";
+import { useConfig, useLeaders, useMarkets } from "../../state/data";
 import { AppBar } from "../../ui/chrome";
 import { Spark } from "../../ui/charts";
 import { Icon } from "../../ui/icons";
@@ -14,6 +14,8 @@ import { useColors } from "../../ui/theme";
 import { LaptopLeaders } from "../../ui/laptop/LaptopLeaders";
 import { useLayout } from "../../ui/layout";
 import { AdversarialFlag } from "../../ui/adversarial";
+import { leadersErrorCopy } from "../../lib/conn";
+import { DemoTryCard, LeadersError } from "../../ui/serviceDown";
 
 function LeaderRow({ l, rank, index }: { l: LeaderSummary; rank: number; index: number }) {
   const c = useColors();
@@ -101,6 +103,9 @@ function PhoneLeaders() {
   const [labeled, setLabeled] = useState(false);
   const [picker, setPicker] = useState<"market" | "sort" | null>(null);
   const q = useLeaders(window, sort, market);
+  // This network's markets (live, cached or bundled config), in the usual order.
+  const { bySymbol } = useMarkets(useConfig().data);
+  const symbols = useMemo(() => [...ALL_MARKETS.filter((m) => bySymbol.has(m)), ...[...bySymbol.keys()].filter((m) => !ALL_MARKETS.includes(m))], [bySymbol]);
   const list = useMemo(
     () => (q.data ?? []).filter((l) => !l.teamRun && (!ddCap || l.maxDrawdownPct <= 25) && (!labeled || l.nansen.labels.length > 0)),
     [q.data, ddCap, labeled],
@@ -130,7 +135,7 @@ function PhoneLeaders() {
         <T size={12} color="mu" style={{ paddingHorizontal: 20, marginTop: -4 }}>
           Ranked by Mirror score from onchain Perpl fills: PnL, drawdown, win rate and consistency. Labels by Nansen.
         </T>
-        {q.isError ? <ErrorBanner title="Can't load leaders" body="Check your connection and try again." onRetry={() => q.refetch()} /> : null}
+        {q.isError ? <LeadersError error={q.error} onRetry={() => q.refetch()} /> : null}
         {q.isLoading ? <LoadingBlock label="Ranking traders" /> : null}
         {!q.isLoading && !q.isError && list.length === 0 ? (
           <Card style={{ marginHorizontal: 16, padding: 20, alignItems: "center", gap: 6 }}>
@@ -149,22 +154,7 @@ function PhoneLeaders() {
             ))}
           </Card>
         ) : null}
-        <Card style={{ marginHorizontal: 16, padding: 14 }} onPress={() => router.push("/demo")} testID="leaders.demo">
-          <Row gap={12}>
-            <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: c.acs, alignItems: "center", justifyContent: "center" }}>
-              <Icon name="feed" size={18} color={c.ac} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <T size={14} w={600}>
-                Try it before you follow
-              </T>
-              <T size={12} color="mu">
-                Watch a copy land on the team-run demo account
-              </T>
-            </View>
-            <ChipS label="Demo" tone="ac" />
-          </Row>
-        </Card>
+        <DemoTryCard down={q.isError && leadersErrorCopy(q.error).down} style={{ marginHorizontal: 16 }} />
       </Scroll>
       <Sheet visible={!!picker} onClose={() => setPicker(null)} testID="leaders.picker">
         <View style={{ gap: 12, paddingBottom: 8 }}>
@@ -173,7 +163,7 @@ function PhoneLeaders() {
           </T>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {picker === "market"
-              ? ["All", ...ALL_MARKETS].map((m) => (
+              ? ["All", ...symbols].map((m) => (
                   <Chip key={m} label={m} mono={m !== "All"} on={(market ?? "All") === m} onPress={() => { setMarket(m === "All" ? undefined : m); setPicker(null); }} testID={`leaders.market.${m}`} />
                 ))
               : SORTS.map((s) => <Chip key={s.key} label={s.label} on={sort === s.key} onPress={() => { setSort(s.key); setPicker(null); }} testID={`leaders.sort.${s.key}`} />)}

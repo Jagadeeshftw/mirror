@@ -3,7 +3,8 @@ import React, { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { timeHM } from "../../lib/format";
 import type { FeedEvent } from "../../lib/types";
-import { useConfig, useFeedAll, useTotals } from "../../state/data";
+import { useConfig, useFeedView, useTotals } from "../../state/data";
+import { FeedBanners, FeedRpcState } from "../../ui/serviceDown";
 import { useLive } from "../../state/live";
 import { AppBar } from "../../ui/chrome";
 import { BlockedSheet, FeedItem } from "../../ui/feed";
@@ -23,7 +24,7 @@ function PhoneFeed() {
   const c = useColors();
   const params = useLocalSearchParams<{ filter?: Filter }>();
   const cfg = useConfig().data;
-  const feed = useFeedAll();
+  const feed = useFeedView();
   const { totals } = useTotals();
   const live = useLive();
   const [filter, setFilter] = useState<Filter>(params.filter ?? "all");
@@ -32,7 +33,7 @@ function PhoneFeed() {
   const rpc = useRpcHealth();
   const counts = useMemo(() => ({ blocked: feed.events.filter((e) => e.kind === "Blocked").length }), [feed.events]);
   const list = feed.events.filter((e) => matchesFilter(e, filter));
-  const stale = feed.isError && feed.events.length > 0;
+  const stale = feed.isError && feed.via === "api" && feed.events.length > 0;
   const weekAgo = Date.now() - 7 * 86400e3;
   const weekBlocked = feed.events.filter((e) => e.kind === "Blocked" && e.timestamp > weekAgo).length;
   const weekTotal = feed.events.filter((e) => (e.kind === "Blocked" || e.kind === "Mirrored") && e.timestamp > weekAgo).length;
@@ -57,23 +58,9 @@ function PhoneFeed() {
             </T>
           </Row>
         </Row>
-        {feed.isError ? (
-          <ErrorBanner
-            testID="feed.offline"
-            title="Can't reach Mirror"
-            body={`Our server isn't answering. Showing copies from ${feed.updatedAt ? timeHM(feed.updatedAt) : "earlier"}. Your follows keep running onchain and your limits still apply.`}
-            onRetry={feed.refetch}
-          />
-        ) : null}
-        {rpc.isError && !feed.isError ? (
-          <ErrorBanner
-            testID="feed.monadDown"
-            title="Can't reach Monad"
-            body={`The Monad RPC isn't answering from this device. Balances are from ${rpc.dataUpdatedAt ? timeHM(rpc.dataUpdatedAt) : "earlier"}. Mirror's server is fine and copying continues.`}
-            onRetry={() => rpc.refetch()}
-          />
-        ) : null}
-        {feed.isLoading && !feed.events.length ? <LoadingBlock label="Loading copies" /> : null}
+        <FeedBanners feed={feed} rpc={rpc} />
+        <FeedRpcState feed={feed} />
+        {feed.isLoading && !feed.events.length && feed.via === "api" ? <LoadingBlock label="Loading copies" /> : null}
         {!feed.isLoading && totals && totals.accounts.length === 0 ? (
           <Card style={{ marginHorizontal: 16, padding: 20, alignItems: "center", gap: 8 }} testID="feed.empty">
             <T size={17} w={600} center>

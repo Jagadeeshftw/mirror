@@ -143,14 +143,14 @@ export const api = {
       return normalizeConfig(raw);
     }),
   markets: () => request<unknown>("GET", "/v1/markets").then(normalizeMarkets),
-  leaders: (window: LeaderWindow = "30d", sort: LeaderSort = "score", market?: string) =>
-    request<LeaderSummary[] | { leaders: LeaderSummary[] }>("GET", `/v1/leaders${q({ window, sort, market })}`).then((r) =>
+  leaders: (window: LeaderWindow = "30d", sort: LeaderSort = "score", market?: string, timeoutMs = 12_000) =>
+    request<LeaderSummary[] | { leaders: LeaderSummary[] }>("GET", `/v1/leaders${q({ window, sort, market })}`, undefined, timeoutMs).then((r) =>
       (Array.isArray(r) ? r : r.leaders).map(normalizeLeaderSummary),
     ),
   leader: (accountId: number, window: LeaderWindow = "30d") =>
     request<LeaderProfile>("GET", `/v1/leaders/${accountId}${q({ window })}`).then(normalizeLeaderProfile),
-  ownerAccounts: (owner: Address) =>
-    request<unknown>("GET", `/v1/owners/${owner}/accounts`).then(async (r) => {
+  ownerAccounts: (owner: Address, timeoutMs?: number) =>
+    request<unknown>("GET", `/v1/owners/${owner}/accounts`, undefined, timeoutMs).then(async (r) => {
       await ensureLeaders(leaderIdsOf(r));
       return normalizeOwnerAccounts(r, owner);
     }),

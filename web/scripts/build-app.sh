@@ -8,6 +8,11 @@
 #   EXPO_BASE_URL          base path, default /app. The app config must set `experiments.baseUrl` to it
 #                          (e.g. `baseUrl: process.env.EXPO_BASE_URL`); the script checks the output.
 #   MERA_RP_ID             passed through to app.config.ts (default there: mirror.0xo.in)
+#   EXPO_PUBLIC_NETWORK    mainnet | testnet | localnet, default testnet (for now: the contracts are live on Monad
+#                          testnet). The app reads /v1/config whenever Mirror's service answers; this picks the
+#                          bundled fallback from shared/config.json networks[...] (RPC, contracts, markets,
+#                          explorer, demo follower) for devices that have never reached the service. Set it to
+#                          mainnet once the mainnet deployment is the one served.
 #
 # public/app is build output: it is gitignored and replaced on every run. Vercel's CLI does not read
 # .gitignore (only .vercelignore), so `vercel deploy` from this machine uploads it.
@@ -18,13 +23,18 @@ APP_DIR="$(cd "$WEB_DIR/../app" && pwd)"
 OUT_DIR="$WEB_DIR/public/app"
 
 export EXPO_BASE_URL="${EXPO_BASE_URL:-/app}"
+export EXPO_PUBLIC_NETWORK="${EXPO_PUBLIC_NETWORK:-testnet}"
+case "$EXPO_PUBLIC_NETWORK" in
+  mainnet|testnet|localnet) ;;
+  *) echo "error: EXPO_PUBLIC_NETWORK must be mainnet, testnet or localnet (got '$EXPO_PUBLIC_NETWORK')" >&2; exit 1 ;;
+esac
 export EXPO_PUBLIC_API_BASE="${EXPO_PUBLIC_API_BASE:-${NEXT_PUBLIC_API_BASE:-}}"
 if [ -z "$EXPO_PUBLIC_API_BASE" ]; then
   echo "warning: EXPO_PUBLIC_API_BASE is not set; the web app will have no API base" >&2
 fi
 
 rm -rf "$OUT_DIR"
-echo "expo export -p web -> $OUT_DIR (base $EXPO_BASE_URL, api ${EXPO_PUBLIC_API_BASE:-<none>})"
+echo "expo export -p web -> $OUT_DIR (base $EXPO_BASE_URL, api ${EXPO_PUBLIC_API_BASE:-<none>}, network $EXPO_PUBLIC_NETWORK)"
 (cd "$APP_DIR" && npx expo export -p web --clear --output-dir "$OUT_DIR")
 
 INDEX="$OUT_DIR/index.html"

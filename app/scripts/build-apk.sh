@@ -4,6 +4,10 @@
 #
 #   EXPO_PUBLIC_API_BASE=https://<engine> scripts/build-apk.sh
 #       -> dist/mirror-<ver>-release.apk  (Mera passkeys only, no dev tools)
+#
+#   EXPO_PUBLIC_NETWORK (mainnet | testnet | localnet): the bundled network the app falls back to when it has never
+#   reached Mirror's service (shared/config.json networks[...]: RPC, contracts, markets, explorer, demo follower).
+#   Release builds default to testnet for now; --stage-a uses localnet; --devtools defaults to mainnet (the dev mock).
 #   scripts/build-apk.sh --devtools
 #       -> dist/mirror-<ver>-devtools.apk (dev mock http://localhost:8787 + passkey simulator
 #          + backend switch, for emulators without a Google account; never ship this)
@@ -21,6 +25,7 @@ if [[ "${1:-}" == "--devtools" ]]; then
   VARIANT=devtools
   export EXPO_PUBLIC_MIRROR_DEV_TOOLS=1
   export EXPO_PUBLIC_API_BASE="${EXPO_PUBLIC_API_BASE:-http://localhost:8787}"
+  export EXPO_PUBLIC_NETWORK="${EXPO_PUBLIC_NETWORK:-mainnet}"
 elif [[ "${1:-}" == "--stage-a" ]]; then
   VARIANT=stagea
   unset EXPO_PUBLIC_MIRROR_DEV_TOOLS EXPO_PUBLIC_DEV_PASSKEY EXPO_PUBLIC_DEV_PASSKEY_SEED MERA_RP_ID
@@ -28,13 +33,19 @@ elif [[ "${1:-}" == "--stage-a" ]]; then
   export EXPO_PUBLIC_API_BASE="http://10.0.2.2:${STAGEA_ENGINE_PORT:-8828}"
   # Share cards and /p/<id> links point at the website the Stage-A run starts on the host (next dev).
   export EXPO_PUBLIC_SHARE_BASE="http://10.0.2.2:${STAGEA_SITE_PORT:-8819}"
+  export EXPO_PUBLIC_NETWORK=localnet
   echo "Stage-A build: API base $EXPO_PUBLIC_API_BASE (localnet engine), share base $EXPO_PUBLIC_SHARE_BASE, cleartext only to 10.0.2.2/localhost"
 else
   unset MIRROR_LOCAL_CLEARTEXT
   unset EXPO_PUBLIC_MIRROR_DEV_TOOLS EXPO_PUBLIC_DEV_PASSKEY EXPO_PUBLIC_DEV_PASSKEY_SEED
   : "${EXPO_PUBLIC_API_BASE:?set EXPO_PUBLIC_API_BASE (https) for a release build}"
   [[ "$EXPO_PUBLIC_API_BASE" == https://* ]] || { echo "release builds need an https API base"; exit 1; }
+  export EXPO_PUBLIC_NETWORK="${EXPO_PUBLIC_NETWORK:-testnet}"
 fi
+case "$EXPO_PUBLIC_NETWORK" in
+  mainnet|testnet|localnet) echo "Bundled network: $EXPO_PUBLIC_NETWORK" ;;
+  *) echo "EXPO_PUBLIC_NETWORK must be mainnet, testnet or localnet (got '$EXPO_PUBLIC_NETWORK')"; exit 1 ;;
+esac
 KEYS="$(cd .. && pwd)/keys"
 if [[ -f "$KEYS/mirror-release.env" && -f "$KEYS/mirror-release.keystore" ]]; then
   set -a; source "$KEYS/mirror-release.env"; set +a

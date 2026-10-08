@@ -1,4 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useRelayGate } from "../state/conn";
+import { RelayNote, relayBlocked } from "../ui/serviceDown";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -21,6 +23,7 @@ export default function Send() {
   const c = useColors();
   const qc = useQueryClient();
   const { account: me } = useSession();
+  const gate = useRelayGate();
   const cfg = useConfig().data;
   const wallet = useWallet();
   const [to, setTo] = useState("");
@@ -118,7 +121,8 @@ export default function Send() {
         </Note>
         {error ? <Note tone="neg" icon="warn" testID="send.error">{error}</Note> : null}
         <View style={{ flex: 1 }} />
-        <Button title={phase === "busy" ? "Waiting for your passkey" : "Send with passkey"} icon="fp" disabled={!valid || phase === "busy"} onPress={go} testID="send.confirm" />
+        <RelayNote gate={gate} testID="send.notLive" />
+        <Button title={phase === "busy" ? "Waiting for your passkey" : "Send with passkey"} icon="fp" disabled={!valid || phase === "busy" || relayBlocked(gate)} onPress={go} testID="send.confirm" />
       </Scroll>
     </Screen>
   );

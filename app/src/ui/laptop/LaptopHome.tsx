@@ -1,5 +1,6 @@
 // Laptop Home: equity chart with KPIs, the follows as a table with budget, margin and loss stops,
 // the deposit split and recent copies in the right column. Watch-mode states use LaptopWatch.
+import { failTitle, mirrorDownBody } from "../../lib/conn";
 import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { View } from "react-native";
@@ -99,7 +100,7 @@ function FundedLaptop({ totals, mirrorDown, monadDown, onRetry, block }: { total
   const multiAccount = totals.accounts.find(isMultiLeader);
   return (
     <LaptopPage testID="home.screen" title="Home" sub={`All numbers read from Monad${block ? ` · block ${block.toLocaleString("en-US")}` : ""}`}>
-      {mirrorDown ? <ErrorBanner testID="home.offline" title="Can't reach Mirror" body="Our server isn't answering. Balances are the last read; your follows keep running onchain." onRetry={onRetry} /> : null}
+      {mirrorDown ? <ErrorBanner testID="home.offline" title={failTitle("mirror")} body={mirrorDownBody("funded")} onRetry={onRetry} /> : null}
       {monadDown ? <ErrorBanner testID="home.monadDown" title="Can't reach Monad" body="The Monad RPC isn't answering from this browser. Mirror's server is fine and copying continues." onRetry={onRetry} /> : null}
       <View style={{ flexDirection: "row", gap: 16, flex: 1 }}>
         <View style={{ flex: 1, gap: 16, minWidth: 0 }}>

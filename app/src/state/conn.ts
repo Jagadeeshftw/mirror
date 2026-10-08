@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { blockNumber } from "../lib/chain";
-import { backendPhase, classifyError, type BackendPhase } from "../lib/conn";
+import { backendPhase, classifyError, FAST_FAIL_MS, relayGate, type BackendPhase, type RelayGate } from "../lib/conn";
 import { useConfig, useOwner } from "./data";
 import { rpcConfig } from "./configCache";
 
@@ -35,7 +35,7 @@ export function useMirrorHealth(intervalMs = 30_000) {
     queryKey: ["mirrorHealth"],
     queryFn: async () => {
       const t0 = Date.now();
-      const h = await api.health();
+      const h = await api.health(FAST_FAIL_MS);
       return { ...h, ms: Date.now() - t0, at: Date.now() };
     },
     refetchInterval: intervalMs,
@@ -64,4 +64,13 @@ export function useBackendPhase(): { phase: BackendPhase; waitedMs: number; retr
       void owner.refetch();
     },
   };
+}
+
+/**
+ * Whether actions that need the relayer (follow, deposit, withdraw, send) can run. Buttons stay disabled with the
+ * reason while Mirror's service doesn't answer, so no passkey prompt is shown for something that can't be sent.
+ */
+export function useRelayGate(): RelayGate {
+  const h = useMirrorHealth(15_000);
+  return relayGate({ ok: !!h.data && !h.isError, failed: h.isError, checking: h.isLoading });
 }

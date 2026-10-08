@@ -17,3 +17,12 @@ export async function getAlertsPref(): Promise<AlertsPref> {
 export async function setAlertsPref(v: "on" | "off"): Promise<void> {
   await AsyncStorage.setItem(ALERTS_KEY, v).catch(() => {});
 }
+
+/**
+ * Whether the Android notification channel is created at app start. Only once the user has turned alerts on or
+ * already allowed notifications: creating a channel can make Android show the permission prompt on its own, and
+ * that prompt must never come right after account creation, before the user asked for alerts.
+ */
+export function channelAtStartup(pref: AlertsPref, permission: string | undefined | null): boolean {
+  return pref === "on" || permission === "granted";
+}

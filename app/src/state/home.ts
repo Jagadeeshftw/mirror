@@ -1,7 +1,7 @@
 // Which Home to show, shared by the phone and laptop compositions.
 import { useState } from "react";
 import { useBackendPhase, useRpcHealth } from "./conn";
-import { useConfig, useTotals, useWallet } from "./data";
+import { useConfig, useOwnRpc, useTotals, useWallet } from "./data";
 
 export function useHomeState() {
   const cfg = useConfig().data;
@@ -24,5 +24,21 @@ export function useHomeState() {
           ? "watch"
           : "slow"
         : "watchDown";
-  return { cfg, totals, walletCNS, phase, waitedMs, retry, rpc, mode, watch: () => setWatchAnyway(true) };
+  // Mirror's service down and no account data from it: the owner's follow accounts read straight from Monad.
+  const own = useOwnRpc(!totals && phase === "down");
+  const followsCNS = own.data ? BigInt(own.data.equityCNS) : null;
+  return {
+    cfg,
+    totals,
+    walletCNS,
+    followsCNS,
+    walletLoading: wallet.isLoading,
+    walletError: wallet.isError,
+    phase,
+    waitedMs,
+    retry,
+    rpc,
+    mode,
+    watch: () => setWatchAnyway(true),
+  };
 }

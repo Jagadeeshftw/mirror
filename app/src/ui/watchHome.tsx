@@ -1,8 +1,11 @@
 // Home for an account with no deposit (watch mode), and the first-load states: skeleton for the
-// first 5 s, "Still connecting" after that, and "Can't reach Mirror" with watch mode read from Monad.
+// first 3 s, "Still connecting" after that, and from 8 s (or at once on a refused connection) "Can't reach
+// Mirror's service" with the balance, follow-account equity and watch mode read straight from Monad.
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
+import { balanceLine, failTitle, mirrorDownBody, noCopiesLine } from "../lib/conn";
+export { balanceLine };
 import { ago, ausd, shortAddr } from "../lib/format";
 import type { AppConfig, FeedEvent } from "../lib/types";
 import { useRpcHealth } from "../state/conn";
@@ -18,7 +21,7 @@ import { CycleCard, DemoCard, DepositNudge, RunButtons } from "./watch";
 
 const QUIET_MS = 2 * 3600e3;
 
-export function WatchHome({ cfg, walletCNS, down, onRetry }: { cfg: AppConfig | undefined; walletCNS: bigint | null; down?: boolean; onRetry?: () => void }) {
+export function WatchHome({ cfg, walletCNS, followsCNS = null, walletLoading, walletError, down, onRetry }: { cfg: AppConfig | undefined; walletCNS: bigint | null; followsCNS?: bigint | null; walletLoading?: boolean; walletError?: boolean; down?: boolean; onRetry?: () => void }) {
   const c = useColors();
   const w = useWatch({ backendDown: down });
   const live = useDemoStream(!down);
@@ -32,29 +35,27 @@ export function WatchHome({ cfg, walletCNS, down, onRetry }: { cfg: AppConfig | 
   const runs = <RunButtons w={w} onRun={run} busy={busy} error={error} down={down} />;
   return (
     <View style={{ gap: 16 }} testID="home.watch">
-      {down ? (
-        <ErrorBanner testID="home.offline" title="Can't reach Mirror" body="Our server isn't answering. Your account lives on Monad, so your balance and limits are fine." onRetry={onRetry} />
-      ) : null}
-      {!down || walletCNS !== null ? (
-        <View style={{ paddingHorizontal: 20, gap: 6 }}>
+      {down ? <ErrorBanner testID="home.offline" title={failTitle("mirror")} body={mirrorDownBody("account")} onRetry={onRetry} /> : null}
+      {(
+        <View style={{ paddingHorizontal: 20, gap: 6 }} testID="home.account">
           <Lbl>Your account</Lbl>
           <Row align="flex-end" gap={6}>
             <T testID="home.equity" size={44} w={500} mono lh={48} style={{ letterSpacing: -1.5 }}>
-              {walletCNS === null ? "—" : ausd(walletCNS)}
+              {walletCNS === null ? "—" : ausd(walletCNS + (down && followsCNS ? followsCNS : 0n))}
             </T>
             <T size={15} w={500} color="mu" style={{ marginBottom: 7 }}>
               AUSD
             </T>
           </Row>
-          <T size={13} color="mu">
-            {walletCNS && walletCNS > 0n ? "In your wallet. Nothing deposited yet. Watch real copies land below." : "Nothing deposited yet. Watch real copies land below."}
+          <T size={13} color="mu" testID="home.balance.source">
+            {balanceLine({ walletCNS, followsCNS, down, walletLoading, walletError })}
           </T>
           <Row gap={10} style={{ marginTop: 8 }}>
             <Button title="Add funds" icon="arrdown" size="md" flex onPress={() => router.push("/funds")} testID="watch.addFunds" />
             <Button title="Browse leaders" icon="leaders" kind="out" size="md" flex style={{ paddingHorizontal: 12 }} onPress={() => router.push("/leaders")} testID="watch.browseLeaders" />
           </Row>
         </View>
-      ) : null}
+      )}
       <View style={{ paddingHorizontal: 20, gap: 10 }}>
         <SecHead title="Watch mode" right={down ? "read from Monad" : running.length ? <LiveDot on={live} /> : "real copies, team money"} />
         <DemoCard w={w} cfg={cfg} live={live} />
@@ -95,8 +96,8 @@ export function WatchHome({ cfg, walletCNS, down, onRetry }: { cfg: AppConfig | 
         <View style={{ paddingHorizontal: 16, gap: 10 }}>
           <SecHead style={{ paddingHorizontal: 4 }} title="Copies landing now" right={down ? undefined : <Link title="Feed" onPress={() => router.push("/demo")} testID="watch.feed.link" />} />
           {w.events.length === 0 ? (
-            <T size={13} color="mu" style={{ paddingHorizontal: 4 }}>
-              {w.isLoading ? "Reading the demo account" : down && !w.account ? "The demo account's address isn't known on this device yet." : "No copies in the last few minutes."}
+            <T size={13} color="mu" style={{ paddingHorizontal: 4 }} testID="watch.empty">
+              {w.isLoading ? "Reading the demo account from Monad" : down && !w.account ? "The demo account's address isn't known for this network yet." : w.rpcError ? "Can't reach Monad to read the demo account. Retrying." : `${noCopiesLine(w.scannedMinutes)} on the demo account (read from Monad).`}
             </T>
           ) : null}
           {w.events.slice(0, down ? 3 : 4).map((e, i) => (
@@ -181,7 +182,7 @@ export function SlowCard({ walletCNS, waitedMs, onWatch, onRetry }: { walletCNS:
       <Button title="Watch the demo meanwhile" icon="eye" onPress={onWatch} testID="home.slow.watch" />
       <Button title="Retry now" icon="refresh" kind="out" onPress={onRetry} testID="home.slow.retry" />
       <T size={12} color="mu" center>
-        Still nothing after 30 s? We show "Can't reach Mirror" and keep retrying.
+        Still nothing after 8 s? We show "Can't reach Mirror's service", read what we can from Monad and keep retrying.
       </T>
     </View>
   );

@@ -4,6 +4,7 @@ import { decodeEventLog } from "viem";
 import { faucet, pub, sleep, X } from "./chain.mjs";
 import { calm, click, findCard, isVisible, LAPTOP, PHONE, text, tid, until, visible } from "./browser.mjs";
 import { shareCardCheck } from "./share-card.mjs";
+import { freshDeviceOfflineFlows } from "./flows-offline.mjs";
 
 /** Builder id and fee Perpl charged on a copy, from its TakerOrderFilledV2 log. */
 export async function takerBuilder(hash) {
@@ -144,6 +145,9 @@ export async function phoneFlows(ctx) {
     const walletShown = await text(page, "home.equity", 5000).catch(() => null);
     return { ok: runDis === "true" && blkDis === "true" && fromMonad && /read from Monad/i.test(watchText) && /^100(\.00)?$/.test(walletShown ?? ""), walletFromMonad: walletShown, cards: cards.slice(0, 6), runDemoDisabled: runDis, runBlockedDisabled: blkDis, copiesFromMonad: fromMonad, balance };
   });
+
+  // Still down: a fresh device (no cached config) must work from the bundled network config.
+  await freshDeviceOfflineFlows(ctx);
 
   await R.check("engine restarted: the app recovers (offline banner gone, Run buttons enabled)", page, async () => {
     await engineCtl.start();

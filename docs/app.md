@@ -12,7 +12,7 @@ npm install
 npm run mock                        # dev mock of docs/api.md on :8787 (dev-mock/server.mjs)
 scripts/build-apk.sh --devtools     # dist/mirror-<ver>-devtools.apk, points at http://localhost:8787
 adb reverse tcp:8787 tcp:8787 && adb install -r dist/mirror-0.9.2-devtools.apk
-EXPO_PUBLIC_API_BASE=https://<engine> scripts/build-apk.sh   # dist/mirror-<ver>-release.apk
+EXPO_PUBLIC_API_BASE=https://<engine> scripts/build-apk.sh   # dist/mirror-<ver>-release.apk (EXPO_PUBLIC_NETWORK defaults to testnet)
 python3 scripts/capture-all.py <serial> screenshots          # every screen, light + dark, + layout checks
 npm test                            # jest: EIP-712, permit/3009, policy encoding, formatting, keys, SSE
 ```
@@ -70,10 +70,49 @@ notification namespace alone; it is never derived from the account output.
 - Settings shows "Notification encryption key — derived from your passkey" with its fingerprint, and under Alerts
   the namespace, that the server only relays ciphertext, and the delivery channel.
 
+## Build-time network and running without Mirror's service
+
+`EXPO_PUBLIC_NETWORK` (`mainnet` | `testnet` | `localnet`; the app's own default is `mainnet`) picks the bundled
+network in `shared/config.json` (`app/src/lib/shared-config.json`, `networks[...]`). `/v1/config` stays the source of
+truth whenever Mirror's service answers, and the last good copy is cached on the device; the bundled network is what
+a device that has *never* reached the service uses (`lib/network.ts`, `state/configCache.ts rpcConfig`, the
+`useConfig` initial data, `chain.ts txUrl/addressUrl`, the bundled market list). With `testnet` a fresh install
+with the engine down knows the testnet RPC, the Mirror contracts, markets 16/32/48/64 (BTC/ETH/SOL/MON),
+`testnet.monadvision.com`, the team-run demo follower, the per-account deposit cap (`depositCapCNS`: 200 test AUSD on
+testnet, 25 AUSD planned on mainnet) and Perpl's minimum to open an account (100 on testnet). `EXPO_PUBLIC_NETWORK_CONFIG` (optional JSON in the
+`/v1/config` shape) overrides fields of that entry; the localnet web e2e uses it because localnet addresses change
+per run. Builds: `web/scripts/build-app.sh` (and `deploy.sh`) default to `testnet`; `scripts/build-apk.sh` release
+defaults to `testnet`, `--stage-a` uses `localnet`, `--devtools` defaults to `mainnet` (the dev mock).
+
+With Mirror's service down (refused, 5xx or no answer):
+
+- **Home** fails fast: skeleton for 3 s, "Still connecting" until 8 s, then (at once on a refused connection)
+  "Can't reach Mirror's service" (`home.offline`). Owner reads time out after 6 s. The balance is read from Monad:
+  wallet AUSD plus the equity of the owner's follow accounts, found at the factory's CREATE2 addresses for salts
+  0, 1, 2 (`lib/watchRpc.ts discoverOwnAccounts`), labelled "Read from Monad" (`home.balance.source`).
+- **Watch mode** reads the team-run demo follower from Monad (`readWatchFromRpc`): equity plus Mirrored/Blocked logs,
+  newest first in 100-block chunks (Monad's eth_getLogs cap), 4 in flight, at most 28 log calls (about 19 minutes)
+  per read; refreshes scan only new blocks. "Run demo trade" / "Run blocked trade" are disabled with "Mirror's testnet
+  service isn't live yet; these copies are read straight from Monad." An empty window says "No copies in the last
+  N minutes". Same on the phone and laptop layouts.
+- **Leaders**: "Leaders aren't live yet" (testnet) / "Can't reach Mirror's service", with a link to Home; the
+  "Try it before you follow" card says why a demo can't be started.
+- **Feed**: "Can't reach Mirror's service" only for the backend, "Can't reach Monad" only for the RPC
+  (`lib/conn.ts feedBanners`). With nothing cached it shows the owner's own copies read from Monad, or a plain empty
+  state (no follow accounts / no copies in the last N minutes). Reads stay under 30 RPC calls.
+- **Settings → Network**: the Monad row is a direct `eth_blockNumber` (host, latency, block) against the live,
+  cached or bundled RPC; Mirror's service is a separate row.
+- **Relayed actions** (follow, add leader, deposit, edit rules, withdraw, send): the buttons are disabled with a
+  "Not live yet" note when the health check fails, and every flow in `lib/actions.ts` re-checks `/v1/health` (6 s)
+  before the passkey prompt (`ensureRelay`). Nothing is signed that can't be sent. Creating the account itself (the
+  passkey on Welcome) is local and works offline; the onchain account is created by the relayer with the first follow.
+
 ## Alerts
 
 Turned on from "Get alerts for this follow?" after the first follow (`follow.alerts.enable`) or the Settings switch.
-The OS / browser permission is asked only then, never at sign-up. Turning alerts on also signs the push registration
+The OS / browser permission is asked only then, never at sign-up. On Android the notification channel is also
+created only then (or at start once alerts are on or permission was already granted), since creating a channel can
+make Android show the prompt on its own. Turning alerts on also signs the push registration
 with the owner key (`PushRegister`, docs/api.md "Push"): one passkey prompt. The app remembers that registration
 (`mirror.pushreg.v1`), so later app starts never prompt; if the channel changes (a rotated FCM token, a new browser
 subscription) Settings shows "Not registered yet" until alerts are turned on again. Turning alerts off signs
@@ -186,5 +225,5 @@ and custom switch and slider without animated values. Charts are static SVG.
 - Android remote push needs `app/google-services.json` and an Expo project id with the FCM V1 key (see "Android
   push: what the owner provides"); without them Android receives encrypted alerts over SSE while open. Web alerts
   use Web Push with VAPID and need only the engine's VAPID keys.
-- Contract addresses (`factory`, `implementation`) come from `/v1/config`; `shared/config.json`
-  still has them as null.
+- Contract addresses (`factory`, `implementation`) come from `/v1/config`. `shared/config.json` has them for
+  testnet (the bundled fallback for testnet builds); mainnet still has them as null.

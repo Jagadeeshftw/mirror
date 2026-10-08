@@ -9,7 +9,8 @@ import { bpsText, fillDeviationBps } from "../../lib/proof";
 import { copyFeeCNS, feeText } from "../../lib/fees";
 import type { FeedEvent } from "../../lib/types";
 import { useRpcHealth } from "../../state/conn";
-import { useConfig, useFeedAll, useTotals } from "../../state/data";
+import { useConfig, useFeedView, useTotals } from "../../state/data";
+import { FeedBanners, FeedRpcState } from "../serviceDown";
 import { useLive } from "../../state/live";
 import { CopyDetailPanel } from "../copyDetail";
 import { BlockedBody, leaderName } from "../feed";
@@ -27,7 +28,7 @@ const isStop = (e: FeedEvent) => e.kind === "StopTriggered" || e.kind === "Level
 export function LaptopFeed() {
   const c = useColors();
   const cfg = useConfig().data;
-  const feed = useFeedAll();
+  const feed = useFeedView();
   const { totals } = useTotals();
   const live = useLive();
   const rpc = useRpcHealth();
@@ -61,8 +62,8 @@ export function LaptopFeed() {
   ];
   return (
     <LaptopPage testID="activity.screen" title="Feed" sub="Every leader trade and what happened to your copy">
-      {feed.isError ? <ErrorBanner testID="feed.offline" title="Can't reach Mirror" body="Our server isn't answering. Your follows keep running onchain and your limits still apply." onRetry={feed.refetch} /> : null}
-      {rpc.isError && !feed.isError ? <ErrorBanner testID="feed.monadDown" title="Can't reach Monad" body="The Monad RPC isn't answering from this browser. Mirror's server is fine and copying continues." onRetry={() => rpc.refetch()} /> : null}
+      <FeedBanners feed={feed} rpc={rpc} />
+      <FeedRpcState feed={feed} />
       <View style={{ flexDirection: "row", gap: 16, flex: 1 }}>
         <LCard style={{ flex: 1 }} testID="feed.scroll">
           <Row gap={8}>
@@ -90,7 +91,7 @@ export function LaptopFeed() {
                   : null
             }
           />
-          {rows.length === 0 ? <T size={13} color="mu" testID="feed.empty">{totals?.accounts.length ? "No copies match this filter." : "Follow a leader and every trade they make shows up here."}</T> : null}
+          {rows.length === 0 && feed.via === "api" ? <T size={13} color="mu" testID="feed.empty">{totals?.accounts.length ? "No copies match this filter." : "Follow a leader and every trade they make shows up here."}</T> : null}
         </LCard>
         <LCard style={{ width: 440 }} testID="feed.panel">
           {!current ? (

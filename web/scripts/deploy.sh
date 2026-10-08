@@ -4,7 +4,8 @@
 #
 #   EXPO_PUBLIC_API_BASE=https://<engine> bash scripts/deploy.sh
 #
-# Env: EXPO_PUBLIC_API_BASE (required; baked into the web app), SITE_URL (default https://mirror.0xo.in).
+# Env: EXPO_PUBLIC_API_BASE (required; baked into the web app), SITE_URL (default https://mirror.0xo.in),
+#      EXPO_PUBLIC_NETWORK (bundled fallback network, default testnet; see scripts/build-app.sh).
 set -euo pipefail
 WEB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SITE_URL="${SITE_URL:-https://mirror.0xo.in}"

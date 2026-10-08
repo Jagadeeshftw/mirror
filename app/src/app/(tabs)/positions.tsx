@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { failTitle, mirrorDownBody } from "../../lib/conn";
 import { leaderAddressOf } from "../../lib/engineShape";
 import React, { useMemo, useState } from "react";
 import { View } from "react-native";
@@ -111,7 +112,7 @@ function PhonePositions() {
     return (
       <Screen>
         <AppBar title="Positions" />
-        {isError ? <ErrorBanner title="Can't reach Mirror" body="Your positions are safe onchain." onRetry={refetch} /> : <LoadingBlock label={isLoading ? "Loading positions" : ""} />}
+        {isError ? <ErrorBanner title={failTitle("mirror")} body={mirrorDownBody("positions")} onRetry={refetch} /> : <LoadingBlock label={isLoading ? "Loading positions" : ""} />}
       </Screen>
     );
   }

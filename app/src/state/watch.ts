@@ -3,10 +3,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError, streamUrl } from "../lib/api";
+import { failTitle } from "../lib/conn";
+import { serviceDownLine } from "../lib/network";
 import { publicClient } from "../lib/chain";
 import { openSse } from "../lib/sse";
 import type { Address, DemoCycle, DemoState, FeedEvent, FeedPage, MirrorAccount } from "../lib/types";
-import { readWatchFromRpc } from "../lib/watchRpc";
+import { DEFAULT_SCAN_BLOCKS, DOWN_SCAN_BLOCKS, readWatchFromRpc, scannedMinutes, type WatchSnapshot } from "../lib/watchRpc";
 import { rpcConfig } from "./configCache";
 import { useConfig, useDemo } from "./data";
 import { applyCommit, applyFeedEvent } from "./live";
@@ -41,6 +43,8 @@ export function useDemoStream(enabled = true): boolean {
 
 export interface WatchData {
   source: "api" | "rpc" | "none";
+  /** Where this view reads from: Mirror's service, or straight from Monad (service down). */
+  via: "api" | "rpc";
   account: Address | null;
   follower: MirrorAccount | null;
   equityCNS: string | null;
@@ -51,10 +55,15 @@ export interface WatchData {
   leaderAccountId: number | null;
   block: number | null;
   readAt: number | null;
+  /** RPC reads: minutes of blocks scanned for the copies shown (for "No copies in the last N minutes"). */
+  scannedMinutes: number | null;
+  /** RPC reads: the read failed (Monad unreachable). */
+  rpcError: boolean;
   isLoading: boolean;
 }
 
 export function useWatch(opts: { backendDown?: boolean } = {}): WatchData {
+  const qc = useQueryClient();
   const cfg = useConfig().data;
   const demo = useDemo();
   const d = demo.data;
@@ -63,9 +72,13 @@ export function useWatch(opts: { backendDown?: boolean } = {}): WatchData {
   const rc = rpcConfig(cfg);
   const rpcAccount = (rc.teamRun?.demoFollowerAccount ?? null) as Address | null;
   const useRpc = !!opts.backendDown || (demo.isError && !d);
+  // With Mirror's service down the scan goes further back (bounded: at most 28 eth_getLogs calls); refreshes
+  // only scan the blocks since the previous read.
+  const maxBlocks = opts.backendDown ? DOWN_SCAN_BLOCKS : DEFAULT_SCAN_BLOCKS;
+  const key = ["watchRpc", rc.rpc, rpcAccount, maxBlocks];
   const rpc = useQuery({
-    queryKey: ["watchRpc", rc.rpc, rpcAccount],
-    queryFn: () => readWatchFromRpc(publicClient(rc as any) as any, rpcAccount!),
+    queryKey: key,
+    queryFn: () => readWatchFromRpc(publicClient(rc) as any, rpcAccount!, { maxBlocks, prev: qc.getQueryData<WatchSnapshot>(key) }),
     enabled: useRpc && !!rpcAccount,
     refetchInterval: 10_000,
     retry: 1,
@@ -73,6 +86,7 @@ export function useWatch(opts: { backendDown?: boolean } = {}): WatchData {
   if (useRpc) {
     return {
       source: rpc.data ? "rpc" : "none",
+      via: "rpc",
       account: rpcAccount,
       follower: null,
       equityCNS: rpc.data?.equityCNS ?? null,
@@ -83,12 +97,15 @@ export function useWatch(opts: { backendDown?: boolean } = {}): WatchData {
       leaderAccountId: rc.teamRun?.demoLeaderAccountId ?? null,
       block: rpc.data?.block ?? null,
       readAt: rpc.data?.readAt ?? null,
-      isLoading: rpc.isLoading,
+      scannedMinutes: rpc.data ? scannedMinutes(rpc.data) : null,
+      rpcError: rpc.isError && !rpc.data,
+      isLoading: rpc.isLoading && !!rpcAccount,
     };
   }
   const events = ((feed.data as FeedPage | undefined)?.events ?? []).filter((e) => e.kind === "Mirrored" || e.kind === "Blocked" || e.kind === "EngineShrunk" || e.kind === "EngineSkipped");
   return {
     source: d ? "api" : "none",
+    via: "api",
     account: apiAccount ?? null,
     follower: d?.follower ?? null,
     equityCNS: d?.follower.equityCNS ?? null,
@@ -99,6 +116,8 @@ export function useWatch(opts: { backendDown?: boolean } = {}): WatchData {
     leaderAccountId: d?.leader.accountId ?? null,
     block: null,
     readAt: demo.dataUpdatedAt || null,
+    scannedMinutes: null,
+    rpcError: false,
     isLoading: demo.isLoading,
   };
 }
@@ -122,7 +141,7 @@ export function useRunDemo() {
           const until = e.retryAfterSec ? Date.now() + e.retryAfterSec * 1000 : undefined;
           if (e.status === 429) setError({ title: e.code === "daily_cap" ? "Today's demo budget is used up" : "Demo limit reached", body: e.message, until });
           else if (e.status === 409) setError({ title: "A demo is already running", body: e.message, until });
-          else if (e.isNetwork) setError({ title: "Can't reach Mirror", body: "Starting a demo needs the Mirror server. Try again in a moment." });
+          else if (e.isNetwork) setError({ title: failTitle("mirror"), body: `${serviceDownLine()}. Starting a demo needs it; the copies shown are read straight from Monad.` });
           else setError({ title: "Demo didn't start", body: e.message });
         } else setError({ title: "Demo didn't start", body: String(e) });
       } finally {

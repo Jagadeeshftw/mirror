@@ -1,7 +1,9 @@
 // Home for a funded account (one or more follows).
+import { failTitle, mirrorDownBody } from "../lib/conn";
 import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { View } from "react-native";
+import { followLimits } from "../lib/policy";
 import { ausd, ausdSigned, dateShort, pctSigned, shortAddr, toBig, leverage } from "../lib/format";
 import type { FeedEvent, MirrorAccount } from "../lib/types";
 import { useConfig, useFeedAll, type Totals } from "../state/data";
@@ -129,7 +131,7 @@ export function FundedHome({ totals, mirrorDown, monadDown, onRetry }: { totals:
 
   return (
     <>
-        {mirrorDown ? <ErrorBanner testID="home.offline" title="Can't reach Mirror" body="Our server isn't answering. Balances below are the last read; your follows keep running onchain." onRetry={onRetry} /> : null}
+        {mirrorDown ? <ErrorBanner testID="home.offline" title={failTitle("mirror")} body={mirrorDownBody("funded")} onRetry={onRetry} /> : null}
         {monadDown ? <ErrorBanner testID="home.monadDown" title="Can't reach Monad" body="The Monad RPC isn't answering from this device. Mirror's server is fine and copying continues." onRetry={onRetry} /> : null}
         <View style={{ paddingHorizontal: 20, paddingTop: 4, gap: 6 }}>
           <Row justify="space-between">
@@ -208,7 +210,7 @@ export function FundedHome({ totals, mirrorDown, monadDown, onRetry }: { totals:
             Beta deposit limit
           </T>
           <T size={12} mono testID="home.beta.cap">
-            {hasFollows ? `${ausd(totals.deposited)} AUSD · 25.00 per follow` : "25.00 AUSD per follow"}
+            {hasFollows ? `${ausd(totals.deposited)} AUSD · ${ausd(followLimits(cfg).capCNS)} per follow` : `${ausd(followLimits(cfg).capCNS)} AUSD per follow`}
           </T>
         </View>
 

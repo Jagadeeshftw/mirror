@@ -1,6 +1,7 @@
 // Monad RPC reads (no writes, no transactions are ever sent from the app: the relayer submits).
 import { createPublicClient, defineChain, http, parseAbi, type PublicClient } from "viem";
 import shared from "./shared-config.json";
+import { networkConfig } from "./network";
 import type { Address, AppConfig } from "./types";
 
 const ERC20_ABI = parseAbi([
@@ -14,12 +15,13 @@ let client: PublicClient | null = null;
 let clientRpc = "";
 
 export function monad(rpc: string, chainId = 143) {
+  const explorer = chainId === 10143 ? "https://testnet.monadvision.com" : "https://monadvision.com";
   return defineChain({
     id: chainId,
     name: "Monad",
     nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
     rpcUrls: { default: { http: [rpc] } },
-    blockExplorers: { default: { name: "MonadVision", url: "https://monadvision.com" } },
+    blockExplorers: { default: { name: "MonadVision", url: explorer } },
   });
 }
 
@@ -58,9 +60,10 @@ export async function blockNumber(cfg: AppConfig): Promise<{ block: bigint; ms: 
 export const SHARED = shared;
 export const MAINNET = shared.networks.mainnet;
 
+/** Explorer links: the live config's explorer, else the one for this build's network (EXPO_PUBLIC_NETWORK). */
 export function txUrl(cfg: Pick<AppConfig, "explorerTx"> | null | undefined, hash: string): string {
-  return (cfg?.explorerTx ?? MAINNET.explorerTx) + hash;
+  return (cfg?.explorerTx || networkConfig().explorerTx) + hash;
 }
 export function addressUrl(cfg: Pick<AppConfig, "explorerAddress"> | null | undefined, a: string): string {
-  return (cfg?.explorerAddress ?? MAINNET.explorerAddress) + a;
+  return (cfg?.explorerAddress || networkConfig().explorerAddress) + a;
 }

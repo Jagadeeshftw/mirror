@@ -1,8 +1,9 @@
 // Last good /v1/config, kept on the device. When the Mirror backend is down the app still knows the
-// Monad RPC, the contracts and the team-run demo follower, so balances and watch mode read from Monad.
+// Monad RPC, the contracts and the team-run demo follower, so balances and watch mode read from Monad. A device
+// that never reached it falls back to the bundled config for the build's network (lib/network.ts).
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { MAINNET } from "../lib/chain";
 import { normalizeConfig } from "../lib/config";
+import { networkConfig } from "../lib/network";
 import type { AppConfig } from "../lib/types";
 
 const KEY = "mirror.config.cache.v1";
@@ -25,14 +26,11 @@ export function saveConfigCache(cfg: AppConfig): AppConfig {
   return cfg;
 }
 
-/** Config good enough for Monad reads: live, else cached, else the bundled mainnet values. */
-export function rpcConfig(cfg: AppConfig | undefined | null): Pick<AppConfig, "rpc" | "chainId" | "contracts" | "teamRun"> {
-  const c = cfg ?? cache;
-  if (c) return c;
-  return {
-    rpc: MAINNET.rpc,
-    chainId: MAINNET.chainId,
-    contracts: { factory: null, implementation: null, keeperRegistry: null, perplExchange: MAINNET.perplExchange as any, collateral: MAINNET.collateral as any },
-    teamRun: MAINNET.teamRun as any,
-  };
+/**
+ * Config good enough for Monad reads and display: live, else the last good copy on this device, else the
+ * bundled config for this build's network (EXPO_PUBLIC_NETWORK), so a fresh device with Mirror's service down
+ * still knows the right RPC, contracts, markets, explorer and demo follower.
+ */
+export function rpcConfig(cfg: AppConfig | undefined | null): AppConfig {
+  return cfg ?? cache ?? networkConfig();
 }

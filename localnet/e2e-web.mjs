@@ -15,7 +15,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
-import { ROOT, apiClient, env, setupDemoFollower, startEngine } from "./e2e-web/chain.mjs";
+import { ROOT, apiClient, demoAccountP, env, setupDemoFollower, startEngine } from "./e2e-web/chain.mjs";
 import { chromium, openDevice, PHONE } from "./e2e-web/browser.mjs";
 import { createReport } from "./e2e-web/report.mjs";
 import { phoneFlows } from "./e2e-web/flows-watch.mjs";
@@ -70,10 +70,23 @@ async function buildWeb() {
   cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
   const dist = join(dir, "dist");
   console.log(`building the web export into ${dist} (1-3 min)`);
-  const buildEnv = { ...process.env, EXPO_BASE_URL: "/app", EXPO_PUBLIC_API_BASE: API, EXPO_PUBLIC_SHARE_BASE: `http://localhost:${SITE_PORT}`, MERA_RP_ID: "localhost", CI: "1" };
+  // The bundled network (what a device that never reached the engine knows): localnet, with this run's addresses.
+  const networkConfig = {
+    chainId: env.chainId,
+    rpc: env.rpcUrl,
+    contracts: { factory: env.mirror.factory, implementation: env.mirror.implementation, keeperRegistry: env.mirror.keeperRegistry, deployBlock: env.mirror.deployBlock, perplExchange: env.perplExchange, collateral: env.collateral },
+    markets: env.markets,
+    minAccountOpenCNS: env.minAccountOpenCNS,
+    depositCapCNS: String(env.mirror.depositCap),
+    teamRun: { demoLeaderAddress: env.teamRun.demoLeaderAddress, demoLeaderAccountId: env.teamRun.demoLeaderAccountId, demoFollowerAccount: await demoAccountP },
+  };
+  const buildEnv = { ...process.env, EXPO_BASE_URL: "/app", EXPO_PUBLIC_API_BASE: API, EXPO_PUBLIC_SHARE_BASE: `http://localhost:${SITE_PORT}`, EXPO_PUBLIC_NETWORK: "localnet", EXPO_PUBLIC_NETWORK_CONFIG: JSON.stringify(networkConfig), MERA_RP_ID: "localhost", CI: "1" };
   delete buildEnv.EXPO_PUBLIC_DEV_PASSKEY;
   delete buildEnv.EXPO_PUBLIC_MIRROR_DEV_TOOLS;
   await run("npx", ["expo", "export", "-p", "web", "--clear", "--output-dir", dist], { cwd: join(ROOT, "app"), env: buildEnv }, join(OUT, "build.log"));
+  // The bundle must carry the bundled network config (Expo inlines EXPO_PUBLIC_* at build time).
+  const { execSync } = await import("node:child_process");
+  try { execSync(`grep -rqF ${JSON.stringify(networkConfig.contracts.factory)} ${JSON.stringify(join(dist, "_expo"))}`); } catch { throw new Error("the web export does not contain EXPO_PUBLIC_NETWORK_CONFIG (factory address missing)"); }
   return dist;
 }
 
