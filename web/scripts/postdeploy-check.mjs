@@ -109,7 +109,13 @@ async function chromeRun(label, contextOpts, expectWidth) {
       const failedRequests = [];
       page.on("console", (m) => m.type() === "error" && consoleErrors.push(`${m.text().slice(0, 300)}${m.location()?.url ? ` @ ${m.location().url}` : ""}`));
       page.on("pageerror", (e) => pageErrors.push(String(e.message).slice(0, 300)));
-      page.on("requestfailed", (r) => failedRequests.push({ url: r.url(), kind: r.resourceType(), error: r.failure()?.errorText }));
+      // Next.js link prefetches (?_rsc=) are cancelled (net::ERR_ABORTED) when the page closes or navigates; that is
+      // not a failure a visitor sees. Any other error on them (or an HTTP error, below) still counts.
+      page.on("requestfailed", (r) => {
+        const error = r.failure()?.errorText;
+        if (error === "net::ERR_ABORTED" && /[?&]_rsc=/.test(r.url())) return;
+        failedRequests.push({ url: r.url(), kind: r.resourceType(), error });
+      });
       page.on("response", (r) => r.status() >= 400 && failedRequests.push({ url: r.url(), status: r.status(), kind: r.request().resourceType() }));
       const r = { consoleErrors, pageErrors, failedRequests, expectWidth };
       try {

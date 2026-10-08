@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import React from "react";
 import { View } from "react-native";
 import { api } from "../lib/api";
+import { serviceDownLine } from "../lib/network";
 import { ago, ausd, leverage, lots as fmtLots } from "../lib/format";
 import { bpsText, fillDeviationBps } from "../lib/proof";
 import type { FeedEvent } from "../lib/types";
@@ -86,7 +87,7 @@ export function WelcomeCopy() {
       </View>
       {!real && !q.isLoading ? (
         <Row gap={6} style={{ marginTop: 10, justifyContent: "center" }}>
-          <T size={12} color="mu">{q.isError ? "Mirror is slow to answer." : "No recent demo copy."}</T>
+          <T size={12} color="mu">{q.isError ? `${serviceDownLine()}.` : "No recent demo copy."}</T>
           <Link title="Watch real copies" onPress={() => router.push("/demo")} testID="onboarding.watch" />
         </Row>
       ) : null}
