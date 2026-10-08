@@ -1,17 +1,19 @@
-# Resume brief (Stage B)
+# Resume brief (Stage B, hosted bring-up block)
 
-Kept current while Stage B runs. Last updated: 2026-10-08 22:15 IST (end of Stage B).
+Kept current while Stage B runs. Last updated: 2026-10-09 01:40 IST.
 
 ## Waiting on Jagadeesh
 
 | # | Action (exact) | Unblocks |
 |---|---|---|
-| 1 | `gh auth refresh -h github.com -s workflow --user Jagadeeshftw` | Pushing the post-deploy check workflow `.github/workflows/postdeploy.yml` (kept locally, excluded from main, and on the local branch `postdeploy-workflow`). After the refresh it is one commit: `git add -f .github/workflows/postdeploy.yml`, commit, push. |
-| 2 | `cd ~/personal/projects/grants/monad/mirror && bash scripts/railway-secrets.sh` | Hosted engine, both indexers, HyperSync proxy, Hasura secrets. After it: `bash scripts/railway-up.sh` brings everything up. |
-| 3 | More testnet MON for the ops wallet `0x299E77E58DD37607e4890C761924D829F8ACe82C` (faucet) | A full 25-tester round: Mirror's relayer and keeper pay all tester gas. 58.90 MON left after the deploy. |
-| 4 | (Resolved: 69 GB free since 19:00 IST; kept for the record.) Free disk space: at least 15 GB on the Data volume (was 119 MB free at 18:20 on 8 Oct; 3.4 GB after I removed Mirror's own build outputs). The large items are not Mirror's to delete: `~/Library/Caches` 23 GB, Colima's VM `~/.colima` 44 GB (images shared with other projects), `~/.gradle` 13 GB, AVD `mirror-dev` 3 GB (not mine; mine are mirror-a/b) | The release APK build, the Docker dry-run of the hosted images, and emulator runs (each needs several GB) |
+| 1 | `gh auth refresh -h github.com -s workflow --user Jagadeeshftw` (the **Jagadeeshftw** account; on 9 Oct the refresh had landed on the active account Baskarayelu, and Jagadeeshftw still had no `workflow` scope) | Pushing `.github/workflows/postdeploy.yml` from the local branch `postdeploy-workflow`, then running it |
+| 2 | `cd ~/personal/projects/grants/monad/mirror && bash scripts/railway-secrets.sh`, from this checkout (the one linked to Railway project `mirror-testnet`). On 9 Oct 00:50 IST none of its variables were set on Railway; the script works from here (its stdin mechanism was checked with a dummy variable, then removed). It prints a `set X on Y` line per variable. | The hosted engine, relayer, both indexers and the HyperSync proxy; then `bash scripts/railway-up.sh` |
+| 3 | More testnet MON (optional) | Ops wallet holds 63.14 MON: the 25-tester round needs about 22, demos at most about 8 a day |
 
 ## Decisions taken without review
+
+- Docker dry-run containers `mirror-dry-*` and `mirror-dry2-*` (7, stopped) were left in place rather than removed, under the no-deletion rule; `docker rm` them when convenient.
+- Engine reads go through Multicall3 on Monad mainnet and testnet (off on a fresh localnet).
 
 - `web/AGENTS.md` (the untracked file seen since Stage A) is written by `next dev` itself (Next 16 agent rules); it is now gitignored, not committed.
 - APK republished as 1.0.1 (versionCode 101) the same day: 1.0.0's Demo screen showed an error instead of reading from Monad while the service is down.
