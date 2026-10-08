@@ -15,6 +15,7 @@ import { Icon } from "../ui/icons";
 import { Button, Card, ChipS, CommitTrack, ErrorBanner, Identicon, Lbl, LatencyPill, LoadingBlock, MarketBadge, Note, Row, Screen, Scroll, Side, T, TeamRunBadge, TxLink } from "../ui/kit";
 import { useColors } from "../ui/theme";
 import { CopyDetailSheet } from "../ui/copyDetail";
+import { WatchHome } from "../ui/watchHome";
 
 function CycleCard({ cy, cfg }: { cy: DemoCycle; cfg: ReturnType<typeof useConfig>["data"] }) {
   const c = useColors();
@@ -144,7 +145,8 @@ export default function Demo() {
     <Screen>
       <AppBar title="Demo" showBack noAv />
       <Scroll testID="demo.screen">
-        {demo.isError && !d ? <ErrorBanner title="Can't reach the demo service" body="The demo runs on the Mirror engine. Try again in a moment." onRetry={() => demo.refetch()} /> : null}
+        {/* Mirror's service down: the demo account's real copies, read straight from Monad (Run buttons off). */}
+        {demo.isError && !d ? <WatchHome cfg={cfg} walletCNS={null} down showAccount={false} onRetry={() => demo.refetch()} /> : null}
         {!d ? (
           demo.isLoading ? <LoadingBlock label="Loading the demo account" /> : null
         ) : (

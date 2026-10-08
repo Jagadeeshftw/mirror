@@ -21,7 +21,7 @@ import { CycleCard, DemoCard, DepositNudge, RunButtons } from "./watch";
 
 const QUIET_MS = 2 * 3600e3;
 
-export function WatchHome({ cfg, walletCNS, followsCNS = null, walletLoading, walletError, down, onRetry }: { cfg: AppConfig | undefined; walletCNS: bigint | null; followsCNS?: bigint | null; walletLoading?: boolean; walletError?: boolean; down?: boolean; onRetry?: () => void }) {
+export function WatchHome({ cfg, walletCNS, followsCNS = null, walletLoading, walletError, down, onRetry, showAccount = true }: { cfg: AppConfig | undefined; walletCNS: bigint | null; followsCNS?: bigint | null; walletLoading?: boolean; walletError?: boolean; down?: boolean; onRetry?: () => void; /** false on the Demo screen: only the demo account's copies. */ showAccount?: boolean }) {
   const c = useColors();
   const w = useWatch({ backendDown: down });
   const live = useDemoStream(!down);
@@ -36,7 +36,7 @@ export function WatchHome({ cfg, walletCNS, followsCNS = null, walletLoading, wa
   return (
     <View style={{ gap: 16 }} testID="home.watch">
       {down ? <ErrorBanner testID="home.offline" title={failTitle("mirror")} body={mirrorDownBody("account")} onRetry={onRetry} /> : null}
-      {(
+      {showAccount && (
         <View style={{ paddingHorizontal: 20, gap: 6 }} testID="home.account">
           <Lbl>Your account</Lbl>
           <Row align="flex-end" gap={6}>
