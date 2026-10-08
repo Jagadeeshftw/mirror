@@ -14,6 +14,9 @@ Kept current while Stage B runs. Last updated: 2026-10-08 19:00 IST (18:55 local
 
 ## Decisions taken without review
 
+- `web/AGENTS.md` (the untracked file seen since Stage A) is written by `next dev` itself (Next 16 agent rules); it is now gitignored, not committed.
+- APK republished as 1.0.1 (versionCode 101) the same day: 1.0.0's Demo screen showed an error instead of reading from Monad while the service is down.
+
 - Public-testnet end-to-end runs against the same engine code on this machine, since the hosted engine needs item 2. Everything else in it is live testnet (contracts, Perpl, demo leader 1000, the passkey accounts).
 - Engine change found that way: it now listens before its first sync (Railway's health check would otherwise fail every hosted start).
 

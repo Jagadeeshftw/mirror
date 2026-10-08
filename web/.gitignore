@@ -43,3 +43,5 @@ next-env.d.ts
 # Expo web export (scripts/build-app.sh); build output, deployed from this machine
 /public/app/
 /postdeploy-evidence/
+# Written by `next dev` (Next 16 agent rules); not project content.
+/AGENTS.md
