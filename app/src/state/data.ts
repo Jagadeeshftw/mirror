@@ -42,13 +42,19 @@ export function useMarkets(cfg: AppConfig | undefined) {
   }, [cfg]);
 }
 
+/** Timeout for refreshing owner data that is already on screen. */
+export const REFRESH_TIMEOUT_MS = 25_000;
+
 export function useOwner() {
+  const qc = useQueryClient();
   const { account } = useSession();
   const owner = account?.address as Address | undefined;
   return useQuery({
     queryKey: ["owner", owner],
-    // Fails fast (FAST_FAIL_MS): Home shows balances read from Monad instead of waiting on Mirror's service.
-    queryFn: () => api.ownerAccounts(owner!, FAST_FAIL_MS),
+    // The first load fails fast (FAST_FAIL_MS) so Home shows balances read from Monad instead of waiting on Mirror's
+    // service. Refreshes of data already on screen get longer: on a rate-limited public RPC the engine's account view
+    // can take several seconds, and a refresh that times out would leave a stale status showing.
+    queryFn: () => api.ownerAccounts(owner!, qc.getQueryData(["owner", owner]) ? REFRESH_TIMEOUT_MS : FAST_FAIL_MS),
     enabled: !!owner,
     refetchInterval: 15_000,
     retry: 1,

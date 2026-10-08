@@ -3,6 +3,8 @@
 # contracts, Perpl's testnet exchange, the demo leader (Perpl account 1000) and every account are the live testnet ones.
 # APK: app/scripts/build-apk.sh --stage-b (release signing, real Mera passkeys, rpId mirror.0xo.in, API 10.0.2.2:8838).
 # Run with devices/run-stage-b-android.sh. ${HOOK} = localnet/stage-b-hook.mjs (reads, plus the demo leader's own orders).
+# Setup done once (run stage-b-android-20261008-201427, steps 01-03): mirror-a created the demo follower 0x634B…4896,
+# deposited its owner's 150 test AUSD by permit and followed leader 1000. This flow starts from that state.
 # Accounts: mirror-a restores the demo follower's owner 0x3aBF…6C78 (passkey "Mirror probe 2026-10-06…"), mirror-b the
 # test user 0x1bbD…040D (passkey "Probe 2026-10-06…"). Each wallet holds 150 test AUSD from Perpl.
 
@@ -20,32 +22,21 @@ readText id:funds.address addr "^0x[0-9a-fA-F ]{40,60}$" 30
 squash addr
 assertVar addr "^0x3[aA][bB][fF]625[bB][eE]454"
 
-step 02 wallet shows the 150 test AUSD from Perpl
+step 02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)
+# The owner is on the team-run list, so the app shows this account as the team-run demo follower in watch mode.
 open /home
-expectResult id:home.balance.ausd "^150\.00$" 60
-
-step 03 follow the demo leader (Perpl 1000): 150 test AUSD, fee line, one passkey prompt
-open /leader/1000
-waitFor id:leader.screen 30
-tap id:leader.follow
-waitFor id:follow.sheet 20
-setText id:follow.amount.input 150
-tap id:follow.seeWhatIf
-tap id:follow.review
-expectResult id:follow.review.fee "Mirror fee: 0\.02% of opening size \(builder 26\)" 20
-tap id:follow.confirm
-passkey 90
-expectResult id:follow.status "^(Following|Matched)$" 180
+waitFor id:home.watch 60
+expectResult id:watch.teamRun "Team-run" 30
+expectResult id:watch.balance "^1[0-9][0-9]\.[0-9][0-9]$" 90
 shell ${HOOK} follow-check ${addr}
-tap id:follow.done
 
 # ---------- 2. a real leader trade on Perpl testnet, copied ----------
 step 04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain
 shell ${HOOK} leader-trade open 50
 shell ${HOOK} wait-copy ${addr} open
-tap id:home.tab.activity
-expectResult "idtext:activity\.item\.\d+~COPY.*${copy_open_tx}" "fee 0\.0*[1-9]" 90
-tap "idtext:activity\.item\.\d+~COPY.*${copy_open_tx}"
+scrollTo "idtext:watch\.feed\.\d+~Open .*${copy_open_tx}"
+expectResult "idtext:watch\.feed\.\d+~Open .*${copy_open_tx}" "fee 0\.0*[1-9]" 90
+tap "idtext:watch\.feed\.\d+~Open .*${copy_open_tx}"
 waitFor id:copy.detail 15
 expectResult id:copy.proof.leaderFill "^[0-9][0-9,]*\.[0-9]$" 10
 expectResult id:copy.proof.yourFill "^[0-9][0-9,]*\.[0-9]$" 10
@@ -128,6 +119,7 @@ shell ${HOOK} wallet ${addrB}
 step 11 demo leader opens at 10x -> the demo follower's leverage rule blocks it onchain
 device a
 shell ${HOOK} leader-trade open 20 1000
-tap id:home.tab.activity
-expectResult "idtext:activity\.item\.\d+~.*" "Not copied" 120
+open /home
+scrollTo "idtext:watch\.feed\.\d+~Not copied"
+expectResult "idtext:watch\.feed\.\d+~Not copied" "leverage" 120
 shell ${HOOK} leader-trade close 20
