@@ -2,6 +2,8 @@
 
 Caps: at most 30 USD parked in total, under 10 USD actually spent.
 
+**Status 8 Oct 2026:** the ops wallet holds 197.66 MON (enough for the deploy, worst case 2.19 MON, and the whole budget below) and Perpl account 5416 holds the demo leader's 10.00 AUSD. Still needed: 10.00 AUSD for the demo follower's passkey address. The ordered checklist, with exact commands, is [runbook-mainnet.md](./runbook-mainnet.md).
+
 ## Send to the ops wallet
 
 One EOA does every team-run job: it deploys the contracts, is the keeper and the relayer, is the team-run demo leader, and pays for Nansen x402 calls.

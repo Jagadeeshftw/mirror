@@ -118,6 +118,10 @@ const probe = createPublicClient({ transport: http(net.rpc) });
 const chainId = net.chainId ?? (await probe.getChainId());
 const actualChainId = await probe.getChainId();
 if (actualChainId !== chainId) throw new Error(`RPC ${net.rpc} is chain ${actualChainId}, expected ${chainId}`);
+if (networkName === "local" && chainId === 143 && send) {
+  // A transaction signed for chain 143 on a fork is a valid mainnet transaction if it ever leaks.
+  throw new Error("the local fork reports chain 143: start anvil with --chain-id 31337 so nothing signed there is valid on mainnet");
+}
 const chain = defineChain({
   id: chainId,
   name: `monad-${networkName}`,
@@ -303,7 +307,12 @@ const deployment = {
 const out = join(root, "contracts", "deployments", networkName === "local" ? `local-${chainId}.json` : `${chainId}.json`);
 writeFileSync(out, JSON.stringify(deployment, null, 2) + "\n");
 console.log(`\nwrote ${out}`);
-console.log("verify (no transaction):");
+console.log("verify (no transaction). Sourcify (sourcify.dev):");
 console.log(`  cd contracts && forge verify-contract ${registryAddr} src/KeeperRegistry.sol:KeeperRegistry --chain ${chainId} --verifier sourcify --constructor-args $(cast abi-encode "c(address)" ${account.address})`);
 console.log(`  cd contracts && forge verify-contract ${factoryAddr} src/MirrorAccountFactory.sol:MirrorAccountFactory --chain ${chainId} --verifier sourcify --constructor-args $(cast abi-encode "c(address,address,address,uint256,uint8,uint16)" ${exchange} ${collateral} ${registryAddr} ${cap} ${builderId} ${builderFee})`);
 console.log(`  cd contracts && forge verify-contract ${implAddr} src/MirrorAccount.sol:MirrorAccount --chain ${chainId} --verifier sourcify --constructor-args $(cast abi-encode "c(address,address,address,address,uint256,uint8,uint16)" ${exchange} ${collateral} ${registryAddr} ${factoryAddr} ${cap} ${builderId} ${builderFee})`);
+if (chainId === 143 || chainId === 10143) {
+  console.log("MonadVision reads BlockVision's own Sourcify instance: run the same three commands with");
+  console.log("  --verifier-url https://sourcify-api-monad.blockvision.org/");
+  console.log("Monadscan (Etherscan API v2): the same three commands with --verifier etherscan --etherscan-api-key <key> --watch instead of --verifier sourcify");
+}
