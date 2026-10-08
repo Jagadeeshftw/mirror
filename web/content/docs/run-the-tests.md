@@ -17,10 +17,10 @@ forge test
 ```
 
 ```text
-Ran 15 test suites ...: 132 tests passed, 0 failed, 0 skipped (132 total tests)
+Ran ... test suites ...: 158 tests passed, 0 failed, 0 skipped (158 total tests)
 ```
 
-132 Foundry tests: unit tests, fuzz tests at 1,000 runs each, 10 invariant properties plus a call summary, and 4 fork tests. Without `MONAD_RPC_URL` the fork tests return early and pass without touching the network; the next section runs them for real.
+158 Foundry tests: unit tests, fuzz tests at 1,000 runs each, 12 invariant properties plus a call summary, and 6 fork tests. Without `MONAD_RPC_URL` the fork tests return early and pass without touching the network; the next section runs them for real.
 
 ## Against live Perpl and AUSD (mainnet fork)
 
@@ -29,7 +29,9 @@ MONAD_RPC_URL=https://rpc.monad.xyz forge test --mc PerplMainnetFork -vv
 ```
 
 ```text
-Ran 4 tests for test/fork/PerplMainnetFork.t.sol:PerplMainnetForkTest
+Ran 6 tests for test/fork/PerplMainnetFork.t.sol:PerplMainnetForkTest
+[PASS] test_fork_builderFeeOnLivePerpl()
+[PASS] test_fork_detachAgainstLivePerpl()
 [PASS] test_fork_followMatchNowAndGasProfile()
 [PASS] test_fork_fullLifecycleAgainstLivePerpl()
 [PASS] test_fork_keeperCopyGasProfile()
@@ -75,10 +77,10 @@ forge test --mc MirrorInvariantTest -vv
 ```
 
 ```text
-Suite result: ok. 11 passed; 0 failed; 0 skipped
+Suite result: ok. 13 passed; 0 failed; 0 skipped
 ```
 
-Foundry drives a funded account that follows two leaders through 256 random sequences of 64 calls: keeper copies and closes, owner match now, leader trades, price moves, liquidations, owner deposits, withdrawals, pauses and levels, stop triggers by a stranger, time jumps, plus hostile calls from the keeper and a stranger (owner-only functions, forged signatures, arbitrary calldata). After every call, these 10 properties must hold:
+Foundry drives a funded account that follows two leaders through 256 random sequences of 64 calls: keeper copies and closes, owner match now, leader trades, price moves, liquidations, owner deposits, withdrawals, pauses and levels, stop triggers by a stranger, time jumps, plus hostile calls from the keeper and a stranger (owner-only functions, forged signatures, arbitrary calldata). After every call, these 12 properties must hold:
 
 | Invariant | Property |
 |---|---|
@@ -92,6 +94,8 @@ Foundry drives a funded account that follows two leaders through 256 random sequ
 | `collateralConserved` | All collateral sits with the owner, the account or the exchange. |
 | `onlyOwnerChangesPolicy` | Every rule is exactly what the owner last set; the pause flag changes only by the owner or a triggered account stop. |
 | `openPositionsHaveAHolder` | Every open position is held for a followed leader. |
+| `builderFeeOnlyOnOpensAtTheFixedRate` | No reducing order carries builder attribution; attributed orders go to builder 26 only, at 20 per 100,000 and never above the owner's signed maximum. |
+| `detachedLeaderNeverCopied` | A detached leader's copies never trade (opens, keeper reductions, match now), and only the owner changes which leaders are detached. |
 
 `invariant_callSummary` also runs; it logs how many copies executed and were blocked (by reason), and how many triggers executed.
 

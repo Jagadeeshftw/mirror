@@ -9,12 +9,12 @@ three integrations together".
 
 | # | Requirement | Evidence | Status |
 |---|---|---|---|
-| 1 | Mobile application | Android APK (Expo / React Native), public download link | todo |
-| 2 | Users authenticate via Mera (no other login) | `@category-labs/mera` PRF passkey; no Privy/Dynamic in deps | todo |
-| 3 | Holds and displays an AUSD balance | Persistent AUSD balance header on every main screen | todo |
-| 4 | Executes trades through Perpl | MirrorAccount `execOrder` on Perpl Exchange `0x34B6…2a6F`; mainnet tx hashes | in progress (fork-tested: `contracts/test/fork/PerplMainnetFork.t.sol`) |
-| 5 | Demo shows at least one Perpl trade | Demo video timestamp + tx link | todo |
-| 6 | Creative use of the three together | Copy trading: passkey owner, AUSD collateral, leader fills on Perpl mirrored under onchain rules | todo |
+| 1 | Mobile application | Android app 1.0.0 (Expo / React Native), `app/`; Stage A 34/34 on Android emulators (`devices/e2e/flows/stage-a.flow`, `stage-a-g2.flow`). Testnet APK on `https://mirror.0xo.in/download`: being published | built; public APK pending |
+| 2 | Users authenticate via Mera (no other login) | `@category-labs/mera` PRF passkey (`app/src/lib/derive.ts`, `wallet.ts`); no Privy/Dynamic in deps; Stage A step 01 (one prompt) and step 18 (restore on the second emulator) | done (emulators) |
+| 3 | Holds and displays an AUSD balance | Balance chip in the app bar on every main screen (`home.balance.ausd`); Stage A step 08 checks it | done (emulators) |
+| 4 | Executes trades through Perpl | MirrorAccount orders on Perpl's Exchange: fork-tested against mainnet (`contracts/test/fork/PerplMainnetFork.t.sol`), Stage A on Perpl's real exchange code (match now, copies, close all). Testnet contracts deployed 7 Oct 2026 21:56 UTC (`contracts/deployments/10143.json`); testnet tx hashes need the hosted engine | done (fork, localnet); testnet trades pending |
+| 5 | Demo shows at least one Perpl trade | Video 3 in `docs/storyboards.md` (final shot list); timestamp + tx link once recorded | storyboard final; not recorded |
+| 6 | Creative use of the three together | Copy trading: passkey owner, AUSD collateral, leader fills on Perpl mirrored under onchain rules; answer in `docs/submission/fields/11-bounties.md` | written |
 
 ## Asked for at submission (official, from the bounty page, read 6 Oct 2026)
 

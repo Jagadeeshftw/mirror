@@ -1,36 +1,47 @@
 ---
 title: Judges guide
-description: How to verify Mirror today, and the phone path once the app and mainnet contracts ship.
+description: What you can verify today, what is deployed on Monad testnet, and the app path once the hosted service is live.
 ---
 
-This page mirrors the judge access instructions in the Metropolis submission and is updated with real links, addresses and transaction hashes as they ship.
+This page mirrors the judge access instructions in the Metropolis submission. It is updated with real links and transaction hashes as each piece goes live, and it says "pending" for anything that is not live yet.
 
-## Status right now (7 Oct 2026)
+## Status (8 Oct 2026)
 
-Not yet usable on a phone. Here is exactly where things stand:
+- **Contracts on Monad testnet (chain 10143):** deployed on 7 Oct 2026 at 21:56 UTC (block 69,083,005) and verified on [Sourcify](https://repo.sourcify.dev/10143/0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39). Addresses below and on [Contracts](/docs/contracts).
+- **Mirror's fee is in that deployment:** Perpl builder 26, 0.02% of opening size only, confirmed by Perpl on 7 Oct 2026. No fee has accrued yet.
+- **Hosted copy engine, relayer and indexer:** prepared, **not live yet**. Until they are, the app reads balances and the demo account from Monad directly and says when an action needs the service.
+- **Web app and Android APK:** being published at [/app](/app) and [/download](/download). Until then those pages say they are not published.
+- **Monad mainnet:** Mirror's contracts are **not deployed**. The team-run demo leader exists there as Perpl account 5416 (10.00 AUSD, no trades).
+- **Users:** none yet. The testnet tester round (25 outside testers, 100 test AUSD each, from Perpl) starts once the hosted service is live.
+- **Devices:** Mirror has been tested on Android emulators and in Chrome only.
 
-- **Contracts**: built and tested (132 Foundry tests, Slither findings explained, localnet smoke test 9/9). **Not deployed yet**, on testnet or mainnet. Testnet deployment comes next (Perpl is funding test AUSD), then mainnet only on the project owner's go.
-- **Copy engine and indexer**: being updated for the new contract rules. Not hosted yet.
-- **Android app**: built and tested on emulators. The APK is not public yet.
-- **Team-run demo leader**: exists on Monad mainnet as Perpl account 5416, opened on 7 Oct 2026 with 10.00 AUSD. No trade placed yet. The demo follower needs the deployed contracts.
-- **Users**: none yet.
+## Deployed on Monad testnet
 
-The steps marked **pending** describe the judge path once those ship.
+| Contract | Address |
+|---|---|
+| KeeperRegistry | `0x394B12D4355bE5B54DBCaa989cf44F8966195E41` |
+| MirrorAccountFactory | `0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39` |
+| MirrorAccount implementation | `0x648e35cdfD4Aca744Ed33c69A0089A5621A76316` |
+| Keeper (ops wallet) | `0x299E77E58DD37607e4890C761924D829F8ACe82C` |
+| Perpl testnet Exchange (third party) | `0x1964C32f0bE608E7D29302AFF5E61268E72080cc` |
+| Test AUSD (third party) | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` |
+
+Deposits on testnet are capped at 200 test AUSD per account (`depositCap` in `contracts/deployments/10143.json`). The three deployment transactions are listed there and in `docs/funding-ledger.md`.
 
 ## What you can verify today
 
-You need a computer with [Foundry](https://getfoundry.sh).
+You need a computer with [Foundry](https://getfoundry.sh) and Node.
 
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/Jagadeeshftw/mirror && cd mirror
+   git clone --recursive https://github.com/Jagadeeshftw/mirror && cd mirror
    ```
 
-2. Run the test suite (132 tests; the 4 fork tests return early without the next step):
+2. Run the contract tests: 158 tests (unit, fuzz at 1,000 runs, 12 invariants). The 6 fork tests return early without the next step.
 
    ```bash
-   git submodule update --init --recursive && cd contracts && forge test
+   cd contracts && forge test
    ```
 
 3. Run the fork tests against the live Perpl Exchange and AUSD on Monad mainnet:
@@ -39,31 +50,34 @@ You need a computer with [Foundry](https://getfoundry.sh).
    MONAD_RPC_URL=https://rpc.monad.xyz forge test --mc PerplMainnetFork -vv
    ```
 
-   This runs a gasless deposit, a blocked copy, a real fill on Perpl's live order book, a keeper withdrawal that reverts, a signed close-all, a follow with match now and an owner withdrawal, all against a fork of mainnet state. `test_fork_newRulesAgainstLivePerpl` also shows the entry guard blocking a copy of a leader far in profit, the follower's fill derived exactly from Perpl's average entry, and a stranger executing a reached take-profit.
+   They run a gasless deposit, a blocked copy, a real fill on Perpl's live order book, a keeper withdrawal that reverts, a signed close-all, a follow with match now and an owner withdrawal. `test_fork_newRulesAgainstLivePerpl` shows the entry filter blocking a copy of a leader far in profit and a stranger executing a reached take-profit; `test_fork_builderFeeOnLivePerpl` shows builder 26 charged on a copied open, equal to Mirror's proof, and nothing on the close; `test_fork_detachAgainstLivePerpl` shows a detached leader's exit refused while the follower keeps the position.
 
-4. Optional: run Slither, the localnet smoke test on Perpl's real exchange, and the deployment plan. Commands and expected output are on [Run the tests](/docs/run-the-tests).
+4. Compare the verified testnet source with `contracts/src` on Sourcify, one link per address: `https://repo.sourcify.dev/10143/<address>`.
 
-## What you need for the phone path (pending)
+5. Run the whole stack on a local network that runs Perpl's real exchange code (needs anvil):
 
-- An Android 9+ phone signed in to a Google account, with a screen lock set. Passkeys are stored in Google Password Manager, which is on by default.
-- Nothing else: no wallet, no seed phrase, no MON, no AUSD.
-- Works in the US and UK. The app reads through Mirror's own backend and indexer and talks to Monad contracts directly, so Perpl's API geo-block does not apply.
+   ```bash
+   cd contracts && forge build && cd ../scripts && npm install && cd ../localnet
+   npm install && npm run fetch && ./run-stage-a.sh --all
+   ```
 
-## Steps (pending)
+   Expected: the API run passes 29 of 29 and the web app run 64 of 64, with one optional check skipped (restoring the passkey in a second browser, which Chrome's virtual authenticator does not support). The Android run, `devices/run-stage-a-android.sh`, passes 34 of 34 on two Android emulators signed in to the same Google account, with real Google passkeys.
 
-1. On the phone, open [mirror.0xo.in](/) and tap **Download for Android**. Allow installs from this source when Android asks, then open the app.
-2. Tap **Create account** and approve the single fingerprint, face or PIN prompt. That passkey is your account. No test login is needed, because the passkey is created on your own phone.
-3. Home shows your AUSD balance. A new account has 0.00 AUSD.
-4. Open **Leaders**: live Perpl traders ranked from onchain data. Open any profile to see the due-diligence card.
-5. Open **Demo**. This is the team-run demo follower, a real MirrorAccount on Monad mainnet that follows the team-run demo leader. Both are run by the Mirror team and are excluded from all user and traction counts. You see its balance, positions and live copy feed.
-6. Tap **Run demo trade**. The demo leader opens a 1-lot BTC position on Perpl mainnet. Within about a second the demo follower's copy appears in the feed, with its latency and a MonadVision tx link. Tap **Run blocked trade**: the demo leader opens at a leverage above the follower's limit, and the feed shows "Blocked by your rule" with its own tx link. Both buttons are rate-limited, and the demo positions are closed again automatically.
-7. Optional, with your own funds: send at least 10 AUSD on Monad to the address on Home, follow a leader from the follow sheet with **Match the leader now** on (the default) and approve with your passkey. A Perpl order for your account is placed at once, shown with its expected size, price and slippage bound before you approve; later copies then land in your own account. Withdraw at any time from Account: gasless, and always to you.
-8. Optional restore test: install the APK on a second phone signed in to the same Google account, tap **Restore** and pick the passkey. The same account and balances appear.
+6. Optional: unit tests of the engine (218), indexer (44), app (205) and site (25), Slither ([static analysis](https://github.com/Jagadeeshftw/mirror/blob/main/docs/security/static-analysis.md): 137 findings, each fixed or explained), and the deployment plan. Commands are on [Run the tests](/docs/run-the-tests).
 
-## What is on mainnet (pending)
+## The app on testnet (pending)
 
-- MirrorAccountFactory, the MirrorAccount implementation and KeeperRegistry, all verified on MonadVision. Addresses will be on [Contracts](/docs/contracts).
-- The team-run demo leader (already live: Perpl account 5416) and the demo follower MirrorAccount (after deployment). See [Team-run accounts](/docs/team-run-accounts).
-- Perpl Exchange `0x34B6552d57a35a1D042CcAe1951BD1C370112a6F` and AUSD `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` (third party, already live).
+These steps need the hosted service, the web app and the APK. Until they are live, this section is a description, not something you can do.
 
-Once live, everything the app shows is real Monad mainnet state, with no simulated mode. The testnet deployment that comes first is for testing before mainnet, not part of the judge path. Live counts and every executed copy are on the [public stats page](/stats).
+**What you need:** an Android phone with Google Play services, signed in to a Google account, with a screen lock; or a desktop browser with passkey support. No wallet, no seed phrase, no MON.
+
+1. Open [/download](/download) on Android for the APK, or [/app](/app) in a browser.
+2. Tap **Create account** and approve the single passkey prompt. That passkey is your account.
+3. Home starts in watch mode with the team-run demo follower, labelled **Team-run**. Tap **Run demo trade**: the team-run demo leader trades on Perpl testnet, and the copy appears with the leader's fill, the copy's fill, the deviation, the latency, the Mirror fee and two transaction links. Tap **Run blocked trade**: the leader opens above the follower's max leverage, and the feed shows **Not copied** with the rule, the numbers and its own transaction. Both buttons are rate-limited, and demo positions are closed again automatically.
+4. Open **Leaders**, pick one and tap **Follow**. Set limits, tap **See what if** (a simulation, labelled as one), then **Review**: the fee line reads "Mirror fee: 0.02% of opening size (builder 26)".
+5. Optional, with test AUSD: Perpl's testnet minimum to open an account is 100 test AUSD. To get it, open an issue titled "test AUSD" at github.com/Jagadeeshftw/mirror/issues with your Mirror address (Add funds shows it); we send 100 test AUSD from the tester pool Perpl funded. Deposit from **Add funds** (gasless permit), follow with **Match the leader now** on, and approve with one passkey prompt.
+6. On a position, **Edit levels** sets a stop-loss or take-profit onchain, executable by anyone once reached. On the leader, **Stop following, keep my positions** makes your contract refuse that leader's copies while your stops and closes still work.
+7. **Close all positions** and **Withdraw**: gasless, and always to you.
+8. Optional: on a second device signed in to the same Google account, tap **I already have an account**. The same address comes back.
+
+Team-run accounts are labelled and excluded from every count ([Team-run accounts](/docs/team-run-accounts)). Testnet tokens have no value. Live counts and every executed copy will be on the [public stats page](/stats) once the hosted indexer is live.

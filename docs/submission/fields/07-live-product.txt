@@ -1,1 +1,1 @@
-PENDING. Planned: the landing page with the APK download, on a 0xo.in subdomain, plus the live stats page. Nothing is hosted yet.
+https://mirror.0xo.in

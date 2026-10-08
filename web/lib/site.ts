@@ -17,7 +17,7 @@ export const PERPL_URL = "/perpl";
 
 /** Static facts about the Android app. Version, size, SHA-256 and URL come from public/release.json (lib/release.ts). */
 export const APK = {
-  minAndroid: "Android 9 (API 28)",
+  minAndroid: "Android 14 (API 34)",
   packageName: "com.zeroxo.mirror",
 };
 

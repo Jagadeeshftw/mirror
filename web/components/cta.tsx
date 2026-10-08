@@ -53,7 +53,7 @@ export const CTA = () => {
               </Button>
             </div>
             <p className="mt-5 font-mono text-[11px] text-muted-foreground">
-              Android 9+ · Sideload install · Beta software
+              Android 14+ · Sideload install · Beta software
             </p>
           </motion.div>
         </div>

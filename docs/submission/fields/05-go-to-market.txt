@@ -13,25 +13,24 @@ CHANNELS
 - Building in public on X. Every post carries transaction links for real copies and real "blocked by your rule" events.
 - Leader profiles. Every leaderboard entry is a shareable page, and leaders have a reason to share that they are being followed.
 - Monad's Discord and community, for Android users who already use passkeys.
-Status: none of these channels has been used yet. Outreach starts once the app and the mainnet contracts are live.
+Status (8 Oct 2026): none of these channels has been used for outreach yet. Outreach starts with the testnet tester round below, once the hosted engine, the web app and the APK are live.
 
 FROM INSTALL TO FIRST FUNDED ACTION
 1. Download the APK from the site.
 2. One passkey prompt creates the account. No seed phrase.
 3. Pick a leader from the leaderboard, ranked from onchain Perpl data.
 4. Open the follow sheet. Defaults are suggested from the leader's history.
-5. Fund the account: send AUSD to the shown Monad address, then one signed permit moves it into the MirrorAccount. No MON is needed. Minimum 10 AUSD (Perpl's account minimum), maximum 25 AUSD (beta cap while unaudited).
+5. Fund the account: send AUSD to the shown Monad address, then one signed permit moves it into the MirrorAccount. No MON is needed. On mainnet: minimum 10 AUSD (Perpl's account minimum), maximum 25 AUSD (beta cap while unaudited). On testnet: minimum 100 test AUSD (Perpl's testnet minimum), maximum 200.
 6. The first copy lands the next time the leader trades, with a push notification.
-Target: under 3 minutes from install to a funded follow.
+Target: under 3 minutes from install to a funded follow. Not measured with outside users yet.
 
 NUMBERS MEASURED SO FAR (ONCHAIN)
-Mirror has no mainnet users yet, because the contracts are not deployed. As of 6 Oct 2026:
-- 0 MirrorAccounts
-- 0 AUSD deposited
-- 0 copies executed
+Mirror has no users yet. As of 8 Oct 2026:
+- Monad testnet: Mirror's contracts are deployed and verified (7 Oct 2026, 21:56 UTC); the tester round has not started.
+- Monad mainnet: Mirror's contracts are not deployed; 0 MirrorAccounts, 0 AUSD deposited, 0 copies.
 The Perpl figures above are read directly from Perpl's mainnet contracts.
 
-The public stats page (pending) will show these metrics, read from our Envio indexer, and this section will be updated from it:
+The public stats page will show these metrics, read from our Envio indexer, once the hosted indexer is live, and this section will be updated from it:
 - accounts created
 - funded accounts
 - net AUSD deposited
@@ -40,13 +39,15 @@ The public stats page (pending) will show these metrics, read from our Envio ind
 - median leader-to-copy latency
 - followers active in the last 7 days
 
+Testnet tester round: Perpl sent 2,500 test AUSD for testers, enough for 25 outside testers at 100 test AUSD each. Mirror's relayer and keeper pay their gas.
+
 Targets before judging:
-- demo leader and demo follower live on mainnet, with real copies and tx links
-- the public APK
-- 10 external funded followers
-Our own capital is capped at 30 USD in total. External users fund their own accounts.
+- the public APK and web app on testnet
+- 25 outside testers through the testnet round, with their copies and blocks on the stats page
+- the team-run demo leader and demo follower copying on testnet, with tx links
+Mainnet follows the testnet round. Our own capital is capped at 30 USD in total. External users fund their own accounts.
 
 PATH TO A BUSINESS
-- Revenue: Mirror is Perpl builder 26, charging 0.02% of the size a copy opens or adds and nothing on closes or stops. Confirmed by Perpl on 7 Oct 2026; live once Mirror's contracts are deployed. Perpl's exchange charges the fee on the opening fill and pays it to Mirror; Mirror's contracts never transfer it, and each follower's contract refuses any copy whose fee is above the maximum they signed. Illustration only: $10M of copied opening notional in a month would be $2,000 that month. No fee has accrued yet.
+- Revenue: Mirror is Perpl builder 26, charging 0.02% of the size a copy opens or adds and nothing on closes or stops. Confirmed by Perpl on 7 Oct 2026; live once Mirror's contracts are deployed (it is in the testnet deployment). Perpl's exchange charges the fee on the opening fill and pays it to Mirror; Mirror's contracts never transfer it, and each follower's contract refuses any copy whose fee is above the maximum they signed. Illustration only, not a forecast: $10M of copied opening notional in a month would be $2,000 that month at 0.02%. No fee has accrued onchain yet.
 - Growth: raise the per-account cap after an audit. Followers bring capital, and leaders bring their audiences.
 - Expansion: the same pattern works on any fully onchain order book, starting with other Monad venues. The pattern is an owned venue account, policy checked onchain on every order, and a keeper that cannot withdraw.

@@ -70,6 +70,6 @@ testnet.monadvision.com/address/0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39 #Mona
 ```
 
 Facts behind it:
-- Deploy output (captures/day14-testnet-deploy.txt), Sourcify full match for all three (captures/day14-sourcify.txt)
+- Deploy output (captures/day14-testnet-deploy.txt), Sourcify status "match" for all three (captures/day14-sourcify.txt)
 - Ledger: 1.103232 test MON, balance 60 -> 58.896768 (docs/funding-ledger.md)
 - Factory constructor builderId 26, fee 20 per 100,000 (contracts/deployments/10143.json)

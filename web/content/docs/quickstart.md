@@ -9,7 +9,7 @@ This is the path from install to your first copied trade. It takes about three m
 
 ## What you need
 
-- An Android 9+ phone signed in to a Google account, with a screen lock set. Passkeys are stored in Google Password Manager, which is on by default.
+- An Android 14+ phone signed in to a Google account, with a screen lock set. Passkeys are stored in Google Password Manager, which is on by default.
 - 10 to 25 AUSD on Monad to fund your account. 10 AUSD is Perpl's minimum to open an account; 25 AUSD is the beta deposit cap.
 - Nothing else: no wallet app, no seed phrase, no MON for gas.
 

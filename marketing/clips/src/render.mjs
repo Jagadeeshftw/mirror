@@ -209,7 +209,7 @@ const CLIPS = {
     const { d, v } = deployLines();
     return terminalPage({
       title: "Mirror's contracts are live on Monad testnet, verified.",
-      tag: "8 Oct 2026",
+      tag: "7 Oct 2026, UTC",
       footer: FOOT,
       fontSize: 22,
       segments: [

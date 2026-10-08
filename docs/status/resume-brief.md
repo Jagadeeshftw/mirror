@@ -19,7 +19,7 @@ Kept current while Stage B runs. Last updated: 2026-10-08 19:10 IST.
 
 ## State
 
-- **Contracts (Monad testnet, verified on Sourcify):** KeeperRegistry `0x394B12D4355bE5B54DBCaa989cf44F8966195E41`, MirrorAccountFactory `0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39`, implementation `0x648e35cdfD4Aca744Ed33c69A0089A5621A76316`, block 69,083,005. Deployed as the ops wallet's first testnet transactions. Verified on sourcify.dev and on MonadVision's Sourcify (full match). Demo leader: Perpl testnet account 1000 (ops wallet, 200 test AUSD). Mainnet: nothing deployed; plan, scripts and fork rehearsal ready in docs/runbook-mainnet.md (needs the go; ops nonce must still be 4).
+- **Contracts (Monad testnet, verified on Sourcify):** KeeperRegistry `0x394B12D4355bE5B54DBCaa989cf44F8966195E41`, MirrorAccountFactory `0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39`, implementation `0x648e35cdfD4Aca744Ed33c69A0089A5621A76316`, block 69,083,005. Deployed as the ops wallet's first testnet transactions. Verified on sourcify.dev and on MonadVision's Sourcify (status "match"). Demo leader: Perpl testnet account 1000 (ops wallet, 200 test AUSD). Mainnet: nothing deployed; plan, scripts and fork rehearsal ready in docs/runbook-mainnet.md (needs the go; ops nonce must still be 4).
 - **Stage A (final contracts):** Android emulators 34/34, API 29/29, web 64/64.
 - **Railway project `mirror-testnet`:** services created with every non-secret variable set; nothing deployed yet (needs item 2). Engine domain `https://engine-production-0fd2.up.railway.app`.
 - **Site:** mirror.0xo.in still serves the pre-Stage-B deploy.

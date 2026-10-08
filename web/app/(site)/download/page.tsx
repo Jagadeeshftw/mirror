@@ -8,12 +8,12 @@ import { RELEASE, apkFileName } from "@/lib/release";
 
 export const metadata: Metadata = {
   title: "Download for Android",
-  description: `Install the ${BRAND} ${RELEASE.version} beta APK on Android 9+: install steps, requirements and the SHA-256 checksum.`,
+  description: `Install the ${BRAND} ${RELEASE.version} beta APK on Android 14+: install steps, requirements and the SHA-256 checksum.`,
   alternates: { canonical: "/download" },
 };
 
 const REQUIREMENTS = [
-  { title: `${APK.minAndroid} or newer`, text: "Passkeys need Android 9+ with Google Play services." },
+  { title: `${APK.minAndroid} or newer`, text: "Mirror derives your account from your passkey (PRF), which Google Password Manager supports on Android 14 and newer. Tested on Android 15 emulators." },
   { title: "Signed in to a Google account", text: "Your passkey is stored in Google Password Manager, which is on by default, and restores on a new phone." },
   { title: "A screen lock", text: "PIN, pattern, fingerprint or face. Android requires one to create a passkey." },
   { title: `${MIN_DEPOSIT} to ${BETA_DEPOSIT_CAP} on Monad (to copy)`, text: "Only to fund your own account. Browsing leaders and the demo needs nothing. You never need MON for gas." },

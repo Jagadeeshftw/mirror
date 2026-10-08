@@ -16,17 +16,21 @@ Test names refer to `contracts/test` and `engine/test` in the [repository](https
   - The entry filter refuses a copy whose limit, or the current mark, is further than your bound from the leader's onchain average entry. You never buy far above where the leader bought.
   - The slippage bound caps every fill at mark ± your limit.
   - The ratio caps your size at your share of the leader's current position.
-- **Engine:** leaders who repeatedly close soon after followers' copies fill, at prices at or beyond those fills, are flagged "exits into followers" on their profile.
+- **Engine:** an "exits into followers" incident is a leader reducing or closing a market within 20 blocks after followers' opening copies filled there, at a price at or beyond their fills (selling into their buying). Each leader gets a score: incidents per copied fill, 0 to 100. A leader with a score of 25 or more and at least 2 incidents is flagged on their profile and in the leaderboard. Recomputed at most once a minute from the engine's own records of executed copies and Perpl's events (`engine/src/services/adversarial.ts`).
 - Tests: `EntryGuardTest`, `testFuzz_entryGuardBoundsEveryOpen`, `adversarial.test.ts`.
 
 **2. The leader trades a thin market so the copies fill badly.**
 - **Contract:** the slippage bound and entry filter cap the price, and per-market notional caps limit the size.
-- **Engine:** the thin-book guard measures depth on Perpl's book up to your limit price. It shrinks the copy if depth is below 2× its size, and skips it if even one lot can't fill safely. Skips show in your feed as engine events, never as onchain blocks.
+- **Engine:** before every opening copy, and every match-now quote, the thin-book guard reads Perpl's order book on the taking side up to your limit price (`engine/src/services/guard.ts`, `engine/src/domain/thinbook.ts`).
+  - Depth of at least 2× the copy's size: the copy goes out unchanged.
+  - Less: the copy is shrunk to half the depth, rounded down to whole lots.
+  - Not even one lot after that, or the book can't be read: the copy is skipped.
+  - Shrinks and skips appear in your feed as engine events ("Shrunk: thin book", "Skipped: thin book", "Skipped: book unavailable") with no transaction, never as onchain blocks. Closes are never held back by the guard.
 - Tests: `thinbook.test.ts`.
 
 **3. The leader's own trade moves the price, and followers fill worse.**
 - **Contract:** the same price bounds as in 1.
-- **Engine:** leaders whose fills move the market by more than 30 bps while followers fill more than 20 bps worse are flagged "moves the book". Mirror can be set to refuse new follows of flagged leaders.
+- **Engine:** a "moves the book" incident is a leader fill that moved the last traded price by more than 30 bps in its direction, while followers' copies of it filled a median of more than 20 bps worse than the leader. These count toward the same score and flag as in 1. The engine can be configured to refuse new follows of flagged leaders; that setting is off by default, so today flagged leaders are only labelled.
 
 **4. The leader flips or nets positions across leaders to confuse sizing.**
 - **Contract:**
@@ -34,6 +38,10 @@ Test names refer to `contracts/test` and `engine/test` in the [repository](https
   - With several leaders, each market belongs to the leader whose copy opened it, and another leader's copy into it is blocked.
   - Each leader has its own margin budget and loss stop, so one bad leader can't spend another's budget.
 - Tests: `MultiLeaderTest`, `invariant_noPolicyViolation`.
+
+**4a. You want out of one leader, but not out of your positions.**
+- **Contract:** "Stop following, keep my positions" is one signed action, `setLeaderDetached(leader, true)`. From then on your contract refuses every keeper copy from that leader, opens and closes, and records each as `Blocked` with reason 22 (`LeaderDetached`), so a leader can't exit through your account after you left. Your stop-loss, take-profit, close a market and close all keep working. Following the leader again, or removing them from your policy, clears it; changing other limits keeps it.
+- Tests: `DetachTest`, `testFuzz_detachedLeaderNeverTrades`, `invariant_detachedLeaderNeverCopied`, `test_fork_detachAgainstLivePerpl`.
 
 ## Mirror itself misbehaves
 
@@ -60,7 +68,7 @@ Test names refer to `contracts/test` and `engine/test` in the [repository](https
 
 **8a. Mirror raises its fee, routes it elsewhere, or charges it on closes.**
 - **Contract:**
-  - The builder id (26) and the fee (0.02%) are fixed in the contract when it is deployed. A keeper order has no builder field, so it can't choose either.
+  - The builder id (26) and the fee (0.02%, 20 per 100,000) are fixed in the contract when it is deployed. Perpl confirmed the builder id on 7 Oct 2026; both values are in the testnet deployment (`contracts/deployments/10143.json`). A keeper order has no builder field, so it can't choose either.
   - Each copy is checked against the maximum builder fee you signed. Above it, the copy is refused (`BuilderFeeTooHigh`) with both numbers.
   - Only opening orders carry the builder attribution. Keeper closes, stops, close a market and close all go to Perpl without it. Perpl would charge an attributed order's fee on a close too, so this is enforced by your contract, not left to Perpl.
 - **Worst case:** your signed maximum times the notional of each opening fill. With the default that is 0.02% of what each copy opens. The fee is charged by Perpl's exchange on the fill; Mirror's contracts never transfer collateral to anyone but you.
@@ -91,5 +99,5 @@ Test names refer to `contracts/test` and `engine/test` in the [repository](https
 ## What is not protected
 
 - **Market risk:** if the leader loses money, so do you, within your limits.
-- **The contracts are not audited:** deposits are capped at 25 AUSD per account while they're in beta.
+- **The contracts are not audited:** deposits are capped per account while they're in beta: 200 test AUSD on testnet, and 25 AUSD planned for mainnet.
 - **Perpl itself:** Mirror trades on Perpl's exchange and inherits its risks.

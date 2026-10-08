@@ -1,8 +1,7 @@
-PENDING. Not recorded yet; it needs the live app and mainnet contracts. Planned 3-minute cut:
-1. Install the APK and create an account with one passkey prompt.
-2. AUSD balance and the leaderboard.
-3. Leader profile and follow sheet; fund 10 AUSD with a signed permit.
-4. Demo leader trades on Perpl; the copy lands with latency and tx links.
-5. A 10x leader trade is blocked by a 3x rule, with its own tx link.
-6. Close all and withdraw, gasless.
-7. Restore the same account on a second phone.
+PENDING. Not recorded yet; it needs the hosted testnet engine. Final 3-minute shot list in docs/storyboards.md (video 1), recorded on Android emulators and the web app against Mirror's testnet contracts:
+1. One passkey prompt creates the account.
+2. Watch mode: Run demo trade, the copy with its proof and fee; Run blocked trade, Blocked with the rule.
+3. Follow sheet with limits, What if, the fee line, one passkey prompt, match now.
+4. Stop-loss and take-profit; a stranger executes the take-profit.
+5. Stop following, keep my positions, enforced by the contract.
+6. Close all and withdraw, gasless; restore on a second emulator.

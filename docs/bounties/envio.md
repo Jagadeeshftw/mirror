@@ -7,9 +7,9 @@ driving a core feature in your app." Excerpt: judged on "non-trivial schema desi
 
 | # | Requirement | Evidence | Status |
 |---|---|---|---|
-| 1 | HyperIndex powers a core feature | Indexer over Perpl Exchange + Mirror events drives leaderboard, leader profiles, follower PnL | todo |
-| 2 | Non-trivial schema, derived/aggregated entities | Leader stats (PnL, drawdown, win rate, consistency), follower PnL attribution per leader | todo |
-| 3 | Real onchain data | Monad mainnet from Perpl deploy block 54773010 | todo |
+| 1 | HyperIndex powers a core feature | Indexer over Perpl Exchange + Mirror events drives leaderboard, leader profiles, follower PnL, stats, `/perpl` analytics | built (44 tests); hosting pending |
+| 2 | Non-trivial schema, derived/aggregated entities | Leader stats (PnL, drawdown, win rate, consistency), per-copy quality, follower PnL attribution per leader (`indexer/schema.graphql`) | done |
+| 3 | Real onchain data | Monad mainnet from Perpl deploy block 54773010 (`config.yaml`); Monad testnet (`config.testnet.yaml`) | built; live sync of recent mainnet blocks tested; hosting pending |
 
 ## Asked for at submission (official, from the bounty page, read 6 Oct 2026)
 

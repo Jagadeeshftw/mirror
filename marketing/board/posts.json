@@ -40,7 +40,7 @@
     "clip": "marketing/clips/day-14-live-on-testnet.mp4",
     "text": "Mirror's contracts are live on Monad testnet and verified on Sourcify.\n\nEvery gas limit came from Monad's own estimator: planned 1.103232 MON, spent 1.103232 MON. Builder 26 at 0.02% is built into every account.\n\ntestnet.monadvision.com/address/0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39 #Monad",
     "facts": [
-      "Deploy output (captures/day14-testnet-deploy.txt), Sourcify full match for all three (captures/day14-sourcify.txt)",
+      "Deploy output (captures/day14-testnet-deploy.txt), Sourcify status match for all three (captures/day14-sourcify.txt)",
       "Ledger: 1.103232 test MON, balance 60 -> 58.896768 (docs/funding-ledger.md)",
       "Factory constructor builderId 26, fee 20 per 100,000 (contracts/deployments/10143.json)"
     ]

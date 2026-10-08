@@ -181,12 +181,12 @@ devices/run-stage-a-android.sh --build    # force a rebuild first
   and runs `passkey 120 "^Mirror account · (${t1}|${t2})$"`. Passkeys from builds before this change are all called
   `Mirror account`, and Google Password Manager collapses them into one picker entry.
 
-## 6. What an emulator cannot prove (do a short check on a physical phone)
+## 6. What Android emulators cannot prove (not checked yet: Mirror has only run on Android emulators)
 
 - **Real biometric hardware and the class-3 (strong) biometric path.** `emu finger touch` is a simulated HAL. Also check face unlock, under-display sensors and lockout behaviour.
-- **Google Password Manager passkey sync between real devices.** Covers sync latency, the first-time "set up screen lock / GPM PIN" on a new device, and restore on a phone that has never seen the account.
+- **Google Password Manager passkey sync outside emulators.** Covers sync latency, the first-time "set up screen lock / GPM PIN" on a new device, and restore on a phone that has never seen the account.
 - **OEM and third-party passkey providers.** Samsung Pass, 1Password, Bitwarden, Dashlane and others: whether they support PRF at all, and whether they evaluate it at create time (otherwise Mera needs a second prompt).
-- **Hybrid / cross-device QR flow** with a real second phone over Bluetooth.
+- **Hybrid / cross-device QR flow** with a second device over Bluetooth.
 - **Real network conditions.** Mobile data, captive portals, high latency and packet loss during a passkey ceremony or a transaction send, and the real Monad RPC from a carrier IP.
 - **Play Protect and "install unknown apps" warnings** for the sideloaded APK, which judges are likely to install.
 - **Battery and background behaviour.** Doze and App Standby, OEM task killers (Xiaomi, Oppo, Samsung), push delivery while backgrounded, and notification permission prompts on Android 13+.

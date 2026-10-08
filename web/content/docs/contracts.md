@@ -9,7 +9,22 @@ Mirror is three contracts, written from scratch in Solidity 0.8.30 with OpenZepp
 
 <!-- addresses-table -->
 
-Mirror's own contracts are **not deployed yet**, on testnet or mainnet; their rows say "pending" until they are deployed and verified on MonadVision. Testnet comes first, then mainnet. The team-run demo leader already exists on mainnet as Perpl account 5416 (opened 7 Oct 2026 with 10.00 AUSD); the demo follower is created after deployment. See [Team-run accounts](/docs/team-run-accounts).
+Mirror's own contracts are **not deployed on mainnet yet**; their rows say "pending" until they are. The team-run demo leader already exists on mainnet as Perpl account 5416 (opened 7 Oct 2026 with 10.00 AUSD, no trades); the demo follower is created after deployment. See [Team-run accounts](/docs/team-run-accounts).
+
+## Addresses (Monad testnet, chain id 10143)
+
+Deployed on 7 Oct 2026 at 21:56 UTC (block 69,083,005) as the ops wallet's first three testnet transactions, and verified on Sourcify (`https://repo.sourcify.dev/10143/<address>`). Source of truth: `contracts/deployments/10143.json`.
+
+| Contract | Address |
+|---|---|
+| KeeperRegistry | `0x394B12D4355bE5B54DBCaa989cf44F8966195E41` |
+| MirrorAccountFactory | `0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39` |
+| MirrorAccount implementation | `0x648e35cdfD4Aca744Ed33c69A0089A5621A76316` |
+| Keeper (ops wallet) | `0x299E77E58DD37607e4890C761924D829F8ACe82C` |
+| Perpl testnet Exchange (third party) | `0x1964C32f0bE608E7D29302AFF5E61268E72080cc` |
+| Test AUSD (third party) | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` |
+
+Deposit cap: 200 test AUSD per account. Builder attribution: Perpl builder 26 at 20 per 100,000 (0.02%) of opening size.
 
 ## Deployment
 
