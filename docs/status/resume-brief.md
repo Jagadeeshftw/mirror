@@ -1,6 +1,6 @@
 # Resume brief (Stage B)
 
-Kept current while Stage B runs. Last updated: 2026-10-08 18:25 IST.
+Kept current while Stage B runs. Last updated: 2026-10-08 19:10 IST.
 
 ## Waiting on Jagadeesh
 
@@ -19,13 +19,15 @@ Kept current while Stage B runs. Last updated: 2026-10-08 18:25 IST.
 
 ## State
 
-- **Contracts (Monad testnet, verified on Sourcify):** KeeperRegistry `0x394B12D4355bE5B54DBCaa989cf44F8966195E41`, MirrorAccountFactory `0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39`, implementation `0x648e35cdfD4Aca744Ed33c69A0089A5621A76316`, block 69,083,005. Deployed as the ops wallet's first testnet transactions. Mainnet: nothing deployed.
+- **Contracts (Monad testnet, verified on Sourcify):** KeeperRegistry `0x394B12D4355bE5B54DBCaa989cf44F8966195E41`, MirrorAccountFactory `0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39`, implementation `0x648e35cdfD4Aca744Ed33c69A0089A5621A76316`, block 69,083,005. Deployed as the ops wallet's first testnet transactions. Verified on sourcify.dev and on MonadVision's Sourcify (full match). Demo leader: Perpl testnet account 1000 (ops wallet, 200 test AUSD). Mainnet: nothing deployed; plan, scripts and fork rehearsal ready in docs/runbook-mainnet.md (needs the go; ops nonce must still be 4).
 - **Stage A (final contracts):** Android emulators 34/34, API 29/29, web 64/64.
 - **Railway project `mirror-testnet`:** services created with every non-secret variable set; nothing deployed yet (needs item 2). Engine domain `https://engine-production-0fd2.up.railway.app`.
 - **Site:** mirror.0xo.in still serves the pre-Stage-B deploy.
-- **Test funds:** ops wallet 2,700 test AUSD (200 demo leader + 2,500 tester pool = 25 testers at 100).
+- **Test funds:** ops wallet 2,500 test AUSD (the tester pool = 25 testers at 100; untouched), 63.86 test MON. Demo leader Perpl account 1000 holds 200.
 
 ## Work queue (in order)
+
+Done: 5 (mainnet prep), 7 (board clips/snippets for 11-14 Oct in marketing/board/), hosted bring-up script (4, minus the image dry-run, which waits on disk space).
 
 1. Site + web app deploy, working without the hosted engine; post-deploy check.
 2. Testnet APK, release notes, download page.

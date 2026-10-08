@@ -123,7 +123,7 @@
       },
       "teamRun": {
         "demoLeaderAddress": "0x299E77E58DD37607e4890C761924D829F8ACe82C",
-        "demoLeaderAccountId": null,
+        "demoLeaderAccountId": 1000,
         "demoFollowerAccount": "0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896"
       },
       "markets": [
