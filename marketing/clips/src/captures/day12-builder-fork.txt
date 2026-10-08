@@ -1,0 +1,12 @@
+No files changed, compilation skipped
+
+Ran 1 test for test/fork/PerplMainnetFork.t.sol:PerplMainnetForkTest
+[PASS] test_fork_builderFeeOnLivePerpl() (gas: 970772)
+Logs:
+  open: Perpl TakerOrderFilledV2 builderId 26 builderFeeCNS 165
+  open: Mirrored proof builderFeeCNS 165
+  close: builderId 0 builderFeeCNS 0
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 19.69s (4.51s CPU time)
+
+Ran 1 test suite in 19.69s (19.69s CPU time): 1 tests passed, 0 failed, 0 skipped (1 total tests)

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Render the board clips: 1080x1350 (4:5), 30 fps, H.264, no audio, loop-friendly (each clip starts and
+// Render the board clips (7-10 Oct, and 11-14 Oct: detach, builder fee, encrypted alerts, testnet deploy): 1080x1350 (4:5), 30 fps, H.264, no audio, loop-friendly (each clip starts and
 // ends on the same frame). Terminal clips replay real captured output (captures/*.txt) verbatim; the
 // intro uses real app and site screenshots. Usage (from repo root):
 //   node marketing/clips/src/render.mjs [day-07|day-08|day-09|day-10 ...]
@@ -115,6 +115,32 @@ function gasLines() {
   return L.filter((l) => /\[PASS\]|gas used by one copied open/.test(l)).map((text) => ({ text, kind: /gas used/.test(text) ? "ok" : "" }));
 }
 
+function detachLines() {
+  const fork = after(cap("day11-detach-fork.txt"), "Ran 1 test").filter((l) => /^\[PASS\]|detached:|Suite result/.test(l.trim()));
+  return fork.map((l) => l.replace(/^  /, "")).map((text) => ({
+    text,
+    kind: /refused/.test(text) ? "bad" : /take-profit|^\[PASS\]|Suite result: ok/.test(text) ? "ok" : "",
+  }));
+}
+
+function detachUnitLines() {
+  return cap("day11-detach-unit.txt").split("\n").filter((l) => /^\[PASS\]|^Suite result/.test(l)).map((text) => ({
+    text: text.replace(/ \(gas: \d+\)/, ""),
+    kind: /StillWork|ownerStops|leaderLossStop/.test(text) ? "ok" : /refuses|Refuse/.test(text) ? "hl" : /Suite result/.test(text) ? "hl" : "",
+  }));
+}
+
+function builderLines() {
+  const L = after(cap("day12-builder-fork.txt"), "Ran 1 test").filter((l) => /^\[PASS\]|open:|close:|Suite result/.test(l.trim()));
+  return L.map((l) => l.replace(/^  /, "")).map((text) => ({ text, kind: /open:/.test(text) ? "ok" : /close:/.test(text) ? "hl" : /Suite result: ok/.test(text) ? "ok" : "" }));
+}
+
+function deployLines() {
+  const d = cap("day14-testnet-deploy.txt").split("\n").filter(Boolean).map((text) => ({ text, kind: /success/.test(text) ? "ok" : /builder|gas/.test(text) ? "hl" : "" }));
+  const v = cap("day14-sourcify.txt").split("\n").filter(Boolean).map((text) => ({ text, kind: "ok" }));
+  return { d, v };
+}
+
 const FOOT = "github.com/Jagadeeshftw/mirror";
 const CLIPS = {
   "day-08": () =>
@@ -151,7 +177,81 @@ const CLIPS = {
       ],
     }),
   "day-07": () => introPage(),
+  "day-11": () =>
+    terminalPage({
+      title: "Stop following, keep your positions. Your contract refuses the leader's exit.",
+      tag: "live Perpl, fork",
+      footer: FOOT,
+      fontSize: 27,
+      segments: [
+        { cmd: "forge test --mc PerplMainnetFork --mt test_fork_detachAgainstLivePerpl -vv", lines: detachLines() },
+        { cmd: "forge test --mc DetachTest", lines: detachUnitLines() },
+      ],
+    }),
+  "day-12": () =>
+    terminalPage({
+      title: "Builder 26: 0.02% on the size a copy opens. Nothing on closes.",
+      tag: "live Perpl, fork",
+      footer: FOOT,
+      segments: [{ cmd: "forge test --mc PerplMainnetFork --mt test_fork_builderFeeOnLivePerpl -vv", lines: builderLines() }],
+    }),
+  "day-13": () =>
+    slidesPage({
+      tag: "Android emulator",
+      note: "Stage A run on an Android emulator, 8 Oct 2026 · github.com/Jagadeeshftw/mirror",
+      slides: [
+        { img: "devices/evidence/stage-a-android-20261008-030408/162-emulator-5554-fcm-notification-shade.png", crop: 0.45, cap: "The push service only ever sees \"New activity\"." },
+        { img: "devices/evidence/stage-a-android-20261008-030408/166-emulator-5554-s1066-expectResult.png", crop: 0.62, cap: "Your passkey's second key decrypts it on the device." },
+      ],
+      per: 4.5,
+    }),
+  "day-14": () => {
+    const { d, v } = deployLines();
+    return terminalPage({
+      title: "Mirror's contracts are live on Monad testnet, verified.",
+      tag: "8 Oct 2026",
+      footer: FOOT,
+      fontSize: 22,
+      segments: [
+        { cmd: "node scripts/deploy-contracts.mjs --network testnet --cap 200 --builder-id 26 --builder-fee 20 --send --expect-nonce 0", lines: d },
+        { cmd: "curl sourcify.dev/server/v2/contract/10143/<address>", lines: v },
+      ],
+    });
+  },
 };
+
+// ------------------------------------------------------------------ screenshot slides (real evidence)
+// crop: fraction of the screenshot's height to show from the top (keeps unrelated rows out of frame).
+function slidesPage({ slides, tag, note, per = 4 }) {
+  const fade = 0.35;
+  const total = slides.length * per;
+  const html = `<!doctype html><html><head><meta charset="utf-8">${FONTS}<style>
+  html,body{margin:0;width:${W}px;height:${H}px;background:#0A0B0E;overflow:hidden;font-family:Inter,Arial,sans-serif}
+  .top{position:absolute;left:56px;right:56px;top:56px;display:flex;align-items:center;gap:18px;color:#F2F3F5}
+  .top b{font-size:44px;font-weight:600;letter-spacing:-1px}
+  .tag{margin-left:auto;font-size:22px;color:#C9C3FF;border:1px solid rgba(139,125,255,.45);background:rgba(139,125,255,.12);padding:8px 16px;border-radius:999px}
+  .slide{position:absolute;inset:0;opacity:0}
+  .cap{position:absolute;left:56px;right:56px;top:150px;color:#F2F3F5;font-size:48px;font-weight:600;letter-spacing:-1.2px;line-height:1.12}
+  .phone{position:absolute;left:50%;top:320px;transform:translateX(-50%);width:560px;border-radius:36px;border:10px solid #23262D;overflow:hidden;background:#000}
+  .phone div{width:100%;background-size:100% auto;background-repeat:no-repeat;background-position:top}
+  .note{position:absolute;left:0;right:0;bottom:30px;text-align:center;color:#7A808C;font-size:22px}
+  </style></head><body>
+  <div class="top">${SAIL}<b>Mirror</b><span class="tag">${esc(tag)}</span></div>
+  ${slides.map((s, i) => `<div class="slide" id="s${i}"><div class="cap">${esc(s.cap)}</div><div class="phone"><div style="height:${Math.round(560 * (2400 / 1080) * (s.crop ?? 1))}px;background-image:url(${b64(path.join(repo, s.img))})"></div></div></div>`).join("")}
+  <div class="note">${esc(note)}</div>
+  <script>
+  const n=${slides.length}, per=${per}, fade=${fade}, total=${total};
+  window.render=(t)=>{ for(let i=0;i<n;i++){ const el=document.getElementById('s'+i); const s=i*per; let o=0;
+      const local=((t-s)%total+total)%total;
+      if(local<per) o = local<fade ? local/fade : (local>per-fade ? (per-local)/fade : 1);
+      if(i===0 && t<fade) o=1;
+      const end=total-1/${FPS};
+      if(i===n-1 && t>end-fade) o=Math.max(0,(end-t)/fade);
+      if(i===0 && t>end-fade) o=Math.min(1,(t-(end-fade))/fade);
+      el.style.opacity=String(Math.max(0,Math.min(1,o))); } };
+  </script></body></html>`;
+  return { html, duration: total };
+}
 
 // ------------------------------------------------------------------ intro (real screens)
 function introPage() {
@@ -195,7 +295,7 @@ function introPage() {
 // ------------------------------------------------------------------ encode
 async function renderClip(browser, name) {
   const { html, duration } = CLIPS[name]();
-  const out = path.join(repo, "marketing/clips", `${name}-${{ "day-07": "intro", "day-08": "blocked-by-your-rule", "day-09": "keeper-cannot-withdraw", "day-10": "why-monad" }[name]}.mp4`);
+  const out = path.join(repo, "marketing/clips", `${name}-${{ "day-07": "intro", "day-08": "blocked-by-your-rule", "day-09": "keeper-cannot-withdraw", "day-10": "why-monad", "day-11": "stop-following-keep-positions", "day-12": "builder-fee", "day-13": "encrypted-alerts", "day-14": "live-on-testnet" }[name]}.mp4`);
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   await page.setContent(html, { waitUntil: "networkidle" });
   await page.evaluate(() => document.fonts.ready);

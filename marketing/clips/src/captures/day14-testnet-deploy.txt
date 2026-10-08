@@ -1,0 +1,9 @@
+network    testnet (chain 10143) via https://testnet-rpc.monad.xyz
+deployer   0x299E77E58DD37607e4890C761924D829F8ACe82C  nonce 0  balance 60.000000 MON
+perpl      0x1964C32f0bE608E7D29302AFF5E61268E72080cc  collateral 0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC  min open 100 AUSD
+cap        200 AUSD per account
+builder    id 26, fee 20 per 100,000 (0.020%) on opening size only
+gas        every limit = Monad eth_estimateGas x 1.15
+deploy KeeperRegistry: success tx 0xc64563e53bc7baa2c0b22e996743f47d5c8ed985f749c12d3815dfd69df59321 gasUsed 502508 / limit 502508
+deploy MirrorAccountFactory (+ MirrorAccount implementation): success tx 0xf3fd5d67e7c6a33e431eebbbe5911c654788a8a10fb474aa5ba706e626579bdf gasUsed 10243061 / limit 10243061
+KeeperRegistry.setKeepers(0x299E77E58DD37607e4890C761924D829F8ACe82C): success tx 0xec3f8874daf820e0e4786859b1086c8803c1d2047b6fde0d41f6d364b9da9979 gasUsed 70430 / limit 70430

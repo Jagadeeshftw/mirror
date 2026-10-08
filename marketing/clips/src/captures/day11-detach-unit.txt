@@ -1,0 +1,17 @@
+No files changed, compilation skipped
+
+Ran 11 tests for test/Detach.t.sol:DetachTest
+[PASS] test_accountStopAndCloseAllStillWork() (gas: 457175)
+[PASS] test_closeAllStillWorks() (gas: 305091)
+[PASS] test_leaderLossStopStillWorks() (gas: 455705)
+[PASS] test_onlyOwnerOrSignedAndOnlyFollowedLeaders() (gas: 141130)
+[PASS] test_onlyThatLeader() (gas: 669508)
+[PASS] test_ownerStopsAndClosesStillWork() (gas: 357525)
+[PASS] test_refusedEvenWhenTheCloseWouldOtherwiseRevert() (gas: 97714)
+[PASS] test_refusesMatchNow() (gas: 90940)
+[PASS] test_refusesOpensAndKeeperReductions() (gas: 152280)
+[PASS] test_removingTheLeaderClearsIt() (gas: 128812)
+[PASS] test_setPolicyKeepsDetachFollowClearsIt() (gas: 393637)
+Suite result: ok. 11 passed; 0 failed; 0 skipped; finished in 4.12ms (3.97ms CPU time)
+
+Ran 1 test suite in 93.11ms (4.12ms CPU time): 11 tests passed, 0 failed, 0 skipped (11 total tests)
