@@ -9,6 +9,7 @@ export const DOC_GROUPS: DocGroup[] = [
       { slug: "", title: "Overview" },
       { slug: "quickstart", title: "Quickstart" },
       { slug: "judges-guide", title: "Judges guide" },
+      { slug: "testers", title: "Testers" },
     ],
   },
   {

@@ -62,7 +62,7 @@ Filled with the Stage B facts (`devices/evidence/stage-b/README.md`): `04-descri
 
 | Line | Depends on | Fill in |
 |---|---|---|
-| 12 | W (publishing step) | `{tester_kit_url}`: where the steps are published for testers (a public page or a pinned post). No such page or post exists yet; the web deploy did not add one. |
+| 12 | done | `{tester_kit_url}` filled with https://mirror.0xo.in/docs/testers (page added 9 Oct; live with the next site deploy). |
 | 71, 73 | H | Tick the hosted-engine and Run demo trade boxes. |
 | 75 | ops | Tick once the ops wallet's test MON is topped up. |
 | 76 | H | Walk steps 1-8 once on an Android emulator and in Chrome against the hosted service. |

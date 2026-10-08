@@ -1,6 +1,6 @@
 # Tester kit (Monad testnet)
 
-For the testnet round: 25 outside testers, 100 test AUSD each. Everything here is final except the field in `{braces}`, which is filled once the steps are published for testers (see `docs/status/doc-updates-pending.md`). Testnet only: no real money is involved at any point, and test AUSD has no value.
+For the testnet round: 25 outside testers, 100 test AUSD each. The steps are published for testers at https://mirror.0xo.in/docs/testers (generated from this file's sections). Testnet only: no real money is involved at any point, and test AUSD has no value.
 
 ## Invite (DM or post)
 
@@ -9,7 +9,7 @@ For the testnet round: 25 outside testers, 100 test AUSD each. Everything here i
 > Could you try it on Monad testnet for about 15 minutes and tell me what broke or confused you? I'll send you 100 test AUSD to trade with.
 > - Android: https://github.com/Jagadeeshftw/mirror/releases/download/v1.0.1-testnet/mirror-1.0.1-testnet.apk (Mirror 1.0.1, SHA-256 2cee6e97e170a0d033e3d17cec712c38e5caa8dac0b6673219ca9e44a51a7728; Android 14 or newer). Install steps: https://mirror.0xo.in/download
 > - Laptop: https://mirror.0xo.in/app in Chrome
-> - Steps and what to send back: {tester_kit_url}
+> - Steps and what to send back: https://mirror.0xo.in/docs/testers
 >
 > No real money is involved, and you never need MON for gas. You need a passkey: on Android, Google Password Manager with a screen lock; on a laptop, Chrome's passkey support.
 
@@ -63,6 +63,12 @@ Please don't send passkeys, recovery phrases or private keys. Mirror never asks 
 
 - **Tester pool: 25 outside testers at 100 test AUSD each.** Perpl sent 2,500 test AUSD to the ops wallet on 7 Oct ([0x743e8690…ca4b02](https://testnet.monadvision.com/tx/0x743e86900d73d5e3fb4c13b6a316887a4bb85f135b344f8d38f8b9fd55ca4b02)). The ops wallet's first 200 stay with the team-run demo leader; the demo follower and the test user have their own 150 each. Send each tester 100 from the ops wallet to their Mirror owner address, only after the contracts are deployed, and log every send in docs/funding-ledger.md.
 - Judges who ask (GitHub issue titled "test AUSD", per the judges guide) get 100 from the same pool; each counts as one of the 25.
+- **Sending a tester their 100 test AUSD** (only after the owner says go and gives the addresses):
+  1. Plan, which sends nothing: `cd scripts && node send-test-ausd.mjs --network testnet --to <address> [--to <address> ...]`. Check the plan: one `AUSD.transfer` per address, 100 each, and the pool left over.
+  2. Send, with the nonce the plan printed: `node send-test-ausd.mjs --network testnet --to <address> ... --send --expect-nonce <n>`.
+  3. Paste the printed ledger rows into `docs/funding-ledger.md`, and tell the tester to look for 100.00 in the balance chip.
+  The script refuses any network but testnet, duplicate addresses, and a send that would overdraw the pool (`--keep <AUSD>` sets a floor).
+- **Gas budget (test MON, from the gas limits Monad charged in the Stage B runs, at 102 gwei):** per tester about 0.87 MON, made up of create 200,421 + permit deposit 516,436 + follow with match-now about 1.02M + levels about 0.2M + stop following 116,884 + close all 507,549 + withdraw 275,999 + about 10 copies at about 566k + the 100 test AUSD send 64,228 = about 8.5M gas. **25 testers: about 22 MON.** Each Run demo trade costs about 0.17 MON (leader open and close plus the demo follower's copies); the engine caps demos at 48 a day, at most about 8 MON a day. The ops wallet holds 63.14 MON (9 Oct), enough for the round plus a few days of demos at the cap.
 - Gas for testers is paid by Mirror's relayer and keeper (the ops wallet's test MON), not by testers; watch its MON balance during the round.
 
 ### Before the first invite
