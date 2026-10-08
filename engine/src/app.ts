@@ -1,5 +1,9 @@
 import { createPublicClient, defineChain, http, type PublicClient } from 'viem';
 import { RpcLimiter } from './chain/rpcLimiter.js';
+
+const MULTICALL3 = '0xcA11bde05977b3631167028862bE2a173976CA11' as const;
+/** Monad mainnet and testnet (and a mainnet fork, same id) have Multicall3 deployed at the canonical address. */
+const MULTICALL_CHAINS = new Set([143, 10143]);
 import { privateKeyToAccount } from 'viem/accounts';
 import type { Config } from './config.js';
 import { Db } from './db.js';
@@ -81,10 +85,13 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     name: 'Monad',
     nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
     rpcUrls: { default: { http: [cfg.rpcUrl] } },
+    // Multicall3 at its canonical address on Monad mainnet and testnet: reads issued together (an account view is
+    // ~30 of them) go out as one eth_call, which matters under a public RPC's request limit. Not on a fresh localnet.
+    ...(MULTICALL_CHAINS.has(cfg.chainId) ? { contracts: { multicall3: { address: MULTICALL3 } } } : {}),
   });
   const rpcLimiter = new RpcLimiter(env.RPC_MAX_RPS);
   // retryDelay grows exponentially in viem (400, 800, 1600, 3200 ms): enough to ride out a rate-limited second.
-  const client = createPublicClient({ chain, transport: http(cfg.rpcUrl, { timeout: 15_000, retryCount: 4, retryDelay: 400, fetchFn: rpcLimiter.fetchFn() }) }) as PublicClient;
+  const client = createPublicClient({ chain, batch: MULTICALL_CHAINS.has(cfg.chainId) ? { multicall: { wait: 0 } } : undefined, transport: http(cfg.rpcUrl, { timeout: 15_000, retryCount: 4, retryDelay: 400, fetchFn: rpcLimiter.fetchFn() }) }) as PublicClient;
   const db = new Db(env.DB_PATH);
   const bus = new Bus();
   const limiter = new RateLimiter();
