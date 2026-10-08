@@ -8,4 +8,5 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm codegen
 EXPOSE 9898
-CMD ["pnpm", "start"]
+# Wait for Postgres and Hasura first: Envio tracks its tables in Hasura only on its first start.
+CMD ["sh", "-c", "node scripts/wait-for-deps.mjs && exec pnpm start"]
