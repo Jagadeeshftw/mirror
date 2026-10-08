@@ -29,7 +29,9 @@ ASSET="mirror-${VERSION}-testnet.apk"
 DATE="$(date -u +%Y-%m-%d)"
 echo "apk $PKG $VERSION ($CODE), $SIZE bytes, sha256 $SHA"
 
-TMP="$(mktemp -d)"
+# Scratch space inside the repo (app/dist, gitignored build output): nothing outside the repo is created or deleted.
+mkdir -p "$ROOT/app/dist"
+TMP="$(mktemp -d "$ROOT/app/dist/.publish-XXXXXX")"
 cp "$APK" "$TMP/$ASSET"
 { cat "$NOTES"; printf '\n\n---\n\n- File: `%s`\n- Version: %s (versionCode %s)\n- Size: %s bytes\n- SHA-256: `%s`\n' "$ASSET" "$VERSION" "$CODE" "$SIZE" "$SHA"; } > "$TMP/notes.md"
 

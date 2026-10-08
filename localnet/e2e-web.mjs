@@ -15,6 +15,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ROOT, apiClient, demoAccountP, env, setupDemoFollower, startEngine } from "./e2e-web/chain.mjs";
 import { chromium, openDevice, PHONE } from "./e2e-web/browser.mjs";
 import { createReport } from "./e2e-web/report.mjs";
@@ -66,7 +67,10 @@ async function buildWeb() {
     if (!process.env.E2E_WEB_DIST) throw new Error("--no-build needs E2E_WEB_DIST=<exported dir>");
     return process.env.E2E_WEB_DIST;
   }
-  const dir = mkdtempSync(join(tmpdir(), "mirror-web-e2e-"));
+  // Inside the repo (localnet/out, gitignored): this harness deletes only its own build output.
+  const outDir = fileURLToPath(new URL("./out/", import.meta.url));
+  mkdirSync(outDir, { recursive: true });
+  const dir = mkdtempSync(join(outDir, "web-e2e-"));
   cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
   const dist = join(dir, "dist");
   console.log(`building the web export into ${dist} (1-3 min)`);
