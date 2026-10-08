@@ -1,6 +1,6 @@
 # Resume brief (Stage B)
 
-Kept current while Stage B runs. Last updated: 2026-10-08 19:00 IST (18:55 local machine time).
+Kept current while Stage B runs. Last updated: 2026-10-08 22:15 IST (end of Stage B).
 
 ## Waiting on Jagadeesh
 
@@ -9,8 +9,7 @@ Kept current while Stage B runs. Last updated: 2026-10-08 19:00 IST (18:55 local
 | 1 | `gh auth refresh -h github.com -s workflow --user Jagadeeshftw` | Pushing the post-deploy check workflow `.github/workflows/postdeploy.yml` (kept locally, excluded from main, and on the local branch `postdeploy-workflow`). After the refresh it is one commit: `git add -f .github/workflows/postdeploy.yml`, commit, push. |
 | 2 | `cd ~/personal/projects/grants/monad/mirror && bash scripts/railway-secrets.sh` | Hosted engine, both indexers, HyperSync proxy, Hasura secrets. After it: `bash scripts/railway-up.sh` brings everything up. |
 | 3 | More testnet MON for the ops wallet `0x299E77E58DD37607e4890C761924D829F8ACe82C` (faucet) | A full 25-tester round: Mirror's relayer and keeper pay all tester gas. 58.90 MON left after the deploy. |
-| 4 | (Resolved by itself: 69 GB free since 19:00 IST.) Free disk space: at least 15 GB on the Data volume (was 119 MB free at 18:20 on 8 Oct; 3.4 GB after I removed Mirror's own build outputs). The large items are not Mirror's to delete: `~/Library/Caches` 23 GB, Colima's VM `~/.colima` 44 GB (images shared with other projects), `~/.gradle` 13 GB, AVD `mirror-dev` 3 GB (not mine; mine are mirror-a/b) | The release APK build, the Docker dry-run of the hosted images, and emulator runs (each needs several GB) |
-| 5 | Unlock the screen (or confirm Safari can open windows), then: `cd ~/personal/projects/grants/monad/mirror/web && node scripts/postdeploy-check.mjs --url https://mirror.0xo.in --only safari --own https://engine-production-0fd2.up.railway.app --down https://engine-production-0fd2.up.railway.app` | Safari half of the post-deploy check for the 15:20 UTC deploy. Safari automation stopped launching windows at about 15:20 UTC ("timed out while connecting to a Safari instance"); Chrome passed 18/18, and Safari passed 18/18 on the deploys an hour earlier. |
+| 4 | (Resolved: 69 GB free since 19:00 IST; kept for the record.) Free disk space: at least 15 GB on the Data volume (was 119 MB free at 18:20 on 8 Oct; 3.4 GB after I removed Mirror's own build outputs). The large items are not Mirror's to delete: `~/Library/Caches` 23 GB, Colima's VM `~/.colima` 44 GB (images shared with other projects), `~/.gradle` 13 GB, AVD `mirror-dev` 3 GB (not mine; mine are mirror-a/b) | The release APK build, the Docker dry-run of the hosted images, and emulator runs (each needs several GB) |
 
 ## Decisions taken without review
 
@@ -40,7 +39,7 @@ Kept current while Stage B runs. Last updated: 2026-10-08 19:00 IST (18:55 local
 - **Railway project `mirror-testnet`:** services created with every non-secret variable set; nothing deployed yet (needs item 2). Engine domain `https://engine-production-0fd2.up.railway.app`. `scripts/railway-up.sh --check` lists exactly what is missing.
 - **APK:** 1.0.1 (versionCode 101), testnet beta, GitHub Release `v1.0.1-testnet`, 43,845,077 bytes, SHA-256 `2cee6e97e170a0d033e3d17cec712c38e5caa8dac0b6673219ca9e44a51a7728`, release-signed (certificate matches assetlinks.json). 1.0.0 (`v1.0.0-testnet`) is superseded: the Demo screen now reads from Monad when the service is down, and refreshes wait longer.
 - **Public-testnet end-to-end:** the engine runs on this machine (`scripts/engine-testnet-local.sh`, port 8838, keys from .env, never printed) until the hosted one is up; Android flow `devices/run-stage-b-android.sh`.
-- **Site:** deployed 8 Oct 13:48 UTC with the web app at /app (testnet build, engine down: watch mode read from Monad), share cards, the suggestion page and /perpl. Post-deploy check against the public URL: 36/36 (9 pages × desktop Chrome, Chrome phone, desktop Safari, Safari phone), evidence devices/evidence/stage-b/postdeploy-20261008T140454Z. Fonts served from /app/assets/assets/fonts (no node_modules paths).
+- **Site:** live at mirror.0xo.in with the web app at /app (testnet build; engine down, so watch mode and Demo read the demo account from Monad), share cards, the suggestion page, /perpl, and the download page for APK 1.0.1. Final deploy 16:2x UTC 8 Oct; post-deploy check against the public URL 36/36 (Chrome 18/18 in the deploy run, Safari 18/18 rerun after its automation recovered), evidence devices/evidence/stage-b/.
 - **Test funds:** ops wallet 2,500 test AUSD (the tester pool = 25 testers at 100; untouched), 63.86 test MON. Demo leader Perpl account 1000 holds 200.
 
 ## Work queue (in order)

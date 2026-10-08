@@ -1,0 +1,390 @@
+{
+  "url": "https://mirror.0xo.in",
+  "own": [
+    "https://mirror.0xo.in",
+    "https://engine-production-0fd2.up.railway.app"
+  ],
+  "at": "2026-10-08T16:38:08.148Z",
+  "passed": 28,
+  "failed": 8,
+  "results": [
+    {
+      "browser": "Chrome desktop",
+      "page": "/",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-desktop-root.png",
+      "textStart": "Skip to content\nMirror\nHow it works\nSafety\nLeaders\nWhy Monad\nStats\nDocs\nOpen web"
+    },
+    {
+      "browser": "Chrome desktop",
+      "page": "/docs",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-desktop-docs.png",
+      "textStart": "Skip to content\nMirror\nSearch docs\n⌘K\nProduct\nDocs\nStats\nPerpl analytics\nDownloa"
+    },
+    {
+      "browser": "Chrome desktop",
+      "page": "/docs/fees",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-desktop-docs-fees.png",
+      "textStart": "Skip to content\nMirror\nSearch docs\n⌘K\nProduct\nDocs\nStats\nPerpl analytics\nDownloa"
+    },
+    {
+      "browser": "Chrome desktop",
+      "page": "/stats",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-desktop-stats.png",
+      "textStart": "Skip to content\nMirror\nProduct\nDocs\nStats\nPerpl analytics\nDownload\nOpen web app\n"
+    },
+    {
+      "browser": "Chrome desktop",
+      "page": "/perpl",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-desktop-perpl.png",
+      "textStart": "Skip to content\nMirror\nProduct\nDocs\nStats\nPerpl analytics\nDownload\nOpen web app\n"
+    },
+    {
+      "browser": "Chrome desktop",
+      "page": "/download",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-desktop-download.png",
+      "textStart": "Skip to content\nMirror\nProduct\nDocs\nStats\nPerpl analytics\nDownload\nOpen web app\n"
+    },
+    {
+      "browser": "Chrome desktop",
+      "page": "/c/leader/1000",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-desktop-c-leader-1000.png",
+      "textStart": "Skip to content\nMirror\nProduct\nDocs\nStats\nPerpl analytics\nDownload\nOpen web app\n"
+    },
+    {
+      "browser": "Chrome desktop",
+      "page": "/app",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [
+        "console error: Access to fetch at 'https://engine-production-0fd2.up.railway.app/v1/config' from origin 'https://mirror.0xo.in' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://mirror.0xo.in/app/welcome",
+        "console error: Failed to load resource: net::ERR_FAILED @ https://engine-production-0fd2.up.railway.app/v1/config",
+        "console error: Access to fetch at 'https://engine-production-0fd2.up.railway.app/v1/demo' from origin 'https://mirror.0xo.in' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://mirror.0xo.in/app/welcome",
+        "console error: Failed to load resource: net::ERR_FAILED @ https://engine-production-0fd2.up.railway.app/v1/demo",
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/config",
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/demo"
+      ],
+      "screenshot": "Chrome-desktop-app.png",
+      "textStart": "Mirror\nBeta\nExample\n0x7a3f…c91e\nOpened\nBTC\nLong\n0.0001 BTC · 2x\ncopied in 0.61 s"
+    },
+    {
+      "browser": "Chrome desktop",
+      "page": "/app/welcome",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [
+        "console error: Access to fetch at 'https://engine-production-0fd2.up.railway.app/v1/config' from origin 'https://mirror.0xo.in' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://mirror.0xo.in/app/welcome",
+        "console error: Failed to load resource: net::ERR_FAILED @ https://engine-production-0fd2.up.railway.app/v1/config",
+        "console error: Access to fetch at 'https://engine-production-0fd2.up.railway.app/v1/demo' from origin 'https://mirror.0xo.in' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://mirror.0xo.in/app/welcome",
+        "console error: Failed to load resource: net::ERR_FAILED @ https://engine-production-0fd2.up.railway.app/v1/demo",
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/config",
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/demo"
+      ],
+      "screenshot": "Chrome-desktop-app-welcome.png",
+      "textStart": "Mirror\nBeta\nExample\n0x7a3f…c91e\nOpened\nBTC\nLong\n0.0001 BTC · 2x\ncopied in 0.61 s"
+    },
+    {
+      "browser": "Chrome phone",
+      "page": "/",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-phone-root.png",
+      "textStart": "Skip to content\nMirror\nBeta\nAndroid · Built on Monad · Trades on Perpl\nCopy the "
+    },
+    {
+      "browser": "Chrome phone",
+      "page": "/docs",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-phone-docs.png",
+      "textStart": "Skip to content\nMirror\n\nGETTING STARTED\n\nOverview\n\nWhat Mirror is, what it guara"
+    },
+    {
+      "browser": "Chrome phone",
+      "page": "/docs/fees",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-phone-docs-fees.png",
+      "textStart": "Skip to content\nMirror\n\nPRODUCT\n\nFees\n\nWhat Mirror charges, when, and how your o"
+    },
+    {
+      "browser": "Chrome phone",
+      "page": "/stats",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-phone-stats.png",
+      "textStart": "Skip to content\nMirror\n\nPUBLIC STATS\n\nEvery copy, onchain.\n\nRead from Monad main"
+    },
+    {
+      "browser": "Chrome phone",
+      "page": "/perpl",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-phone-perpl.png",
+      "textStart": "Skip to content\nMirror\n\nPERPL ANALYTICS\n\nAll of Perpl, read from Monad\n\nEvery Pe"
+    },
+    {
+      "browser": "Chrome phone",
+      "page": "/download",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-phone-download.png",
+      "textStart": "Skip to content\nMirror\n\nDOWNLOAD\n\nMirror for Android\n\nCopy the best traders on P"
+    },
+    {
+      "browser": "Chrome phone",
+      "page": "/c/leader/1000",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Chrome-phone-c-leader-1000.png",
+      "textStart": "Skip to content\nMirror\n\nSHARED FROM MIRROR\n\nLeader record · not available\nNot av"
+    },
+    {
+      "browser": "Chrome phone",
+      "page": "/app",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [
+        "console error: Access to fetch at 'https://engine-production-0fd2.up.railway.app/v1/config' from origin 'https://mirror.0xo.in' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://mirror.0xo.in/app/welcome",
+        "console error: Failed to load resource: net::ERR_FAILED @ https://engine-production-0fd2.up.railway.app/v1/config",
+        "console error: Access to fetch at 'https://engine-production-0fd2.up.railway.app/v1/demo' from origin 'https://mirror.0xo.in' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://mirror.0xo.in/app/welcome",
+        "console error: Failed to load resource: net::ERR_FAILED @ https://engine-production-0fd2.up.railway.app/v1/demo",
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/config",
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/demo"
+      ],
+      "screenshot": "Chrome-phone-app.png",
+      "textStart": "Mirror\nBeta\nExample\n0x7a3f…c91e\nOpened\nBTC\nLong\n0.0001 BTC · 2x\ncopied in 0.61 s"
+    },
+    {
+      "browser": "Chrome phone",
+      "page": "/app/welcome",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [
+        "console error: Access to fetch at 'https://engine-production-0fd2.up.railway.app/v1/config' from origin 'https://mirror.0xo.in' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://mirror.0xo.in/app/welcome",
+        "console error: Failed to load resource: net::ERR_FAILED @ https://engine-production-0fd2.up.railway.app/v1/config",
+        "console error: Access to fetch at 'https://engine-production-0fd2.up.railway.app/v1/demo' from origin 'https://mirror.0xo.in' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://mirror.0xo.in/app/welcome",
+        "console error: Failed to load resource: net::ERR_FAILED @ https://engine-production-0fd2.up.railway.app/v1/demo",
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/config",
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/demo"
+      ],
+      "screenshot": "Chrome-phone-app-welcome.png",
+      "textStart": "Mirror\nBeta\nExample\nLoading the latest copy\n0x7a3f…c91e\nOpened\nBTC\nLong\n0.0001 B"
+    },
+    {
+      "browser": "Safari desktop",
+      "page": "/",
+      "ok": false,
+      "problems": [
+        "viewport 1512px, expected ~1440px"
+      ],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-desktop-root.png",
+      "textStart": "Skip to content\nMirror\nHow it works\nSafety\nLeaders\nWhy Monad\nStats\nDocs\n\nOpen we"
+    },
+    {
+      "browser": "Safari desktop",
+      "page": "/docs",
+      "ok": false,
+      "problems": [
+        "viewport 1512px, expected ~1440px"
+      ],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-desktop-docs.png",
+      "textStart": "Skip to content\nMirror\n\nSearch docs\n⌘K\nProduct\nDocs\nStats\nPerpl analytics\nDownlo"
+    },
+    {
+      "browser": "Safari desktop",
+      "page": "/docs/fees",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-desktop-docs-fees.png",
+      "textStart": "Skip to content\nMirror\n\nSearch docs\n⌘K\nProduct\nDocs\nStats\nPerpl analytics\nDownlo"
+    },
+    {
+      "browser": "Safari desktop",
+      "page": "/stats",
+      "ok": false,
+      "problems": [
+        "viewport 1512px, expected ~1440px"
+      ],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-desktop-stats.png",
+      "textStart": "Skip to content\nMirror\nProduct\nDocs\nStats\nPerpl analytics\nDownload\n\nOpen web app"
+    },
+    {
+      "browser": "Safari desktop",
+      "page": "/perpl",
+      "ok": false,
+      "problems": [
+        "viewport 1512px, expected ~1440px"
+      ],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-desktop-perpl.png",
+      "textStart": "Skip to content\nMirror\nProduct\nDocs\nStats\nPerpl analytics\nDownload\n\nOpen web app"
+    },
+    {
+      "browser": "Safari desktop",
+      "page": "/download",
+      "ok": false,
+      "problems": [
+        "viewport 1512px, expected ~1440px"
+      ],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-desktop-download.png",
+      "textStart": "Skip to content\nMirror\nProduct\nDocs\nStats\nPerpl analytics\nDownload\n\nOpen web app"
+    },
+    {
+      "browser": "Safari desktop",
+      "page": "/c/leader/1000",
+      "ok": false,
+      "problems": [
+        "viewport 1512px, expected ~1440px"
+      ],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-desktop-c-leader-1000.png",
+      "textStart": "Skip to content\nMirror\nProduct\nDocs\nStats\nPerpl analytics\nDownload\n\nOpen web app"
+    },
+    {
+      "browser": "Safari desktop",
+      "page": "/app",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/config",
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/demo"
+      ],
+      "screenshot": "Safari-desktop-app.png",
+      "textStart": "Mirror\nBeta\nExample\n0x7a3f…c91e\nOpened\nBTC\nLong\n0.0001 BTC · 2x\ncopied in 0.61 s"
+    },
+    {
+      "browser": "Safari desktop",
+      "page": "/app/welcome",
+      "ok": false,
+      "problems": [
+        "viewport 1512px, expected ~1440px"
+      ],
+      "expectedWhileDown": [
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/config",
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/demo"
+      ],
+      "screenshot": "Safari-desktop-app-welcome.png",
+      "textStart": "Mirror\nBeta\nExample\n0x7a3f…c91e\nOpened\nBTC\nLong\n0.0001 BTC · 2x\ncopied in 0.61 s"
+    },
+    {
+      "browser": "Safari phone",
+      "page": "/",
+      "ok": false,
+      "problems": [
+        "did not load: /session/A74B9FEB-A756-4B28-A69D-26C990CED488/window/rect: invalid argument Parameter 'width' is outside allowed range of [0, 2^31-1]."
+      ],
+      "expectedWhileDown": []
+    },
+    {
+      "browser": "Safari phone",
+      "page": "/docs",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-phone-docs.png",
+      "textStart": "Skip to content\n\nMirror\n\n\nGETTING STARTED\n\nOverview\nWhat Mirror is, what it guar"
+    },
+    {
+      "browser": "Safari phone",
+      "page": "/docs/fees",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-phone-docs-fees.png",
+      "textStart": "Skip to content\n\nMirror\n\n\nPRODUCT\n\nFees\nWhat Mirror charges, when, and how your "
+    },
+    {
+      "browser": "Safari phone",
+      "page": "/stats",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-phone-stats.png",
+      "textStart": "Skip to content\nMirror\n\nPUBLIC STATS\n\nEvery copy, onchain.\nRead from Monad mainn"
+    },
+    {
+      "browser": "Safari phone",
+      "page": "/perpl",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-phone-perpl.png",
+      "textStart": "Skip to content\nMirror\n\nPERPL ANALYTICS\n\nAll of Perpl, read from Monad\nEvery Per"
+    },
+    {
+      "browser": "Safari phone",
+      "page": "/download",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-phone-download.png",
+      "textStart": "Skip to content\nMirror\n\nDOWNLOAD\n\nMirror for Android\nCopy the best traders on Pe"
+    },
+    {
+      "browser": "Safari phone",
+      "page": "/c/leader/1000",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [],
+      "screenshot": "Safari-phone-c-leader-1000.png",
+      "textStart": "Skip to content\nMirror\n\nSHARED FROM MIRROR\n\nLeader record · not available\nNot av"
+    },
+    {
+      "browser": "Safari phone",
+      "page": "/app",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/config",
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/demo"
+      ],
+      "screenshot": "Safari-phone-app.png",
+      "textStart": "Mirror\nBeta\nExample\n0x7a3f…c91e\nOpened\nBTC\nLong\n0.0001 BTC · 2x\ncopied in 0.61 s"
+    },
+    {
+      "browser": "Safari phone",
+      "page": "/app/welcome",
+      "ok": true,
+      "problems": [],
+      "expectedWhileDown": [
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/demo",
+        "failed request (backend down): https://engine-production-0fd2.up.railway.app/v1/config"
+      ],
+      "screenshot": "Safari-phone-app-welcome.png",
+      "textStart": "Mirror\nBeta\nExample\n0x7a3f…c91e\nOpened\nBTC\nLong\n0.0001 BTC · 2x\ncopied in 0.61 s"
+    }
+  ]
+}

@@ -81,6 +81,7 @@ function verdict(name, page, r) {
   for (const s of r.statuses ?? []) if (s.status === 0 || s.status >= 400) problems.push(`own resource ${s.status}: ${s.url}`);
   if (r.recorder === false) problems.push("error recorder missing from the page (deploy predates it?)");
   if (r.width !== undefined && r.expectWidth && Math.abs(r.width - r.expectWidth) > 40) problems.push(`viewport ${r.width}px, expected ~${r.expectWidth}px`);
+  if (r.width !== undefined && r.minWidth && r.width < r.minWidth) problems.push(`viewport ${r.width}px, expected a desktop width (>= ${r.minWidth}px)`);
   const res = { browser: name, page, ok: problems.length === 0, problems: [...new Set(problems)], expectedWhileDown: [...new Set(expected)], screenshot: r.screenshot, textStart: r.textStart };
   results.push(res);
   console.log(`${res.ok ? "PASS" : "FAIL"}  ${name.padEnd(15)} ${page}${res.ok ? "" : "\n      " + res.problems.join("\n      ")}`);
@@ -163,7 +164,8 @@ async function safariRun() {
       for (const p of PAGES) {
         // A new session per page: clean, isolated storage and cache every time.
         let sid;
-        const r = { expectWidth: width };
+        // Desktop: whatever the screen allows (>= 1280 is a desktop layout); phone width is checked tightly.
+        const r = { expectWidth: width < 800 ? width : undefined, minWidth: width < 800 ? undefined : 1280 };
         try {
           // Safari releases the previous automation session asynchronously; retry while it is still paired.
           for (let attempt = 0; ; attempt++) {
@@ -176,10 +178,14 @@ async function safariRun() {
             }
           }
           await call("POST", `/session/${sid}/timeouts`, { pageLoad: 45_000, script: 60_000 });
+          // Size the window (twice: a fresh window can ignore the first resize), then correct for window chrome so the
+          // page itself is about `width` CSS px wide. The correction is bounded so a window that never resized cannot
+          // produce a nonsense width.
           await call("POST", `/session/${sid}/window/rect`, { x: 0, y: 0, width, height });
-          // Correct for window chrome so the page itself is `width` CSS px wide (or as close as Safari allows).
+          await call("POST", `/session/${sid}/window/rect`, { x: 0, y: 0, width, height });
           const inner = await call("POST", `/session/${sid}/execute/sync`, { script: "return innerWidth", args: [] });
-          if (inner !== width) await call("POST", `/session/${sid}/window/rect`, { width: width + (width - inner), height });
+          const chrome = width - inner;
+          if (chrome > 0 && chrome < 200) await call("POST", `/session/${sid}/window/rect`, { width: width + chrome, height });
           await call("POST", `/session/${sid}/url`, { url: BASE + p });
           r.loaded = true;
           await new Promise((res) => setTimeout(res, SETTLE_MS));
