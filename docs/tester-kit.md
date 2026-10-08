@@ -1,13 +1,13 @@
 # Tester kit (Monad testnet)
 
-For the testnet round: 25 outside testers, 100 test AUSD each. Everything here is final except the fields in `{braces}`, which the deploy determines (see `docs/status/doc-updates-pending.md`). Testnet only: no real money is involved at any point, and test AUSD has no value.
+For the testnet round: 25 outside testers, 100 test AUSD each. Everything here is final except the field in `{braces}`, which is filled once the steps are published for testers (see `docs/status/doc-updates-pending.md`). Testnet only: no real money is involved at any point, and test AUSD has no value.
 
 ## Invite (DM or post)
 
 > I'm testing Mirror, a copy-trading app for Perpl on Monad: your own contract copies a trader for you, checks your limits on every order, and can never withdraw.
 >
 > Could you try it on Monad testnet for about 15 minutes and tell me what broke or confused you? I'll send you 100 test AUSD to trade with.
-> - Android: {apk_url} (SHA-256 {apk_sha256}). Install steps: https://mirror.0xo.in/download
+> - Android: https://github.com/Jagadeeshftw/mirror/releases/download/v1.0.1-testnet/mirror-1.0.1-testnet.apk (Mirror 1.0.1, SHA-256 2cee6e97e170a0d033e3d17cec712c38e5caa8dac0b6673219ca9e44a51a7728; Android 14 or newer). Install steps: https://mirror.0xo.in/download
 > - Laptop: https://mirror.0xo.in/app in Chrome
 > - Steps and what to send back: {tester_kit_url}
 >
@@ -69,8 +69,9 @@ Please don't send passkeys, recovery phrases or private keys. Mirror never asks 
 
 - [x] Contracts deployed and verified on testnet (KeeperRegistry `0x394B12D4355bE5B54DBCaa989cf44F8966195E41`, MirrorAccountFactory `0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39`, implementation `0x648e35cdfD4Aca744Ed33c69A0089A5621A76316`).
 - [ ] Hosted testnet engine, relayer and indexer live (`scripts/railway-up.sh`); `/v1/config` reports chain 10143 and the factory above.
-- [ ] Team-run demo leader's Perpl testnet account opened and the demo follower created; Run demo trade and Run blocked trade work once each.
-- [ ] APK published with its SHA-256 on `/download`; web app live at `/app`.
+- [x] Team-run demo leader's Perpl testnet account opened (account 1000, 200 test AUSD) and the demo follower created (`0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896`, 150 test AUSD, following 1000), 8 Oct 2026.
+- [ ] Run demo trade and Run blocked trade work once each (needs the hosted engine).
+- [x] APK published with its SHA-256 on `/download` (1.0.1, GitHub Release `v1.0.1-testnet`); web app live at `/app` (8 Oct 2026).
 - [ ] Ops wallet test MON topped up from the faucet: about 58.9 MON after the deploy, and the relayer and keeper pay every tester's gas.
 - [ ] Walk steps 1-8 once yourself on an Android emulator and in Chrome.
 

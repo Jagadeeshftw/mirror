@@ -18,10 +18,10 @@ testIDs are from `app/TESTIDS.md` (on the web build they are `data-testid`). Ste
 
 | Needed | Why | Status (8 Oct 2026) |
 |---|---|---|
-| Hosted testnet engine and relayer | Account creation, deposits, follows, Run demo trade, copies, the feed | prepared on Railway (`mirror-testnet`), not live |
+| Hosted testnet engine and relayer | Account creation, deposits, follows, Run demo trade, copies, the feed | prepared on Railway (`mirror-testnet`), not live; the engine has run against public testnet from the developer's machine (`devices/evidence/stage-b/README.md`) |
 | Hosted testnet indexer | Leaderboard, stats page, per-copy quality | prepared, not live |
-| Team-run demo leader's Perpl testnet account and the demo follower (`0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896`, counterfactual today) | Watch mode, Run demo trade, Run blocked trade | not created yet |
-| Testnet APK and web app published | Every app shot | being published |
+| Team-run demo leader's Perpl testnet account and the demo follower (`0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896`) | Watch mode, Run demo trade, Run blocked trade | done 8 Oct 2026: demo leader Perpl account 1000 (200 test AUSD); demo follower created, 150 test AUSD, following 1000 (max 2x, BTC and ETH, 1% of the leader's size) |
+| Testnet APK and web app published | Every app shot | done 8 Oct 2026: APK 1.0.1 on `/download`, web app at `/app` |
 | Test AUSD for the recording account: 100 from the tester pool | Perpl's testnet minimum to open an account is 100 test AUSD | in the ops wallet |
 | A second wallet with a little test MON (the "stranger") | Executing someone else's take-profit | to create |
 
@@ -64,7 +64,7 @@ For VC and Monad judges: founder and market readiness. Dark theme.
 | 5 | 1:02 | Video 1 shot 9 (Stop following, keep my positions) | "Leave a leader. Keep your positions." | Leave a leader at any time; your contract enforces it. | Onchain detach | `DetachTest` |
 | 6 | 1:12 | Stats page, copy quality section (once the indexer is live; otherwise the copy detail proof from video 1 shot 3) | "Every copy's quality is public." | Every copy's quality is public and recomputable from chain data. | Proof in every copy event | `CopyProofTest`; indexer quality entities |
 | 7 | 1:25 | Why Monad card | "Blocks ≈300 ms · Finalized ≈550 ms after Proposed · every rule checked onchain" | Copies follow within moments, cheaply enough to check every rule on every order. | Measured on mainnet 6 Oct 2026 | `node scripts/measure-monad.mjs`; gas from `test_fork_keeperCopyGasProfile` (print the number from the recording day's run, not an older one) |
-| 8 | 1:38 | Business model card | "Perpl builder 26 · 0.02% of opening size · nothing on closes · confirmed by Perpl 7 Oct 2026 · no revenue yet" | Mirror earns 0.02% of the size a copy opens, as Perpl builder 26. Nothing on closes, capped by each follower's contract, shown on every copy. No fee has accrued yet. | Fee model only; no revenue claimed | `contracts/deployments/10143.json` (`builderId` 26, `builderFeePer100K` 20); `docs/bounties/perpl-api.md` |
+| 8 | 1:38 | Business model card | "Perpl builder 26 · 0.02% of opening size · nothing on closes · confirmed by Perpl 7 Oct 2026 · no revenue yet" | Mirror earns 0.02% of the size a copy opens, as Perpl builder 26. Nothing on closes, capped by each follower's contract, shown on every copy. No revenue yet. | Fee model only; no revenue claimed | `contracts/deployments/10143.json` (`builderId` 26, `builderFeePer100K` 20); `docs/bounties/perpl-api.md` |
 | 9 | 1:48 | Traction card | Real counts on the recording day: testers, funded accounts, copies, blocks (team-run excluded). If an illustration of revenue is shown, label it "Illustration, not a forecast". | Traction so far, stated plainly. Next: audit, then raise the deposit cap. | Only measured numbers | Stats page / indexer on the day; `docs/funding-ledger.md` |
 
 ---

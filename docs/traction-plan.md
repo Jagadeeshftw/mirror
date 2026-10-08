@@ -17,7 +17,7 @@ Status is updated as the product ships. Targets are targets, not results. Every 
 |---|---|---|
 | Perpl community (Discord, X) | Where Perpl traders already are; Perpl is a Metropolis sponsor | pending: no posts yet |
 | Build in public on X | Each post carries tx links for real copies and real "blocked by your rule" events | pending: no posts yet |
-| Leader profiles | Every leaderboard entry is a shareable profile; leaders have a reason to share being followed | pending: profiles and share cards built, not public yet |
+| Leader profiles | Every leaderboard entry is a shareable profile; leaders have a reason to share being followed | pending: no posts yet; share cards public at `https://mirror.0xo.in/c/...` since 8 Oct 2026 |
 | Monad Discord and community | Monad users on Android who already use passkeys | pending |
 
 ## From install to first funded action
@@ -45,6 +45,8 @@ Target: under 3 minutes from install to a funded follow, timed in the demo video
 | Median leader-to-copy latency | leader fill block/time vs `Mirrored` tx | not measured yet |
 | Followers active in the last 7 days | accounts with a `Mirrored` event | 0 |
 
+These are outside users' figures. The team's own testnet accounts (the team-run demo follower and one test account, 8 Oct 2026) have testnet activity, including real copies and a block on the demo follower (`devices/evidence/stage-b/README.md`), and are not counted.
+
 The stats page is built; its numbers need the hosted indexer, which is not live yet. It will be served from the same indexer as the app, so the submission numbers and the page always agree.
 
 ## Milestones and targets
@@ -55,14 +57,14 @@ The stats page is built; its numbers need the hosted indexer, which is not live 
 | Hosted testnet engine and indexer | before the tester round | prepared on Railway, not live |
 | Testnet tester round | 25 outside testers at 100 test AUSD each (2,500 test AUSD from Perpl) | pending |
 | Contracts deployed and verified on Monad mainnet | after the testnet round, on the owner's go | pending |
-| Demo leader and demo follower copying | first real copies with tx links (testnet first) | pending |
-| Android APK public | download link on the site | pending (testnet APK being published) |
+| Demo leader and demo follower copying | first real copies with tx links (testnet first) | done on testnet, 8 Oct 2026, with the engine run on the developer's machine: [copy](https://testnet.monadvision.com/tx/0xc14cd15a3d3243263fc3b43cd2b7d1ae349c407622bf7479dc788ef7c873aa9b), [close](https://testnet.monadvision.com/tx/0x83922244bd82b863b07e8e7c771d39757d631d61327459afb89054ee04bfe373), [blocked](https://testnet.monadvision.com/tx/0xcfeeda062c5a5590e051c892d7c379c0019d93548f5f66f13043718f7a6d80aa); from the hosted engine: pending |
+| Android APK public | download link on the site | done for testnet: APK 1.0.1 on `/download`, 8 Oct 2026 |
 | First external funded follower | 1 | pending |
 | External funded followers before judging (13 Oct) | 10 | pending (target) |
 
 Capital we put in ourselves is capped at 30 USD in total (demo leader plus demo follower). External users fund their own accounts.
 
 ## Path to a business
-- **Revenue:** Mirror is Perpl builder 26, charging 0.02% of the size a copy opens or adds and nothing on closes or stops. Confirmed by Perpl on 7 Oct 2026; live once Mirror's contracts are deployed (it is in the testnet deployment). Perpl's exchange charges the fee on the opening fill and pays it to Mirror; Mirror's contracts never transfer it, and each follower's contract refuses any copy whose fee is above the maximum they signed. Illustration only, not a forecast: $10M of copied opening notional in a month would be $2,000 that month at 0.02%. No fee has accrued onchain yet.
+- **Revenue:** Mirror is Perpl builder 26, charging 0.02% of the size a copy opens or adds and nothing on closes or stops. Confirmed by Perpl on 7 Oct 2026; live once Mirror's contracts are deployed (it is in the testnet deployment). Perpl's exchange charges the fee on the opening fill and pays it to Mirror; Mirror's contracts never transfer it, and each follower's contract refuses any copy whose fee is above the maximum they signed. Illustration only, not a forecast: $10M of copied opening notional in a month would be $2,000 that month at 0.02%. No revenue yet: nothing is deployed on mainnet, and the only builder 26 fees so far were charged in test AUSD on testnet.
 - **Growth:** raise the per-account cap after an audit. Followers bring more capital, and leaders bring their audiences.
 - **Expansion:** the same pattern (an owned venue account plus onchain policy checks plus a keeper that cannot withdraw) works on any fully onchain order book, starting with other Monad venues.

@@ -28,18 +28,19 @@ Every follower gets their own smart contract account, a **MirrorAccount**. It ow
 
 Mirror is in beta and is being built in the open for Monad's Metropolis hackathon.
 
-| Component | Status (7 Oct 2026) |
+| Component | Status (8 Oct 2026) |
 |---|---|
-| Contracts (MirrorAccount, factory, KeeperRegistry) | Built. 132 passing tests, including fork tests against the live Perpl Exchange and AUSD. New rules: entry filter, stops anyone can trigger, several leaders per account with their own budgets and loss stops, price proof in every copy event. Slither report in the repository. |
-| Testnet deployment | Next, once Perpl's test AUSD arrives. |
-| Mainnet deployment | After testnet, on the owner's go. Addresses will be listed on [Contracts](/docs/contracts). |
-| Team-run demo leader | Live on mainnet: Perpl account 5416, 10.00 AUSD. |
-| Copy engine, relayer, API | Being updated for the new rules. Not hosted yet. |
-| Envio indexer | Updated for the new rules, with per-copy quality. Not hosted yet. |
-| Android app | Built and tested on emulators. APK not public yet. See [Download](/download). |
+| Contracts (MirrorAccount, factory, KeeperRegistry) | Built. 158 passing tests, including fork tests against the live Perpl Exchange and AUSD. Slither report in the repository. |
+| Testnet deployment | Deployed and verified on Monad testnet on 7 Oct 2026. Addresses on [Contracts](/docs/contracts). |
+| Mainnet deployment | Not deployed. After testnet, on the owner's go. |
+| Team-run demo accounts | Testnet: demo leader Perpl account 1000 and demo follower `0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896`. Mainnet: demo leader Perpl account 5416, 10.00 AUSD. See [Team-run accounts](/docs/team-run-accounts). |
+| Copy engine, relayer, API | Built, 218 tests. Run against public testnet from the developer's machine; not hosted yet. |
+| Envio indexer | Built, with per-copy quality, 44 tests. Not hosted yet. |
+| Web app | Live at [/app](/app) since 8 Oct 2026 (testnet). Until the hosted engine is live, it shows the demo account's copies read from Monad and says when an action needs the service. |
+| Android app | APK 1.0.1 (testnet beta) published on 8 Oct 2026. Tested on Android emulators only. See [Download](/download). |
 | Nansen wallet intelligence in the ranking | Built behind an interface; live data needs an API key. |
 
-Deposits are capped at **25 AUSD per account** while the contracts are unaudited.
+Deposits are capped while the contracts are unaudited: **25 AUSD per account** planned for mainnet, 200 test AUSD on testnet.
 
 ## Where to go next
 

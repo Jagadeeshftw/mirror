@@ -5,7 +5,7 @@ Fields are in the portal's order. Character counts use the portal's counting (UT
 Anything not built yet is marked PENDING. The portal has no final submit: what is saved at the deadline
 (14 Oct 2026, 03:59 UTC) is the entry, so keep the saved form in sync with this file.
 
-Last built: 2026-10-08 13:14 UTC
+Last built: 2026-10-08 16:04 UTC
 
 ## Primary track
 
@@ -32,7 +32,7 @@ Copy the best traders on Perpl with your limits enforced onchain: your own contr
 ```
 
 ### Description *
-Characters: 6,193 / 8,000.
+Characters: 7,070 / 8,000.
 
 ```text
 Mirror lets anyone copy the best traders on Perpl, the fully onchain perpetuals exchange on Monad, without handing money or keys to a copy-trading platform.
@@ -60,7 +60,7 @@ Match now: the follower's signed follow can bring the account straight to the le
 The owner is the follower's passkey, through Mera: one prompt, no seed phrase, no extension. Every owner action is signed and can be relayed by anyone; deposits use AUSD permit, so the follower never needs MON.
 
 BUSINESS MODEL
-Mirror is Perpl builder 26: 0.02% (20 per 100,000) of the size a copy opens or adds, nothing on closes or stops. Confirmed by Perpl on 7 Oct 2026; live once Mirror's contracts are deployed, and it is part of the testnet deployment. Perpl's exchange charges it on the opening fill and pays it to Mirror; Mirror's contracts never transfer it. The builder id and rate are fixed in the contract, only opening orders carry them, and the follower's contract refuses any copy whose fee is above the maximum they signed. The fee is shown before the passkey prompt and on every copy. No fee has accrued onchain yet.
+Mirror is Perpl builder 26: 0.02% (20 per 100,000) of the size a copy opens or adds, nothing on closes or stops. Confirmed by Perpl on 7 Oct 2026; live once Mirror's contracts are deployed, and it is part of the testnet deployment. Perpl's exchange charges it on the opening fill and pays it to Mirror; Mirror's contracts never transfer it. The builder id and rate are fixed in the contract, only opening orders carry them, and the follower's contract refuses any copy whose fee is above the maximum they signed. The fee is shown before the passkey prompt and on every copy. No fee has been earned: nothing is deployed on mainnet, and on testnet builder 26 has only been charged in test AUSD (0.000166 test AUSD on a copied open), test funds, not revenue.
 
 WHAT IS BUILT
 - Contracts (Solidity 0.8.30, OpenZeppelin; written from scratch against Perpl's published ABI): MirrorAccount, MirrorAccountFactory (non-upgradeable EIP-1167 clones), KeeperRegistry.
@@ -73,7 +73,10 @@ WHAT IS BUILT
 
 STATUS (8 OCT 2026)
 - Monad testnet: KeeperRegistry, MirrorAccountFactory and the MirrorAccount implementation are deployed and verified on Sourcify.
-- Hosted engine and indexer: prepared, not live yet. Testnet APK and web app: being published.
+- Live since 8 Oct 2026: the web app at mirror.0xo.in/app and the Android APK 1.0.1 (testnet beta) on /download. Until the hosted engine is live, the app reads the team-run demo account's copies straight from Monad and says "not live yet" for account creation, deposits and follows.
+- Team-run demo accounts on testnet: demo leader Perpl account 1000; demo follower MirrorAccount 0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896, created and funded through the app.
+- Public-testnet end to end, 11 of 11 steps on Android emulators, with the engine run on the developer's machine: a Perpl testnet trade copied with builder 26 charged on the open, the close copied with no fee, a stop-following set onchain while the follower kept its position, a 10x copy blocked by a 2x rule.
+- Hosted engine and indexer: prepared, not live yet.
 - Mainnet: Mirror's contracts are not deployed. No users yet.
 - Tested on Android emulators only.
 
@@ -87,7 +90,7 @@ Deposits are capped while the contracts are unaudited: 25 AUSD per account plann
 ```
 
 ### Please describe the go-to-market and user acquisition strategy for your product. *
-Characters: 4,123 / 8,000. Matches docs/traction-plan.md.
+Characters: 4,944 / 8,000. Matches docs/traction-plan.md.
 
 ```text
 FIRST USERS
@@ -105,7 +108,7 @@ CHANNELS
 - Building in public on X. Every post carries transaction links for real copies and real "blocked by your rule" events.
 - Leader profiles. Every leaderboard entry is a shareable page, and leaders have a reason to share that they are being followed.
 - Monad's Discord and community, for Android users who already use passkeys.
-Status (8 Oct 2026): none of these channels has been used for outreach yet. Outreach starts with the testnet tester round below, once the hosted engine, the web app and the APK are live.
+Status (8 Oct 2026): none of these channels has been used for outreach yet. Outreach starts with the testnet tester round below, once the hosted engine is live (the web app and the APK have been live since 8 Oct 2026).
 
 FROM INSTALL TO FIRST FUNDED ACTION
 1. Download the APK from the site.
@@ -134,13 +137,13 @@ The public stats page will show these metrics, read from our Envio indexer, once
 Testnet tester round: Perpl sent 2,500 test AUSD for testers, enough for 25 outside testers at 100 test AUSD each. Mirror's relayer and keeper pay their gas.
 
 Targets before judging:
-- the public APK and web app on testnet
-- 25 outside testers through the testnet round, with their copies and blocks on the stats page
-- the team-run demo leader and demo follower copying on testnet, with tx links
+- the public APK and web app on testnet: met on 8 Oct 2026 (APK 1.0.1 on /download, web app at /app)
+- 25 outside testers through the testnet round, with their copies and blocks on the stats page: not started (needs the hosted engine)
+- the team-run demo leader and demo follower copying on testnet, with tx links: met on 8 Oct 2026, with the engine run on the developer's machine (the hosted engine is not live yet). Demo leader: Perpl testnet account 1000. Copy of its BTC open, builder 26 charged 0.000166 test AUSD (test funds, not revenue): https://testnet.monadvision.com/tx/0xc14cd15a3d3243263fc3b43cd2b7d1ae349c407622bf7479dc788ef7c873aa9b. Close copied with no fee: https://testnet.monadvision.com/tx/0x83922244bd82b863b07e8e7c771d39757d631d61327459afb89054ee04bfe373. 10x copy blocked by the 2x rule: https://testnet.monadvision.com/tx/0xcfeeda062c5a5590e051c892d7c379c0019d93548f5f66f13043718f7a6d80aa
 Mainnet follows the testnet round. Our own capital is capped at 30 USD in total. External users fund their own accounts.
 
 PATH TO A BUSINESS
-- Revenue: Mirror is Perpl builder 26, charging 0.02% of the size a copy opens or adds and nothing on closes or stops. Confirmed by Perpl on 7 Oct 2026; live once Mirror's contracts are deployed (it is in the testnet deployment). Perpl's exchange charges the fee on the opening fill and pays it to Mirror; Mirror's contracts never transfer it, and each follower's contract refuses any copy whose fee is above the maximum they signed. Illustration only, not a forecast: $10M of copied opening notional in a month would be $2,000 that month at 0.02%. No fee has accrued onchain yet.
+- Revenue: Mirror is Perpl builder 26, charging 0.02% of the size a copy opens or adds and nothing on closes or stops. Confirmed by Perpl on 7 Oct 2026; live once Mirror's contracts are deployed (it is in the testnet deployment). Perpl's exchange charges the fee on the opening fill and pays it to Mirror; Mirror's contracts never transfer it, and each follower's contract refuses any copy whose fee is above the maximum they signed. Illustration only, not a forecast: $10M of copied opening notional in a month would be $2,000 that month at 0.02%. No revenue yet: nothing is deployed on mainnet, and the only builder 26 fees so far were charged in test AUSD on testnet.
 - Growth: raise the per-account cap after an audit. Followers bring capital, and leaders bring their audiences.
 - Expansion: the same pattern works on any fully onchain order book, starting with other Monad venues. The pattern is an owned venue account, policy checked onchain on every order, and a keeper that cannot withdraw.
 ```
@@ -182,7 +185,7 @@ PENDING. Not recorded yet. Final 2-minute shot list in docs/storyboards.md (vide
 ```
 
 ### Judge access instructions (optional)
-Characters: 4,591 / 8,000. Private to the team, judges and organizers.
+Characters: 6,723 / 8,000. Private to the team, judges and organizers.
 
 ```text
 STATUS (8 OCT 2026)
@@ -191,8 +194,11 @@ STATUS (8 OCT 2026)
   MirrorAccountFactory 0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39
   MirrorAccount implementation 0x648e35cdfD4Aca744Ed33c69A0089A5621A76316
   They run against Perpl's testnet Exchange 0x1964C32f0bE608E7D29302AFF5E61268E72080cc and test AUSD 0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC. Perpl builder 26 (0.02% of opening size) is set in this deployment.
-- Hosted copy engine and indexer: prepared, not live yet.
-- Site and docs: live at https://mirror.0xo.in. The web app (/app) and the Android APK (/download) are being published; until then those pages say so.
+- Hosted copy engine and indexer: prepared, not live yet. The engine has been run against public testnet from the developer's machine (below).
+- Site, docs and web app: live at https://mirror.0xo.in; the web app at https://mirror.0xo.in/app since 8 Oct 2026.
+- Android APK: Mirror 1.0.1 (testnet beta) at https://mirror.0xo.in/download, GitHub Release v1.0.1-testnet, SHA-256 2cee6e97e170a0d033e3d17cec712c38e5caa8dac0b6673219ca9e44a51a7728. Needs Android 14+ with Google Password Manager.
+- Until the hosted engine is live, the web app and the APK show the team-run demo account's copies read straight from Monad (Run buttons off), and creating an account, deposits and follows say "not live yet" before any passkey prompt.
+- Team-run testnet accounts: demo leader Perpl account 1000; demo follower MirrorAccount 0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896 (max 2x, BTC and ETH, 1% of the leader's size).
 - Monad mainnet: Mirror's contracts are not deployed. The team-run demo leader exists as Perpl account 5416 (10.00 AUSD, no trades).
 - Mirror has been tested on Android emulators only.
 
@@ -205,13 +211,19 @@ WHAT YOU CAN VERIFY TODAY (a computer with Foundry and Node)
 4. Testnet contracts: open https://repo.sourcify.dev/10143/0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39 (and the other two addresses) to compare the verified source with contracts/src.
 5. Full stack on a local network running Perpl's real exchange code (needs anvil): (cd contracts && forge build) && (cd scripts && npm install) && cd localnet && npm install && npm run fetch && ./run-stage-a.sh --all
    Expected: API 29 of 29, web app 64 of 64 (one optional check skipped: second-browser passkey restore, which Chrome's virtual authenticator does not support). The Android run (devices/run-stage-a-android.sh, 34 of 34) needs two signed-in Android emulators.
+6. Real copies on public Monad testnet, with the engine run on the developer's machine (Android emulators, 11 of 11 steps; every step and tx in devices/evidence/stage-b/README.md):
+   demo follower created https://testnet.monadvision.com/tx/0x64cb1e2e64a0f36f5876b1c8b66851dd7ea0349299ece130a7c5efbc77930d59, 150 test AUSD deposited by permit https://testnet.monadvision.com/tx/0xd4afdf05e36ed5d9f3a5fc86dda98bd25f20134164a801bf82c4f3447dc27833, follows leader 1000 https://testnet.monadvision.com/tx/0xe172e09112d5f3074d23b4b6233e10863d05e0b4ec001adb4f8a282106ea3987
+   copy of the leader's BTC open, builder 26 charged 166 units (0.000166 test AUSD, test funds) https://testnet.monadvision.com/tx/0xc14cd15a3d3243263fc3b43cd2b7d1ae349c407622bf7479dc788ef7c873aa9b
+   close copied with fee 0 https://testnet.monadvision.com/tx/0x83922244bd82b863b07e8e7c771d39757d631d61327459afb89054ee04bfe373
+   stop following, keep my positions (another account) https://testnet.monadvision.com/tx/0x741241722325f5536d633d084b824734ed2539c5d14aa7a2677d6f6f2b89537a
+   10x copy blocked by the 2x rule https://testnet.monadvision.com/tx/0xcfeeda062c5a5590e051c892d7c379c0019d93548f5f66f13043718f7a6d80aa
 Every command and its expected output: https://mirror.0xo.in/docs/run-the-tests
 
-TESTNET PATH (PENDING: needs the hosted engine, the web app and the APK)
-What you need: an Android phone with Google Play services, signed in to a Google account, with a screen lock; or a desktop browser with passkey support. No wallet, no seed phrase, no MON. Mirror has been tested on Android 15 emulators and in Chrome; nothing else yet.
+TESTNET PATH (PENDING: needs the hosted engine; the web app and the APK are live. Until it is, the app only shows the demo account's copies read from Monad, with the Run buttons off)
+What you need: an Android phone with Google Play services, signed in to a Google account, with a screen lock; or a desktop browser with passkey support. No wallet, no seed phrase, no MON. Mirror has been tested on Android 15 emulators and in Chrome; the site's pages were also checked in Safari.
 1. Open https://mirror.0xo.in/download for the Android APK, or https://mirror.0xo.in/app in a browser.
 2. Tap Create account and approve the single passkey prompt. That passkey is your account.
-3. Home (watch mode) shows the team-run demo follower, labelled Team-run. Tap Run demo trade: the team-run demo leader trades on Perpl testnet and the copy appears with the leader's fill, your fill, the deviation, the latency, the Mirror fee and two tx links. Tap Run blocked trade: the leader opens above the follower's max leverage and the feed shows Not copied, with the rule, the numbers and its own tx link. Both buttons are rate-limited, and demo positions are closed again automatically.
+3. Home (watch mode) shows the team-run demo follower (MirrorAccount 0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896, following demo leader Perpl testnet account 1000), labelled Team-run. Tap Run demo trade: the team-run demo leader trades on Perpl testnet and the copy appears with the leader's fill, your fill, the deviation, the latency, the Mirror fee and two tx links. Tap Run blocked trade: the leader opens above the follower's max leverage and the feed shows Not copied, with the rule, the numbers and its own tx link. Both buttons are rate-limited, and demo positions are closed again automatically.
 4. Leaders: Perpl testnet traders ranked from onchain data. Open one, tap Follow, set limits, read What if (a simulation, labelled as one), then Review: the Mirror fee line reads "0.02% of opening size (builder 26)".
 5. Optional, with test AUSD: Perpl's testnet minimum to open an account is 100 test AUSD. To get it, open an issue titled "test AUSD" at github.com/Jagadeeshftw/mirror/issues with your Mirror address (Add funds shows it); we send 100 test AUSD from the tester pool Perpl funded. Deposit it from Add funds (gasless permit), follow with Match the leader now on, and approve with one passkey prompt.
 6. On a position: set a stop-loss or take-profit (onchain, executable by anyone once reached). On the leader: Stop following, keep my positions; the contract then refuses that leader's copies while your stops and closes still work.
@@ -231,7 +243,7 @@ come from docs/submission/bounty-limits.json (null until read from the portal) a
 Helper text (portal): Focus on how it creatively integrates the following 3 key features: authenticates users via Mera, holds and displays a stablecoin balance in AUSD, and executes trades through Perpl. Video field: PWAs are accepted.
 
 #### Q1. Describe the core features of your trading app.
-Characters: 2,555 / 8,000. Field type: Text area (required).
+Characters: 3,098 / 8,000. Field type: Text area (required).
 
 ```text
 Mirror is a copy-trading app for Perpl. A follower picks a leader, signs limits once with a passkey, and every leader trade is copied into the follower's own contract account, with the limits checked onchain on every order.
@@ -250,11 +262,11 @@ What makes it more than a trading front end:
 - Match now: the follower's signed follow places the Perpl order at once.
 - Android app and a web app for laptop browsers, the same passkey account.
 
-Business model: Mirror is Perpl builder 26, 0.02% of the size a copy opens, nothing on closes or stops; confirmed by Perpl on 7 Oct 2026, live once deployed and set in the testnet deployment. The fee is shown before the passkey prompt and on every copy, and the follower's contract caps it at the maximum they sign. No fee has accrued yet.
+Business model: Mirror is Perpl builder 26, 0.02% of the size a copy opens, nothing on closes or stops; confirmed by Perpl on 7 Oct 2026, live once deployed and set in the testnet deployment. The fee is shown before the passkey prompt and on every copy, and the follower's contract caps it at the maximum they sign. No revenue yet: on testnet builder 26 has only been charged in test AUSD (test funds), and nothing is deployed on mainnet.
 
-Status (8 Oct 2026): contracts deployed and verified on Monad testnet; hosted engine, APK and web app being published; not on mainnet.
+Status (8 Oct 2026): contracts deployed and verified on Monad testnet; Android APK 1.0.1 (testnet beta, https://mirror.0xo.in/download) and the web app (https://mirror.0xo.in/app) published on 8 Oct 2026; hosted engine not live yet; not on mainnet.
 
-Tested: 158 contract tests, including 6 fork tests against live Perpl and AUSD. On a local network running Perpl's real exchange code, the Android app passes 34 of 34 end-to-end steps on two Android emulators with real Google passkeys, and the web app 64 of 64.
+Tested: 158 contract tests, including 6 fork tests against live Perpl and AUSD. On a local network running Perpl's real exchange code, the Android app passes 34 of 34 end-to-end steps on two Android emulators with real Google passkeys, and the web app 64 of 64. On public Monad testnet, with the engine run on the developer's machine, the Android app passes 11 of 11 steps on emulators: passkey restore, a gasless deposit and follow, a copied Perpl testnet trade (https://testnet.monadvision.com/tx/0xc14cd15a3d3243263fc3b43cd2b7d1ae349c407622bf7479dc788ef7c873aa9b), close all and withdraw.
 ```
 
 #### Q2. Submit a demo video (up to 2 mins) showing a user logging in via passkey, funding or viewing an AUSD balance, and placing at least one trade on Perpl in your app
@@ -270,10 +282,10 @@ PENDING. Not recorded yet; it needs the hosted testnet engine. The final cut (do
 ### Perpl: Best use of Perpl's API
 
 #### Q1. Submit a demo video (up to 2 mins) showing your trading bot or automation system on Perpl with demonstrated real on-chain activity.
-Characters: 648 / 2,000. Field type: URL (required).
+Characters: 755 / 2,000. Field type: URL (required).
 
 ```text
-PENDING (video). The copy engine is built and tested (218 tests; a mainnet fork; a local network running Perpl's real exchange code). Mirror's contracts are deployed on Monad testnet; the hosted engine is not live yet. The video (docs/storyboards.md, video 4), on Perpl testnet, will show:
+PENDING (video). The copy engine is built and tested (218 tests; a mainnet fork; a local network running Perpl's real exchange code). Mirror's contracts are deployed on Monad testnet; the hosted engine is not live yet, but the engine has copied Perpl testnet trades from the developer's machine (tx links in the next answer). The video (docs/storyboards.md, video 4), on Perpl testnet, will show:
 - a leader fill arriving at Monad's Proposed stage
 - the policy pre-check and the thin-book check against Perpl's order book
 - the copied order landing on Perpl, attributed to builder 26 (0.02% on the opening size, in Perpl's fill event and in Mirror's proof), with latency and tx links
@@ -281,10 +293,15 @@ PENDING (video). The copy engine is built and tested (218 tests; a mainnet fork;
 ```
 
 #### Q2. Link to your trading bot or automation system on Perpl with demonstrated real on-chain activity.
-Characters: 826 / 2,000. Field type: URL (required).
+Characters: 1,483 / 2,000. Field type: URL (required).
 
 ```text
-PENDING (link). Planned: the public stats page listing every copy the engine executes, with MonadVision links and the keeper address. No copy has been executed on a public network yet.
+PENDING (link). Planned: the public stats page listing every copy the engine executes, with MonadVision links and the keeper address, once the hosted engine and indexer are live.
+
+On public Monad testnet, the engine run from the developer's machine has already copied the team-run demo leader (Perpl testnet account 1000) into the demo follower's MirrorAccount:
+- open copied, builder 26 charged 166 units (0.000166 test AUSD; test funds, not revenue): https://testnet.monadvision.com/tx/0xc14cd15a3d3243263fc3b43cd2b7d1ae349c407622bf7479dc788ef7c873aa9b
+- close copied with fee 0: https://testnet.monadvision.com/tx/0x83922244bd82b863b07e8e7c771d39757d631d61327459afb89054ee04bfe373
+- a 10x copy blocked onchain by the follower's 2x rule: https://testnet.monadvision.com/tx/0xcfeeda062c5a5590e051c892d7c379c0019d93548f5f66f13043718f7a6d80aa
 
 Built: the engine uses Perpl's public REST context (market config, minimum sizes) and WebSocket market data (marks, best bid and ask, recent trades, order book) to price, size and pre-check every copy and every match-now quote, and exposes them at /v1/markets. It executes onchain through each follower's MirrorAccount, attributing every opening order to Mirror's builder code (builder 26, 0.02% of opening size; confirmed by Perpl on 7 Oct 2026), and every closing order without one. Before an opening copy it measures Perpl's book: below 2x the order's size within the limit price the copy is shrunk, and skipped if not even one lot fits.
 ```
@@ -292,7 +309,7 @@ Built: the engine uses Perpl's public REST context (market config, minimum sizes
 ### Monad Foundation: Best Mera-Powered UX on Monad
 
 #### Q1. Describe how your project meaningfully integrates Mera as the entire account layer
-Characters: 1,376 / 8,000. Field type: Text area (required).
+Characters: 1,637 / 8,000. Field type: Text area (required).
 
 ```text
 The Mera-derived EOA is the only owner of each MirrorAccount. Nothing else can withdraw, change the policy, pause, stop following a leader or close all:
@@ -308,7 +325,7 @@ Verified on Android emulators signed in to Google, with rpId mirror.0xo.in (asse
 - in the Mirror app (release-signed build, real Google passkeys), 34 of 34 end-to-end steps against Perpl's real exchange code on a local network: one prompt creates the account; follow, levels, stop following, close all and withdraw each take one prompt; on a second emulator signed in to the same Google account, the synced passkey restores the same account address
 - the web app runs the same flows in Chrome, 64 of 64
 
-Not yet: the same flows against the hosted testnet service (pending). Android testing so far is on Android emulators only.
+On public Monad testnet (Mirror's testnet contracts, Perpl testnet, the engine run from the developer's machine), 11 of 11 steps on Android emulators: restore from the passkey, create, deposit and follow with one prompt, stop following, close all and withdraw. Not yet: the same flows against the hosted testnet service (pending). Android testing so far is on Android emulators only.
 ```
 
 #### Q2. Submit an optional demo video (up to 2 mins) showing how Mera is integrated into your app, focusing on UX elements

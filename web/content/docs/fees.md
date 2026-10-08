@@ -58,4 +58,4 @@ Your policy includes a **maximum builder fee that you sign** with your passkey. 
 
 The fee is Mirror's business model: a small share of the size copies open, paid only when a copy actually trades.
 
-**Illustration only:** $10M of copied opening notional in a month at 0.02% would be $2,000 that month. No fee has accrued yet; Mirror's contracts are not deployed.
+**Illustration only:** $10M of copied opening notional in a month at 0.02% would be $2,000 that month. No revenue yet: Mirror's contracts are not deployed on mainnet, and on testnet the fee has only been charged in test AUSD, which is test funds.

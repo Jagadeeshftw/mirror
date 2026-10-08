@@ -3,7 +3,7 @@
 Copy the best traders on Perpl with your limits enforced onchain. Your own contract checks every copied order and can trade for you but never withdraw. Built on Monad.
 
 - Site and docs: https://mirror.0xo.in · Judges guide: https://mirror.0xo.in/docs/judges-guide
-- Web app: https://mirror.0xo.in/app · Android APK: https://mirror.0xo.in/download (both being published; until then the pages say so) · Public stats: https://mirror.0xo.in/stats
+- Web app: https://mirror.0xo.in/app · Android APK: https://mirror.0xo.in/download (both live on testnet since 8 Oct 2026; until the hosted engine is live they show the demo account's copies read from Monad, and creating an account, deposits and follows say "not live yet") · Public stats: https://mirror.0xo.in/stats
 - X: [@MirrorOnMonad](https://x.com/MirrorOnMonad)
 - Monad Metropolis, Track 01 Onchain Finance & Trading
 
@@ -20,7 +20,7 @@ Each follower gets a **MirrorAccount**: a non-upgradeable contract that owns its
 
 A keeper watches leader fills on Perpl and submits the copies. It can trade through the account but can never withdraw: no code path sends collateral to anyone but the owner. A copy can never exceed the sizing ratio times the leader's current position on the same side. When a copy would break a rule the contract does not trade and emits a `Blocked` event, so "blocked by your rule" has its own transaction. **Match now** lets the follower's own signed follow open the leader's current position at once, under the same checks. Stop-loss, take-profit and loss stops can be executed by anyone once they are true onchain (reduce-only), so they work even if Mirror is down. **Stop following, keep my positions** is enforced per leader by the contract (`setLeaderDetached`): every further copy from that leader is refused with Blocked reason 22, while the follower's own stops and closes keep working.
 
-Mirror's fee: Mirror is Perpl builder 26 and charges 0.02% (20 per 100,000) of the size a copy opens or adds, nothing on closes or stops (confirmed by Perpl on 7 Oct 2026; live once deployed, and set in the testnet deployment). No fee has accrued yet. Perpl's exchange charges it on the fill; Mirror's contracts never transfer it, and each follower's contract refuses any copy whose fee is above the maximum they signed. See https://mirror.0xo.in/docs/fees.
+Mirror's fee: Mirror is Perpl builder 26 and charges 0.02% (20 per 100,000) of the size a copy opens or adds, nothing on closes or stops (confirmed by Perpl on 7 Oct 2026; live once deployed, and set in the testnet deployment). No revenue yet: on testnet builder 26 has only been charged in test AUSD (0.000166 test AUSD on a copied open), which is test funds; nothing is deployed on mainnet. Perpl's exchange charges it on the fill; Mirror's contracts never transfer it, and each follower's contract refuses any copy whose fee is above the maximum they signed. See https://mirror.0xo.in/docs/fees.
 
 The owner is the follower's passkey (Mera, WebAuthn PRF): one prompt, no seed phrase, no extension. Owner actions are EIP-712 signatures relayed by anyone, and deposits use AUSD permit or ERC-3009, so the follower never needs MON.
 
@@ -30,11 +30,11 @@ The owner is the follower's passkey (Mera, WebAuthn PRF): one prompt, no seed ph
 |---|---|
 | Contracts (`contracts/`) | **Deployed on Monad testnet** and verified on Sourcify (7 Oct 2026, 21:56 UTC; addresses below). Not deployed on mainnet. 158 Foundry tests: unit, fuzz (1,000 runs), 12 invariant properties plus a call summary, and 6 mainnet-fork tests against the live Perpl Exchange and AUSD. Slither: 137 findings, each fixed or explained (`docs/security/static-analysis.md`). |
 | Local network (`localnet/`) | Perpl's real exchange code deployed as in Perpl's dex-sdk test kit, with Mirror on top. Stage A: API 29/29, web app 64/64 (one optional check skipped: second-browser passkey restore, unsupported by Chrome's virtual authenticator), Android app 34/34 on two Android emulators (`mirror-a`, `mirror-b`). |
-| Copy engine and relayer (`engine/`) | Built, 218 tests. Hosting prepared on Railway (project `mirror-testnet`), **not live yet**. |
+| Copy engine and relayer (`engine/`) | Built, 218 tests. Run against public Monad testnet from the developer's machine on 8 Oct 2026 (`devices/evidence/stage-b/README.md`). Hosting prepared on Railway (project `mirror-testnet`), **not live yet**. |
 | Indexer (`indexer/`) | Built (Envio HyperIndex; mainnet and testnet configs), with per-copy quality proof. 44 tests. Hosting prepared, **not live yet**. |
-| App (`app/`) | Android app and web app 1.0.0 (Expo, Mera passkeys), 205 tests. Tested on Android emulators and in Chrome only. Testnet APK and web app being published. |
+| App (`app/`) | Android app and web app 1.0.1 (Expo, Mera passkeys), 205 tests. Tested on Android emulators and in Chrome. **Live on testnet since 8 Oct 2026:** web app at https://mirror.0xo.in/app; APK 1.0.1 (versionCode 101) on https://mirror.0xo.in/download, GitHub Release `v1.0.1-testnet`, SHA-256 `2cee6e97e170a0d033e3d17cec712c38e5caa8dac0b6673219ca9e44a51a7728` (notes: `docs/releases/1.0.1-testnet.md`). Public testnet end to end: 11 of 11 steps on Android emulators with the engine run on the developer's machine (`devices/evidence/stage-b/README.md`). |
 | Site, docs, stats (`web/`) | Live at https://mirror.0xo.in. 25 tests. |
-| Team-run demo leader | Mainnet: Perpl account 5416, 10.00 AUSD, no trades (`docs/funding-ledger.md`). Testnet: not opened yet. |
+| Team-run demo leader | Mainnet: Perpl account 5416, 10.00 AUSD, no trades (`docs/funding-ledger.md`). Testnet: Perpl account 1000, 200 test AUSD; demo follower MirrorAccount `0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896` created and funded with 150 test AUSD on 8 Oct 2026. |
 | Users | None yet. Testnet tester round: 25 outside testers at 100 test AUSD each, from 2,500 test AUSD Perpl provided (`docs/tester-kit.md`). |
 
 ## Repository layout

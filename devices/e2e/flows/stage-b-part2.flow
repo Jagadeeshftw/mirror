@@ -29,6 +29,7 @@ shell ${HOOK} lots ${addrB} lotsKept
 assertVar lotsKept "^${lotsB}$"
 
 step 09 the test user closes the kept position themselves (Close all, one passkey prompt)
+open /home
 tap id:home.tab.portfolio
 tap id:portfolio.closeAll
 waitFor id:closeAll.dialog 10

@@ -23,7 +23,7 @@ Match now: the follower's signed follow can bring the account straight to the le
 The owner is the follower's passkey, through Mera: one prompt, no seed phrase, no extension. Every owner action is signed and can be relayed by anyone; deposits use AUSD permit, so the follower never needs MON.
 
 BUSINESS MODEL
-Mirror is Perpl builder 26: 0.02% (20 per 100,000) of the size a copy opens or adds, nothing on closes or stops. Confirmed by Perpl on 7 Oct 2026; live once Mirror's contracts are deployed, and it is part of the testnet deployment. Perpl's exchange charges it on the opening fill and pays it to Mirror; Mirror's contracts never transfer it. The builder id and rate are fixed in the contract, only opening orders carry them, and the follower's contract refuses any copy whose fee is above the maximum they signed. The fee is shown before the passkey prompt and on every copy. No fee has accrued onchain yet.
+Mirror is Perpl builder 26: 0.02% (20 per 100,000) of the size a copy opens or adds, nothing on closes or stops. Confirmed by Perpl on 7 Oct 2026; live once Mirror's contracts are deployed, and it is part of the testnet deployment. Perpl's exchange charges it on the opening fill and pays it to Mirror; Mirror's contracts never transfer it. The builder id and rate are fixed in the contract, only opening orders carry them, and the follower's contract refuses any copy whose fee is above the maximum they signed. The fee is shown before the passkey prompt and on every copy. No fee has been earned: nothing is deployed on mainnet, and on testnet builder 26 has only been charged in test AUSD (0.000166 test AUSD on a copied open), test funds, not revenue.
 
 WHAT IS BUILT
 - Contracts (Solidity 0.8.30, OpenZeppelin; written from scratch against Perpl's published ABI): MirrorAccount, MirrorAccountFactory (non-upgradeable EIP-1167 clones), KeeperRegistry.
@@ -36,7 +36,10 @@ WHAT IS BUILT
 
 STATUS (8 OCT 2026)
 - Monad testnet: KeeperRegistry, MirrorAccountFactory and the MirrorAccount implementation are deployed and verified on Sourcify.
-- Hosted engine and indexer: prepared, not live yet. Testnet APK and web app: being published.
+- Live since 8 Oct 2026: the web app at mirror.0xo.in/app and the Android APK 1.0.1 (testnet beta) on /download. Until the hosted engine is live, the app reads the team-run demo account's copies straight from Monad and says "not live yet" for account creation, deposits and follows.
+- Team-run demo accounts on testnet: demo leader Perpl account 1000; demo follower MirrorAccount 0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896, created and funded through the app.
+- Public-testnet end to end, 11 of 11 steps on Android emulators, with the engine run on the developer's machine: a Perpl testnet trade copied with builder 26 charged on the open, the close copied with no fee, a stop-following set onchain while the follower kept its position, a 10x copy blocked by a 2x rule.
+- Hosted engine and indexer: prepared, not live yet.
 - Mainnet: Mirror's contracts are not deployed. No users yet.
 - Tested on Android emulators only.
 
