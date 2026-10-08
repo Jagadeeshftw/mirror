@@ -1,0 +1,172 @@
+{
+  "flow": "/Users/jagadeesh/personal/projects/grants/monad/mirror/devices/e2e/flows/stage-b.flow",
+  "apk": "/Users/jagadeesh/personal/projects/grants/monad/mirror/app/dist/mirror-1.0.0-stageb.apk",
+  "package": "com.zeroxo.mirror",
+  "ok": false,
+  "summary": [
+    {
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "ok": true,
+      "commands": 12
+    },
+    {
+      "step": "02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "ok": false,
+      "commands": 3
+    }
+  ],
+  "commands": [
+    {
+      "line": 12,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "step 01 restore the demo follower's owner with its passkey (mirror-a)",
+      "ok": true,
+      "secs": 9.2,
+      "shots": []
+    },
+    {
+      "line": 13,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "device a",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 14,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "01-emulator-5554-s14-launch.png"
+      ]
+    },
+    {
+      "line": 15,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "02-emulator-5554-s15-waitFor.png"
+      ]
+    },
+    {
+      "line": 16,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "tap id:onboarding.restore",
+      "ok": true,
+      "secs": 3.3,
+      "shots": [
+        "03-emulator-5554-s16-tap-id_onboarding.restore.png"
+      ]
+    },
+    {
+      "line": 17,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "passkey 90 \"^Mirror probe 2026-10-06\"",
+      "ok": true,
+      "secs": 16.8,
+      "shots": [
+        "04-emulator-5554-passkey-picker.png",
+        "05-emulator-5554-passkey-biometric.png",
+        "06-emulator-5554-s17-after-passkey.png"
+      ]
+    },
+    {
+      "line": 18,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "waitFor id:restore.go.home 120",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "07-emulator-5554-s18-waitFor.png"
+      ]
+    },
+    {
+      "line": 19,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "tap id:restore.go.home",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "08-emulator-5554-s19-tap-id_restore.go.home.png"
+      ]
+    },
+    {
+      "line": 20,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "open /funds",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "09-emulator-5554-s20-open.png"
+      ]
+    },
+    {
+      "line": 21,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "readText id:funds.address addr \"^0x[0-9a-fA-F ]{40,60}$\" 30",
+      "ok": true,
+      "secs": 2.1,
+      "values": {
+        "addr": "0x3aBF 625B e454 F8F7 8e5a DA1B 4AB6 27Ed e6C2 6C78"
+      },
+      "shots": [
+        "10-emulator-5554-s21-readText.png"
+      ]
+    },
+    {
+      "line": 22,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "squash addr",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addr": "0x3aBF625Be454F8F78e5aDA1B4AB627Ede6C26C78"
+      },
+      "shots": []
+    },
+    {
+      "line": 23,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "assertVar addr \"^0x3[aA][bB][fF]625[bB][eE]454\"",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addr": "0x3aBF625Be454F8F78e5aDA1B4AB627Ede6C26C78"
+      },
+      "shots": []
+    },
+    {
+      "line": 25,
+      "step": "02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "cmd": "step 02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 26,
+      "step": "02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "cmd": "open /home",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "11-emulator-5554-s26-open.png"
+      ]
+    },
+    {
+      "line": 27,
+      "step": "02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "cmd": "expectResult id:home.equity \"^1[0-9][0-9]\\.[0-9][0-9]$\" 90",
+      "ok": false,
+      "error": "id:home.equity text '0.00' !~ /^1[0-9][0-9]\\.[0-9][0-9]$/",
+      "shots": [
+        "12-emulator-5554-s27-assert-FAILED.png",
+        "13-emulator-5554-s27-FAILED.png"
+      ]
+    }
+  ]
+}

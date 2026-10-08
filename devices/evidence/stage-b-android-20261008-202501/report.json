@@ -1,0 +1,781 @@
+{
+  "flow": "/Users/jagadeesh/personal/projects/grants/monad/mirror/devices/e2e/flows/stage-b.flow",
+  "apk": "/Users/jagadeesh/personal/projects/grants/monad/mirror/app/dist/mirror-1.0.0-stageb.apk",
+  "package": "com.zeroxo.mirror",
+  "ok": false,
+  "summary": [
+    {
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "ok": true,
+      "commands": 12
+    },
+    {
+      "step": "02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "ok": true,
+      "commands": 6
+    },
+    {
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "ok": true,
+      "commands": 14
+    },
+    {
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "ok": true,
+      "commands": 13
+    },
+    {
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "ok": true,
+      "commands": 15
+    },
+    {
+      "step": "07 stop following, keep my positions (one passkey prompt): set onchain by the test user's contract",
+      "ok": false,
+      "commands": 10
+    }
+  ],
+  "commands": [
+    {
+      "line": 12,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "step 01 restore the demo follower's owner with its passkey (mirror-a)",
+      "ok": true,
+      "secs": 9.2,
+      "shots": []
+    },
+    {
+      "line": 13,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "device a",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 14,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 3.1,
+      "shots": [
+        "01-emulator-5554-s14-launch.png"
+      ]
+    },
+    {
+      "line": 15,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": true,
+      "secs": 2.5,
+      "shots": [
+        "02-emulator-5554-s15-waitFor.png"
+      ]
+    },
+    {
+      "line": 16,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "tap id:onboarding.restore",
+      "ok": true,
+      "secs": 3.8,
+      "shots": [
+        "03-emulator-5554-s16-tap-id_onboarding.restore.png"
+      ]
+    },
+    {
+      "line": 17,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "passkey 90 \"^Mirror probe 2026-10-06\"",
+      "ok": true,
+      "secs": 18.9,
+      "shots": [
+        "04-emulator-5554-passkey-picker.png",
+        "05-emulator-5554-passkey-biometric.png",
+        "06-emulator-5554-s17-after-passkey.png"
+      ]
+    },
+    {
+      "line": 18,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "waitFor id:restore.go.home 120",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "07-emulator-5554-s18-waitFor.png"
+      ]
+    },
+    {
+      "line": 19,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "tap id:restore.go.home",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "08-emulator-5554-s19-tap-id_restore.go.home.png"
+      ]
+    },
+    {
+      "line": 20,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "open /funds",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "09-emulator-5554-s20-open.png"
+      ]
+    },
+    {
+      "line": 21,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "readText id:funds.address addr \"^0x[0-9a-fA-F ]{40,60}$\" 30",
+      "ok": true,
+      "secs": 2.1,
+      "values": {
+        "addr": "0x3aBF 625B e454 F8F7 8e5a DA1B 4AB6 27Ed e6C2 6C78"
+      },
+      "shots": [
+        "10-emulator-5554-s21-readText.png"
+      ]
+    },
+    {
+      "line": 22,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "squash addr",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addr": "0x3aBF625Be454F8F78e5aDA1B4AB627Ede6C26C78"
+      },
+      "shots": []
+    },
+    {
+      "line": 23,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "assertVar addr \"^0x3[aA][bB][fF]625[bB][eE]454\"",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addr": "0x3aBF625Be454F8F78e5aDA1B4AB627Ede6C26C78"
+      },
+      "shots": []
+    },
+    {
+      "line": 25,
+      "step": "02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "cmd": "step 02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 27,
+      "step": "02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "cmd": "open /home",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "11-emulator-5554-s27-open.png"
+      ]
+    },
+    {
+      "line": 28,
+      "step": "02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "cmd": "waitFor id:home.watch 60",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "12-emulator-5554-s28-waitFor.png"
+      ]
+    },
+    {
+      "line": 29,
+      "step": "02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "cmd": "expectResult id:watch.teamRun \"Team-run\" 30",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "13-emulator-5554-s29-expectResult.png"
+      ]
+    },
+    {
+      "line": 30,
+      "step": "02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "cmd": "expectResult id:watch.balance \"^1[0-9][0-9]\\.[0-9][0-9]$\" 90",
+      "ok": true,
+      "secs": 14.1,
+      "shots": [
+        "14-emulator-5554-s30-expectResult.png"
+      ]
+    },
+    {
+      "line": 31,
+      "step": "02 Home shows the demo follower's funded follow account (set up in the first run: create, permit deposit 150, follow 1000)",
+      "cmd": "shell ${HOOK} follow-check ${addr}",
+      "ok": true,
+      "secs": 7.1,
+      "values": {
+        "followAccount": "0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896",
+        "deposited": "150.000000"
+      },
+      "shell": [
+        "VAR followAccount=0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896\nVAR deposited=150.000000\n{\"account\":\"0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896\",\"leaders\":[1000],\"deposits\":\"150000000\"}"
+      ],
+      "shots": [
+        "15-emulator-5554-s31-shell.png"
+      ]
+    },
+    {
+      "line": 34,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "step 04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 35,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "shell ${HOOK} leader-trade open 50",
+      "ok": true,
+      "secs": 5.1,
+      "values": {
+        "leader_open_tx": "0x7f88\u20266b1b"
+      },
+      "shell": [
+        "VAR leader_open_tx=0x7f88\u20266b1b\n{\"ok\":true,\"hash\":\"0x7f88b2b629e6fbe51487352c98c0c83b594943a11227b1886589c92169f06b1b\",\"gasUsed\":\"303512\"}"
+      ],
+      "shots": [
+        "16-emulator-5554-s35-shell.png"
+      ]
+    },
+    {
+      "line": 36,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "shell ${HOOK} wait-copy ${addr} open",
+      "ok": true,
+      "secs": 8.2,
+      "values": {
+        "copy_open_tx": "0xc14c\u2026aa9b",
+        "copy_open_fee": "0.000166"
+      },
+      "shell": [
+        "VAR copy_open_tx=0xc14c\u2026aa9b\nVAR copy_open_fee=0.000166\n{\"ok\":true,\"tx\":\"0xc14cd15a3d3243263fc3b43cd2b7d1ae349c407622bf7479dc788ef7c873aa9b\",\"builderId\":26,\"builderFeeCNS\":\"166\"}"
+      ],
+      "shots": [
+        "17-emulator-5554-s36-shell.png"
+      ]
+    },
+    {
+      "line": 37,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "scrollTo \"idtext:watch\\.feed\\.\\d+~Open .*${copy_open_tx}\"",
+      "ok": true,
+      "secs": 8.8,
+      "shots": [
+        "18-emulator-5554-s37-scrollTo.png"
+      ]
+    },
+    {
+      "line": 38,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "expectResult \"idtext:watch\\.feed\\.\\d+~Open .*${copy_open_tx}\" \"fee 0\\.0*[1-9]\" 90",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "19-emulator-5554-s38-expectResult.png"
+      ]
+    },
+    {
+      "line": 39,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "tap \"idtext:watch\\.feed\\.\\d+~Open .*${copy_open_tx}\"",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "20-emulator-5554-s39-tap-idtext_watch_.feed_._d_Open_._0xc14c_aa9b.png"
+      ]
+    },
+    {
+      "line": 40,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "waitFor id:copy.detail 15",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "21-emulator-5554-s40-waitFor.png"
+      ]
+    },
+    {
+      "line": 41,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "expectResult id:copy.proof.leaderFill \"^[0-9][0-9,]*\\.[0-9]$\" 10",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "22-emulator-5554-s41-expectResult.png"
+      ]
+    },
+    {
+      "line": 42,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "expectResult id:copy.proof.yourFill \"^[0-9][0-9,]*\\.[0-9]$\" 10",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "23-emulator-5554-s42-expectResult.png"
+      ]
+    },
+    {
+      "line": 43,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "expectResult id:copy.proof.deviation \"bps\" 10",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "24-emulator-5554-s43-expectResult.png"
+      ]
+    },
+    {
+      "line": 44,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "expectResult id:copy.proof.yourTx \"${copy_open_tx}\" 10",
+      "ok": true,
+      "secs": 5.1,
+      "shots": [
+        "25-emulator-5554-s44-expectResult.png"
+      ]
+    },
+    {
+      "line": 45,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "scrollTo id:copy.proof.fee",
+      "ok": true,
+      "secs": 5.5,
+      "shots": [
+        "26-emulator-5554-s45-scrollTo.png"
+      ]
+    },
+    {
+      "line": 46,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "readText id:copy.proof.fee feeOpen \"builder 26\\) \\| (0\\.0*[1-9][0-9]* (test )?AUSD)\" 10",
+      "ok": true,
+      "secs": 2.1,
+      "values": {
+        "feeOpen": "0.0002 AUSD"
+      },
+      "shots": [
+        "27-emulator-5554-s46-readText.png"
+      ]
+    },
+    {
+      "line": 47,
+      "step": "04 demo leader opens 50 lots BTC on Perpl testnet -> copy with builder 26 fee onchain",
+      "cmd": "tap id:copy.detail.close",
+      "ok": true,
+      "secs": 3.5,
+      "shots": [
+        "28-emulator-5554-s47-tap-id_copy.detail.close.png"
+      ]
+    },
+    {
+      "line": 50,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "step 05 restore the test user with its passkey (mirror-b)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 51,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "device b",
+      "ok": true,
+      "secs": 9.6,
+      "shots": []
+    },
+    {
+      "line": 52,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "install",
+      "ok": true,
+      "secs": 3.8,
+      "shots": []
+    },
+    {
+      "line": 53,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 3.6,
+      "shots": [
+        "01-emulator-5556-s53-launch.png"
+      ]
+    },
+    {
+      "line": 54,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "02-emulator-5556-s54-waitFor.png"
+      ]
+    },
+    {
+      "line": 55,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "tap id:onboarding.restore",
+      "ok": true,
+      "secs": 3.8,
+      "shots": [
+        "03-emulator-5556-s55-tap-id_onboarding.restore.png"
+      ]
+    },
+    {
+      "line": 56,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "passkey 90 \"^Probe 2026-10-06\"",
+      "ok": true,
+      "secs": 35.7,
+      "shots": [
+        "04-emulator-5556-passkey-picker.png",
+        "05-emulator-5556-passkey-biometric.png",
+        "06-emulator-5556-s56-after-passkey.png"
+      ]
+    },
+    {
+      "line": 57,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "waitFor id:restore.go.home 120",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "07-emulator-5556-s57-waitFor.png"
+      ]
+    },
+    {
+      "line": 58,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "tap id:restore.go.home",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "08-emulator-5556-s58-tap-id_restore.go.home.png"
+      ]
+    },
+    {
+      "line": 59,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "open /funds",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "09-emulator-5556-s59-open.png"
+      ]
+    },
+    {
+      "line": 60,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "readText id:funds.address addrB \"^0x[0-9a-fA-F ]{40,60}$\" 30",
+      "ok": true,
+      "secs": 2.1,
+      "values": {
+        "addrB": "0x1bbD 7e33 33B9 9E76 18C9 21B2 67ee 246D 1425 040D"
+      },
+      "shots": [
+        "10-emulator-5556-s60-readText.png"
+      ]
+    },
+    {
+      "line": 61,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "squash addrB",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addrB": "0x1bbD7e3333B99E7618C921B267ee246D1425040D"
+      },
+      "shots": []
+    },
+    {
+      "line": 62,
+      "step": "05 restore the test user with its passkey (mirror-b)",
+      "cmd": "assertVar addrB \"^0x1[bB][bB][dD]7[eE]3333\"",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addrB": "0x1bbD7e3333B99E7618C921B267ee246D1425040D"
+      },
+      "shots": []
+    },
+    {
+      "line": 64,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "step 06 test user follows the demo leader with 100 test AUSD (match now)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 65,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "open /leader/1000",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "11-emulator-5556-s65-open.png"
+      ]
+    },
+    {
+      "line": 66,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "waitFor id:leader.screen 30",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "12-emulator-5556-s66-waitFor.png"
+      ]
+    },
+    {
+      "line": 67,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "tap id:leader.follow",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "13-emulator-5556-s67-tap-id_leader.follow.png"
+      ]
+    },
+    {
+      "line": 68,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "waitFor id:follow.sheet 20",
+      "ok": true,
+      "secs": 2.3,
+      "shots": [
+        "14-emulator-5556-s68-waitFor.png"
+      ]
+    },
+    {
+      "line": 69,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "setText id:follow.amount.input 100",
+      "ok": true,
+      "secs": 4.7,
+      "shots": [
+        "15-emulator-5556-s69-setText.png"
+      ]
+    },
+    {
+      "line": 70,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "tap id:follow.seeWhatIf",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "16-emulator-5556-s70-tap-id_follow.seeWhatIf.png"
+      ]
+    },
+    {
+      "line": 71,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "tap id:follow.review",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "17-emulator-5556-s71-tap-id_follow.review.png"
+      ]
+    },
+    {
+      "line": 72,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "expectResult id:follow.review.fee \"builder 26\" 20",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "18-emulator-5556-s72-expectResult.png"
+      ]
+    },
+    {
+      "line": 73,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "tap id:follow.confirm",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "19-emulator-5556-s73-tap-id_follow.confirm.png"
+      ]
+    },
+    {
+      "line": 74,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "passkey 90",
+      "ok": true,
+      "secs": 14.9,
+      "shots": [
+        "20-emulator-5556-passkey-biometric.png",
+        "21-emulator-5556-s74-after-passkey.png"
+      ]
+    },
+    {
+      "line": 75,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "expectResult id:follow.status \"^(Following|Matched)$\" 180",
+      "ok": true,
+      "secs": 5.1,
+      "shots": [
+        "22-emulator-5556-s75-expectResult.png"
+      ]
+    },
+    {
+      "line": 76,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "shell ${HOOK} follow-check ${addrB}",
+      "ok": true,
+      "secs": 9.4,
+      "values": {
+        "followAccount": "0xE199F20EF4a40bA5C1C070986D931746789729ba",
+        "deposited": "100.000000"
+      },
+      "shell": [
+        "VAR followAccount=0xE199F20EF4a40bA5C1C070986D931746789729ba\nVAR deposited=100.000000\n{\"account\":\"0xE199F20EF4a40bA5C1C070986D931746789729ba\",\"leaders\":[1000],\"deposits\":\"100000000\"}"
+      ],
+      "shots": [
+        "23-emulator-5556-s76-shell.png"
+      ]
+    },
+    {
+      "line": 77,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "tap id:follow.done",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "24-emulator-5556-s77-tap-id_follow.done.png"
+      ]
+    },
+    {
+      "line": 78,
+      "step": "06 test user follows the demo leader with 100 test AUSD (match now)",
+      "cmd": "shell ${HOOK} lots ${addrB} lotsB",
+      "ok": true,
+      "secs": 12.0,
+      "values": {
+        "lotsB": "50"
+      },
+      "shell": [
+        "VAR lotsB=50"
+      ],
+      "shots": [
+        "25-emulator-5556-s78-shell.png"
+      ]
+    },
+    {
+      "line": 80,
+      "step": "07 stop following, keep my positions (one passkey prompt): set onchain by the test user's contract",
+      "cmd": "step 07 stop following, keep my positions (one passkey prompt): set onchain by the test user's contract",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 81,
+      "step": "07 stop following, keep my positions (one passkey prompt): set onchain by the test user's contract",
+      "cmd": "open /leader/1000",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "26-emulator-5556-s81-open.png"
+      ]
+    },
+    {
+      "line": 82,
+      "step": "07 stop following, keep my positions (one passkey prompt): set onchain by the test user's contract",
+      "cmd": "waitFor id:leader.screen 30",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "27-emulator-5556-s82-waitFor.png"
+      ]
+    },
+    {
+      "line": 83,
+      "step": "07 stop following, keep my positions (one passkey prompt): set onchain by the test user's contract",
+      "cmd": "tap id:leader.stopFollow",
+      "ok": true,
+      "secs": 22.2,
+      "shots": [
+        "28-emulator-5556-s83-tap-id_leader.stopFollow.png"
+      ]
+    },
+    {
+      "line": 84,
+      "step": "07 stop following, keep my positions (one passkey prompt): set onchain by the test user's contract",
+      "cmd": "waitFor id:stop.sheet 15",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "29-emulator-5556-s84-waitFor.png"
+      ]
+    },
+    {
+      "line": 85,
+      "step": "07 stop following, keep my positions (one passkey prompt): set onchain by the test user's contract",
+      "cmd": "tap id:stop.option.keep",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "30-emulator-5556-s85-tap-id_stop.option.keep.png"
+      ]
+    },
+    {
+      "line": 86,
+      "step": "07 stop following, keep my positions (one passkey prompt): set onchain by the test user's contract",
+      "cmd": "tap id:stop.confirm",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "31-emulator-5556-s86-tap-id_stop.confirm.png"
+      ]
+    },
+    {
+      "line": 87,
+      "step": "07 stop following, keep my positions (one passkey prompt): set onchain by the test user's contract",
+      "cmd": "passkey 90",
+      "ok": true,
+      "secs": 13.8,
+      "shots": [
+        "32-emulator-5556-passkey-biometric.png",
+        "33-emulator-5556-s87-after-passkey.png"
+      ]
+    },
+    {
+      "line": 88,
+      "step": "07 stop following, keep my positions (one passkey prompt): set onchain by the test user's contract",
+      "cmd": "shell ${HOOK} detached ${addrB} 1",
+      "ok": true,
+      "secs": 14.3,
+      "values": {
+        "detached": "yes"
+      },
+      "shell": [
+        "VAR detached=yes"
+      ],
+      "shots": [
+        "34-emulator-5556-s88-shell.png"
+      ]
+    },
+    {
+      "line": 89,
+      "step": "07 stop following, keep my positions (one passkey prompt): set onchain by the test user's contract",
+      "cmd": "expectResult id:follow.status \"Stopped, positions kept\" 60",
+      "ok": false,
+      "error": "id:follow.status text 'Following' !~ /Stopped, positions kept/",
+      "shots": [
+        "35-emulator-5556-s89-assert-FAILED.png",
+        "36-emulator-5556-s89-FAILED.png"
+      ]
+    }
+  ]
+}

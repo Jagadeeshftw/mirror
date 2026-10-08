@@ -24,14 +24,14 @@ const config: ExpoConfig = {
   name: BRAND,
   slug: "mirror",
   scheme: "mirror",
-  version: "1.0.0",
+  version: "1.0.1",
   orientation: "portrait",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
   backgroundColor: "#F6F6F3",
   android: {
     package: applicationId,
-    versionCode: 100,
+    versionCode: 101,
     ...(googleServicesFile ? { googleServicesFile } : {}),
     adaptiveIcon: {
       backgroundColor: "#4B3BFF",

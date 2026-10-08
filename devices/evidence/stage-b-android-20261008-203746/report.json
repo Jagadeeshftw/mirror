@@ -1,0 +1,315 @@
+{
+  "flow": "devices/e2e/flows/stage-b-part2.flow",
+  "apk": "/Users/jagadeesh/personal/projects/grants/monad/mirror/app/dist/mirror-1.0.0-stageb.apk",
+  "package": "com.zeroxo.mirror",
+  "ok": false,
+  "summary": [
+    {
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "ok": true,
+      "commands": 19
+    },
+    {
+      "step": "08 demo leader closes -> the demo follower's close is copied with no builder fee; the detached test user keeps the position",
+      "ok": true,
+      "commands": 5
+    },
+    {
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "ok": false,
+      "commands": 2
+    }
+  ],
+  "commands": [
+    {
+      "line": 5,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "step 07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "ok": true,
+      "secs": 9.2,
+      "shots": []
+    },
+    {
+      "line": 6,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "device b",
+      "ok": true,
+      "secs": 9.9,
+      "shots": []
+    },
+    {
+      "line": 7,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "install",
+      "ok": true,
+      "secs": 4.7,
+      "shots": []
+    },
+    {
+      "line": 8,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "01-emulator-5556-s8-launch.png"
+      ]
+    },
+    {
+      "line": 9,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "02-emulator-5556-s9-waitFor.png"
+      ]
+    },
+    {
+      "line": 10,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "tap id:onboarding.restore",
+      "ok": true,
+      "secs": 4.4,
+      "shots": [
+        "03-emulator-5556-s10-tap-id_onboarding.restore.png"
+      ]
+    },
+    {
+      "line": 11,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "passkey 90 \"^Probe 2026-10-06\"",
+      "ok": true,
+      "secs": 19.4,
+      "shots": [
+        "04-emulator-5556-passkey-picker.png",
+        "05-emulator-5556-passkey-biometric.png",
+        "06-emulator-5556-s11-after-passkey.png"
+      ]
+    },
+    {
+      "line": 12,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "waitFor id:restore.go.home 120",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "07-emulator-5556-s12-waitFor.png"
+      ]
+    },
+    {
+      "line": 13,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "tap id:restore.go.home",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "08-emulator-5556-s13-tap-id_restore.go.home.png"
+      ]
+    },
+    {
+      "line": 14,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "open /funds",
+      "ok": true,
+      "secs": 1.8,
+      "shots": [
+        "09-emulator-5556-s14-open.png"
+      ]
+    },
+    {
+      "line": 15,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "readText id:funds.address addrB \"^0x[0-9a-fA-F ]{40,60}$\" 30",
+      "ok": true,
+      "secs": 2.2,
+      "values": {
+        "addrB": "0x1bbD 7e33 33B9 9E76 18C9 21B2 67ee 246D 1425 040D"
+      },
+      "shots": [
+        "10-emulator-5556-s15-readText.png"
+      ]
+    },
+    {
+      "line": 16,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "squash addrB",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addrB": "0x1bbD7e3333B99E7618C921B267ee246D1425040D"
+      },
+      "shots": []
+    },
+    {
+      "line": 17,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "assertVar addrB \"^0x1[bB][bB][dD]7[eE]3333\"",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addrB": "0x1bbD7e3333B99E7618C921B267ee246D1425040D"
+      },
+      "shots": []
+    },
+    {
+      "line": 18,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "shell ${HOOK} detached ${addrB} 1",
+      "ok": true,
+      "secs": 7.1,
+      "values": {
+        "detached": "yes"
+      },
+      "shell": [
+        "VAR detached=yes"
+      ],
+      "shots": [
+        "11-emulator-5556-s18-shell.png"
+      ]
+    },
+    {
+      "line": 19,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "open /leader/1000",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "12-emulator-5556-s19-open.png"
+      ]
+    },
+    {
+      "line": 20,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "waitFor id:leader.screen 30",
+      "ok": true,
+      "secs": 5.4,
+      "shots": [
+        "13-emulator-5556-s20-waitFor.png"
+      ]
+    },
+    {
+      "line": 21,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "expectResult id:follow.status \"Stopped, positions kept\" 90",
+      "ok": true,
+      "secs": 2.3,
+      "shots": [
+        "14-emulator-5556-s21-expectResult.png"
+      ]
+    },
+    {
+      "line": 22,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "shell ${HOOK} lots ${addrB} lotsB",
+      "ok": true,
+      "secs": 9.3,
+      "values": {
+        "lotsB": "50"
+      },
+      "shell": [
+        "VAR lotsB=50"
+      ],
+      "shots": [
+        "15-emulator-5556-s22-shell.png"
+      ]
+    },
+    {
+      "line": 23,
+      "step": "07b the test user's leader profile shows the onchain detach: \"Stopped, positions kept\"",
+      "cmd": "assertVar lotsB \"^[1-9][0-9]*$\"",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "lotsB": "50"
+      },
+      "shots": []
+    },
+    {
+      "line": 25,
+      "step": "08 demo leader closes -> the demo follower's close is copied with no builder fee; the detached test user keeps the position",
+      "cmd": "step 08 demo leader closes -> the demo follower's close is copied with no builder fee; the detached test user keeps the position",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 26,
+      "step": "08 demo leader closes -> the demo follower's close is copied with no builder fee; the detached test user keeps the position",
+      "cmd": "shell ${HOOK} leader-trade close 50",
+      "ok": true,
+      "secs": 4.9,
+      "values": {
+        "leader_close_tx": "0x536a\u2026124e"
+      },
+      "shell": [
+        "VAR leader_close_tx=0x536a\u2026124e\n{\"ok\":true,\"hash\":\"0x536a4772d808adb570d16a054591557c0c34bc569513d08717258708d57b124e\",\"gasUsed\":\"260015\"}"
+      ],
+      "shots": [
+        "16-emulator-5556-s26-shell.png"
+      ]
+    },
+    {
+      "line": 27,
+      "step": "08 demo leader closes -> the demo follower's close is copied with no builder fee; the detached test user keeps the position",
+      "cmd": "shell ${HOOK} wait-copy 0x3abf625be454f8f78e5ada1b4ab627ede6c26c78 close",
+      "ok": true,
+      "secs": 9.6,
+      "values": {
+        "copy_close_tx": "0x8392\u2026e373",
+        "copy_close_fee": "0.000000"
+      },
+      "shell": [
+        "VAR copy_close_tx=0x8392\u2026e373\nVAR copy_close_fee=0.000000\n{\"ok\":true,\"tx\":\"0x83922244bd82b863b07e8e7c771d39757d631d61327459afb89054ee04bfe373\",\"builderId\":0,\"builderFeeCNS\":\"0\"}"
+      ],
+      "shots": [
+        "17-emulator-5556-s27-shell.png"
+      ]
+    },
+    {
+      "line": 28,
+      "step": "08 demo leader closes -> the demo follower's close is copied with no builder fee; the detached test user keeps the position",
+      "cmd": "shell ${HOOK} lots ${addrB} lotsKept",
+      "ok": true,
+      "secs": 11.5,
+      "values": {
+        "lotsKept": "50"
+      },
+      "shell": [
+        "VAR lotsKept=50"
+      ],
+      "shots": [
+        "18-emulator-5556-s28-shell.png"
+      ]
+    },
+    {
+      "line": 29,
+      "step": "08 demo leader closes -> the demo follower's close is copied with no builder fee; the detached test user keeps the position",
+      "cmd": "assertVar lotsKept \"^${lotsB}$\"",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "lotsKept": "50"
+      },
+      "shots": []
+    },
+    {
+      "line": 31,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "step 09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 32,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "tap id:home.tab.portfolio",
+      "ok": false,
+      "error": "visible timeout (30s): id:home.tab.portfolio",
+      "shots": [
+        "19-emulator-5556-s32-FAILED.png"
+      ]
+    }
+  ]
+}

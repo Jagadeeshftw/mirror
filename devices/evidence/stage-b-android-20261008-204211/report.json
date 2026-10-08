@@ -1,0 +1,478 @@
+{
+  "flow": "devices/e2e/flows/stage-b-part3.flow",
+  "apk": "/Users/jagadeesh/personal/projects/grants/monad/mirror/app/dist/mirror-1.0.0-stageb.apk",
+  "package": "com.zeroxo.mirror",
+  "ok": true,
+  "summary": [
+    {
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "ok": true,
+      "commands": 21
+    },
+    {
+      "step": "10 the test user withdraws back to the wallet (one passkey prompt)",
+      "ok": true,
+      "commands": 9
+    },
+    {
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "ok": true,
+      "commands": 13
+    }
+  ],
+  "commands": [
+    {
+      "line": 4,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "step 09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "ok": true,
+      "secs": 9.4,
+      "shots": []
+    },
+    {
+      "line": 5,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "device b",
+      "ok": true,
+      "secs": 10.3,
+      "shots": []
+    },
+    {
+      "line": 6,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "install",
+      "ok": true,
+      "secs": 6.0,
+      "shots": []
+    },
+    {
+      "line": 7,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 3.6,
+      "shots": [
+        "01-emulator-5556-s7-launch.png"
+      ]
+    },
+    {
+      "line": 8,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "02-emulator-5556-s8-waitFor.png"
+      ]
+    },
+    {
+      "line": 9,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "tap id:onboarding.restore",
+      "ok": true,
+      "secs": 3.9,
+      "shots": [
+        "03-emulator-5556-s9-tap-id_onboarding.restore.png"
+      ]
+    },
+    {
+      "line": 10,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "passkey 90 \"^Probe 2026-10-06\"",
+      "ok": true,
+      "secs": 25.6,
+      "shots": [
+        "04-emulator-5556-passkey-picker.png",
+        "05-emulator-5556-passkey-biometric.png",
+        "06-emulator-5556-s10-after-passkey.png"
+      ]
+    },
+    {
+      "line": 11,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "waitFor id:restore.go.home 120",
+      "ok": true,
+      "secs": 5.1,
+      "shots": [
+        "07-emulator-5556-s11-waitFor.png"
+      ]
+    },
+    {
+      "line": 12,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "tap id:restore.go.home",
+      "ok": true,
+      "secs": 4.2,
+      "shots": [
+        "08-emulator-5556-s12-tap-id_restore.go.home.png"
+      ]
+    },
+    {
+      "line": 13,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "open /funds",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "09-emulator-5556-s13-open.png"
+      ]
+    },
+    {
+      "line": 14,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "readText id:funds.address addrB \"^0x[0-9a-fA-F ]{40,60}$\" 30",
+      "ok": true,
+      "secs": 2.2,
+      "values": {
+        "addrB": "0x1bbD 7e33 33B9 9E76 18C9 21B2 67ee 246D 1425 040D"
+      },
+      "shots": [
+        "10-emulator-5556-s14-readText.png"
+      ]
+    },
+    {
+      "line": 15,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "squash addrB",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addrB": "0x1bbD7e3333B99E7618C921B267ee246D1425040D"
+      },
+      "shots": []
+    },
+    {
+      "line": 16,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "open /home",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "11-emulator-5556-s16-open.png"
+      ]
+    },
+    {
+      "line": 17,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "tap id:home.tab.portfolio",
+      "ok": true,
+      "secs": 3.1,
+      "shots": [
+        "12-emulator-5556-s17-tap-id_home.tab.portfolio.png"
+      ]
+    },
+    {
+      "line": 18,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "tap id:portfolio.closeAll",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "13-emulator-5556-s18-tap-id_portfolio.closeAll.png"
+      ]
+    },
+    {
+      "line": 19,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "waitFor id:closeAll.dialog 10",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "14-emulator-5556-s19-waitFor.png"
+      ]
+    },
+    {
+      "line": 20,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "tap id:portfolio.closeAll.confirm",
+      "ok": true,
+      "secs": 3.1,
+      "shots": [
+        "15-emulator-5556-s20-tap-id_portfolio.closeAll.confirm.png"
+      ]
+    },
+    {
+      "line": 21,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "passkey 90",
+      "ok": true,
+      "secs": 16.3,
+      "shots": [
+        "16-emulator-5556-passkey-biometric.png",
+        "17-emulator-5556-s21-after-passkey.png"
+      ]
+    },
+    {
+      "line": 22,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "expectResult id:portfolio.positions.count \"^0$\" 120",
+      "ok": true,
+      "secs": 3.4,
+      "shots": [
+        "18-emulator-5556-s22-expectResult.png"
+      ]
+    },
+    {
+      "line": 23,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "shell ${HOOK} lots ${addrB} lotsAfter",
+      "ok": true,
+      "secs": 15.4,
+      "values": {
+        "lotsAfter": "0"
+      },
+      "shell": [
+        "VAR lotsAfter=0"
+      ],
+      "shots": [
+        "19-emulator-5556-s23-shell.png"
+      ]
+    },
+    {
+      "line": 24,
+      "step": "09 the test user closes the kept position themselves (Close all, one passkey prompt)",
+      "cmd": "assertVar lotsAfter \"^0$\"",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "lotsAfter": "0"
+      },
+      "shots": []
+    },
+    {
+      "line": 26,
+      "step": "10 the test user withdraws back to the wallet (one passkey prompt)",
+      "cmd": "step 10 the test user withdraws back to the wallet (one passkey prompt)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 27,
+      "step": "10 the test user withdraws back to the wallet (one passkey prompt)",
+      "cmd": "open /withdraw",
+      "ok": true,
+      "secs": 1.8,
+      "shots": [
+        "20-emulator-5556-s27-open.png"
+      ]
+    },
+    {
+      "line": 28,
+      "step": "10 the test user withdraws back to the wallet (one passkey prompt)",
+      "cmd": "tap id:withdraw.max 20",
+      "ok": true,
+      "secs": 3.0,
+      "shots": [
+        "21-emulator-5556-s28-tap-id_withdraw.max.png"
+      ]
+    },
+    {
+      "line": 29,
+      "step": "10 the test user withdraws back to the wallet (one passkey prompt)",
+      "cmd": "tap id:withdraw.continue",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "22-emulator-5556-s29-tap-id_withdraw.continue.png"
+      ]
+    },
+    {
+      "line": 30,
+      "step": "10 the test user withdraws back to the wallet (one passkey prompt)",
+      "cmd": "waitFor id:withdraw.sheet 10",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "23-emulator-5556-s30-waitFor.png"
+      ]
+    },
+    {
+      "line": 31,
+      "step": "10 the test user withdraws back to the wallet (one passkey prompt)",
+      "cmd": "tap id:withdraw.confirm",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "24-emulator-5556-s31-tap-id_withdraw.confirm.png"
+      ]
+    },
+    {
+      "line": 32,
+      "step": "10 the test user withdraws back to the wallet (one passkey prompt)",
+      "cmd": "passkey 90",
+      "ok": true,
+      "secs": 15.4,
+      "shots": [
+        "25-emulator-5556-passkey-biometric.png",
+        "26-emulator-5556-s32-after-passkey.png"
+      ]
+    },
+    {
+      "line": 33,
+      "step": "10 the test user withdraws back to the wallet (one passkey prompt)",
+      "cmd": "expectResult id:withdraw.status \"^Confirmed$\" 180",
+      "ok": true,
+      "secs": 4.6,
+      "shots": [
+        "27-emulator-5556-s33-expectResult.png"
+      ]
+    },
+    {
+      "line": 34,
+      "step": "10 the test user withdraws back to the wallet (one passkey prompt)",
+      "cmd": "shell ${HOOK} wallet ${addrB}",
+      "ok": true,
+      "secs": 2.1,
+      "values": {
+        "walletAusd": "149.733416"
+      },
+      "shell": [
+        "VAR walletAusd=149.733416"
+      ],
+      "shots": [
+        "28-emulator-5556-s34-shell.png"
+      ]
+    },
+    {
+      "line": 36,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "step 11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 37,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "device a",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 38,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 7.5,
+      "shots": [
+        "01-emulator-5554-s38-launch.png"
+      ]
+    },
+    {
+      "line": 39,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": true,
+      "secs": 4.1,
+      "shots": [
+        "02-emulator-5554-s39-waitFor.png"
+      ]
+    },
+    {
+      "line": 40,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "tap id:onboarding.restore",
+      "ok": true,
+      "secs": 3.6,
+      "shots": [
+        "03-emulator-5554-s40-tap-id_onboarding.restore.png"
+      ]
+    },
+    {
+      "line": 41,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "passkey 90 \"^Mirror probe 2026-10-06\"",
+      "ok": true,
+      "secs": 22.0,
+      "shots": [
+        "04-emulator-5554-passkey-picker.png",
+        "05-emulator-5554-passkey-biometric.png",
+        "06-emulator-5554-s41-after-passkey.png"
+      ]
+    },
+    {
+      "line": 42,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "waitFor id:restore.go.home 120",
+      "ok": true,
+      "secs": 9.9,
+      "shots": [
+        "07-emulator-5554-s42-waitFor.png"
+      ]
+    },
+    {
+      "line": 43,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "tap id:restore.go.home",
+      "ok": true,
+      "secs": 5.0,
+      "shots": [
+        "08-emulator-5554-s43-tap-id_restore.go.home.png"
+      ]
+    },
+    {
+      "line": 44,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "shell ${HOOK} leader-trade open 20 1000",
+      "ok": true,
+      "secs": 9.0,
+      "values": {
+        "leader_open_tx": "0x0fb8\u2026e85d"
+      },
+      "shell": [
+        "VAR leader_open_tx=0x0fb8\u2026e85d\n{\"ok\":true,\"hash\":\"0x0fb85e1eb4d23263d942d1ee0a3a6a8b52e76d0f689c0214f1d2b93a2368e85d\",\"gasUsed\":\"303870\"}"
+      ],
+      "shots": [
+        "09-emulator-5554-s44-shell.png"
+      ]
+    },
+    {
+      "line": 45,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "open /home",
+      "ok": true,
+      "secs": 4.9,
+      "shots": [
+        "10-emulator-5554-s45-open.png"
+      ]
+    },
+    {
+      "line": 46,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "scrollTo \"idtext:watch\\.feed\\.\\d+~Not copied\"",
+      "ok": true,
+      "secs": 11.4,
+      "shots": [
+        "11-emulator-5554-s46-scrollTo.png"
+      ]
+    },
+    {
+      "line": 47,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "expectResult \"idtext:watch\\.feed\\.\\d+~Not copied\" \"leverage\" 120",
+      "ok": true,
+      "secs": 3.3,
+      "shots": [
+        "12-emulator-5554-s47-expectResult.png"
+      ]
+    },
+    {
+      "line": 48,
+      "step": "11 demo leader opens at 10x -> the demo follower's 2x rule blocks it onchain (watch feed, mirror-a)",
+      "cmd": "shell ${HOOK} leader-trade close 20",
+      "ok": true,
+      "secs": 6.9,
+      "values": {
+        "leader_close_tx": "0x82d6\u20263edc"
+      },
+      "shell": [
+        "VAR leader_close_tx=0x82d6\u20263edc\n{\"ok\":true,\"hash\":\"0x82d6d194c7bf555a9cf4749a6312ee124c4f6957f9218d245b01ea1d15a03edc\",\"gasUsed\":\"249043\"}"
+      ],
+      "shots": [
+        "13-emulator-5554-s48-shell.png"
+      ]
+    }
+  ]
+}

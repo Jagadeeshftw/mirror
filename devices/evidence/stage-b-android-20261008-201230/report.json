@@ -1,0 +1,73 @@
+{
+  "flow": "/Users/jagadeesh/personal/projects/grants/monad/mirror/devices/e2e/flows/stage-b.flow",
+  "apk": "/Users/jagadeesh/personal/projects/grants/monad/mirror/app/dist/mirror-1.0.0-stageb.apk",
+  "package": "com.zeroxo.mirror",
+  "ok": false,
+  "summary": [
+    {
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "ok": false,
+      "commands": 6
+    }
+  ],
+  "commands": [
+    {
+      "line": 10,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "step 01 restore the demo follower's owner with its passkey (mirror-a)",
+      "ok": true,
+      "secs": 9.5,
+      "shots": []
+    },
+    {
+      "line": 11,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "device a",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 12,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "01-emulator-5554-s12-launch.png"
+      ]
+    },
+    {
+      "line": 13,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "02-emulator-5554-s13-waitFor.png"
+      ]
+    },
+    {
+      "line": 14,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "tap id:onboarding.restore",
+      "ok": true,
+      "secs": 3.4,
+      "shots": [
+        "03-emulator-5554-s14-tap-id_onboarding.restore.png"
+      ]
+    },
+    {
+      "line": 15,
+      "step": "01 restore the demo follower's owner with its passkey (mirror-a)",
+      "cmd": "passkey 90 \"^Mirror probe 2026-10-06\"",
+      "ok": false,
+      "error": "passkey approval failed: {'ok': False, 'events': ['back'], 'texts': ['Mirror | Choose a saved passkey for Mirror | Mirror account \u00b7 2026-10-08 03:08 | Mirror account \u00b7 2026-10-08 01:59 | Mirror account \u00b7 2026-10-08 01:21 | Mirror account \u00b7 2026-10-07 19:37 | Sign-in options'], 'error': 'choice-not-listed'}",
+      "shots": [
+        "04-emulator-5554-passkey-choice-missing.png",
+        "05-emulator-5554-s15-after-passkey.png",
+        "06-emulator-5554-s15-FAILED.png"
+      ]
+    }
+  ]
+}

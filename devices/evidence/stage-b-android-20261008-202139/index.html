@@ -1,0 +1,18 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mirror Android Stage A</title><style>
+body{font:14px system-ui,sans-serif;margin:16px;background:#f6f6f3;color:#111}
+h1{font-size:20px} .ok{color:#0a7a3b} .bad{color:#c0262d}
+section{background:#fff;border-radius:10px;padding:12px 14px;margin:12px 0}
+h2{font-size:15px;margin:0 0 6px} code{font-size:12px;color:#555}
+.shots{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.shots a{display:block;width:150px;font-size:10px;color:#666;word-break:break-all;text-decoration:none}
+.shots img{width:150px;border:1px solid #ddd;border-radius:6px}
+@media (prefers-color-scheme:dark){body{background:#0a0b0e;color:#eee}section{background:#16181d}}
+</style><h1>Mirror Android Stage A: <span class="bad">FAIL</span></h1>
+<p><code>/Users/jagadeesh/personal/projects/grants/monad/mirror/app/dist/mirror-1.0.0-stageb.apk</code> · 2 steps</p>
+<section><h2 class="ok">✓ 01 restore the demo follower&#x27;s owner with its passkey (mirror-a)</h2>
+<p><b>addr</b> 0x3aBF625Be454F8F78e5aDA1B4AB627Ede6C26C78</p>
+<div class=shots><a href="01-emulator-5554-s14-launch.png"><img loading=lazy src="01-emulator-5554-s14-launch.png">01-emulator-5554-s14-launch.png</a><a href="02-emulator-5554-s15-waitFor.png"><img loading=lazy src="02-emulator-5554-s15-waitFor.png">02-emulator-5554-s15-waitFor.png</a><a href="03-emulator-5554-s16-tap-id_onboarding.restore.png"><img loading=lazy src="03-emulator-5554-s16-tap-id_onboarding.restore.png">03-emulator-5554-s16-tap-id_onboarding.restore.png</a><a href="04-emulator-5554-passkey-picker.png"><img loading=lazy src="04-emulator-5554-passkey-picker.png">04-emulator-5554-passkey-picker.png</a><a href="05-emulator-5554-passkey-biometric.png"><img loading=lazy src="05-emulator-5554-passkey-biometric.png">05-emulator-5554-passkey-biometric.png</a><a href="06-emulator-5554-s17-after-passkey.png"><img loading=lazy src="06-emulator-5554-s17-after-passkey.png">06-emulator-5554-s17-after-passkey.png</a><a href="07-emulator-5554-s18-waitFor.png"><img loading=lazy src="07-emulator-5554-s18-waitFor.png">07-emulator-5554-s18-waitFor.png</a><a href="08-emulator-5554-s19-tap-id_restore.go.home.png"><img loading=lazy src="08-emulator-5554-s19-tap-id_restore.go.home.png">08-emulator-5554-s19-tap-id_restore.go.home.png</a><a href="09-emulator-5554-s20-open.png"><img loading=lazy src="09-emulator-5554-s20-open.png">09-emulator-5554-s20-open.png</a><a href="10-emulator-5554-s21-readText.png"><img loading=lazy src="10-emulator-5554-s21-readText.png">10-emulator-5554-s21-readText.png</a></div></section>
+<section><h2 class="bad">✗ 02 Home shows the demo follower&#x27;s funded follow account (set up in the first run: create, permit deposit 150, follow 1000)</h2>
+<p class=bad><code>expectResult id:home.equity &quot;^1[0-9][0-9]\.[0-9][0-9]$&quot; 90</code>: id:home.equity text &#x27;0.00&#x27; !~ /^1[0-9][0-9]\.[0-9][0-9]$/</p>
+<div class=shots><a href="11-emulator-5554-s26-open.png"><img loading=lazy src="11-emulator-5554-s26-open.png">11-emulator-5554-s26-open.png</a><a href="12-emulator-5554-s27-assert-FAILED.png"><img loading=lazy src="12-emulator-5554-s27-assert-FAILED.png">12-emulator-5554-s27-assert-FAILED.png</a><a href="13-emulator-5554-s27-FAILED.png"><img loading=lazy src="13-emulator-5554-s27-FAILED.png">13-emulator-5554-s27-FAILED.png</a></div></section>
