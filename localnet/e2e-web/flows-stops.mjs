@@ -72,14 +72,25 @@ export async function stopsFlows(ctx) {
         throw e;
       }
     }, 30_000, 1500);
-    const hash = await w.writeContract({ address: A, abi: MA, functionName: "triggerLevel", args: [1n] });
-    const r = await pub.waitForTransactionReceipt({ hash });
-    const after = await lots();
+    let hash = await w.writeContract({ address: A, abi: MA, functionName: "triggerLevel", args: [1n] });
+    let r = await pub.waitForTransactionReceipt({ hash });
+    let after = await lots();
+    // The reduce-only IOC fills only against resting bids; if the makers' quotes had just expired it fills nothing
+    // (no revert) and the contract keeps the level for a retry, as the engine's stop executor would do. Refresh the
+    // quotes and execute the same level again (as e2e-api.mjs does).
+    let attempts = 1;
+    for (; attempts < 4 && after !== 0n && r.status === "success"; attempts++) {
+      await faucet("/mark", { perpId: 1, price: target });
+      await new Promise((res) => setTimeout(res, 5000));
+      hash = await w.writeContract({ address: A, abi: MA, functionName: "triggerLevel", args: [1n] });
+      r = await pub.waitForTransactionReceipt({ hash });
+      after = await lots();
+    }
     const strangerAusd = await ausdOf(stranger.address);
     const halted = (await read("markets", [1n]))[1];
     state.stranger = stranger.address;
     state.triggerTx = hash;
-    return { ok: r.status === "success" && after === 0n && strangerAusd === 0n && halted === true, tx: hash, stranger: stranger.address, markPNS: markNow.toString(), takeProfitPNS: state.tpPNS.toString(), lotsBefore: lotsBefore.toString(), lotsAfter: after.toString(), strangerAusd: strangerAusd.toString(), marketHalted: halted };
+    return { ok: r.status === "success" && after === 0n && strangerAusd === 0n && halted === true, attempts, tx: hash, stranger: stranger.address, markPNS: markNow.toString(), takeProfitPNS: state.tpPNS.toString(), lotsBefore: lotsBefore.toString(), lotsAfter: after.toString(), strangerAusd: strangerAusd.toString(), marketHalted: halted };
   }, { needs: ["tpPNS"] });
 
   await R.check("app: feed card 'Take-profit executed by <stranger>' with the tx; copy detail and position show how it closed; halt notice", page, async () => {
