@@ -1,6 +1,6 @@
 # Resume brief (Stage B)
 
-Kept current while Stage B runs. Last updated: 2026-10-08 03:50 IST.
+Kept current while Stage B runs. Last updated: 2026-10-08 18:25 IST.
 
 ## Waiting on Jagadeesh
 
@@ -9,6 +9,7 @@ Kept current while Stage B runs. Last updated: 2026-10-08 03:50 IST.
 | 1 | `gh auth refresh -h github.com -s workflow --user Jagadeeshftw` | Pushing the post-deploy check workflow `.github/workflows/postdeploy.yml` (kept locally, excluded from main, and on the local branch `postdeploy-workflow`). After the refresh it is one commit: `git add -f .github/workflows/postdeploy.yml`, commit, push. |
 | 2 | `cd ~/personal/projects/grants/monad/mirror && bash scripts/railway-secrets.sh` | Hosted engine, both indexers, HyperSync proxy, Hasura secrets. After it: `bash scripts/railway-up.sh` brings everything up. |
 | 3 | More testnet MON for the ops wallet `0x299E77E58DD37607e4890C761924D829F8ACe82C` (faucet) | A full 25-tester round: Mirror's relayer and keeper pay all tester gas. 58.90 MON left after the deploy. |
+| 4 | Free disk space: at least 15 GB on the Data volume (was 119 MB free at 18:20 on 8 Oct; 3.4 GB after I removed Mirror's own build outputs). The large items are not Mirror's to delete: `~/Library/Caches` 23 GB, Colima's VM `~/.colima` 44 GB (images shared with other projects), `~/.gradle` 13 GB, AVD `mirror-dev` 3 GB (not mine; mine are mirror-a/b) | The release APK build, the Docker dry-run of the hosted images, and emulator runs (each needs several GB) |
 
 ## Decisions taken without review
 

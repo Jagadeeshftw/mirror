@@ -55,7 +55,7 @@ Perpl's API geo-blocks the US and UK, so the service must run in an EU region (e
 Select the region in the service settings; it is not set in `railway.json`.
 
 1. New service from this repo. Root directory: repository root (the image needs `shared/`). Config-as-code path:
-   `engine/railway.json` (builds `engine/Dockerfile`, health check `/v1/health`).
+   `railway.json` at the repo root (the engine uploads from the root; builds `engine/Dockerfile`, health check `/v1/health`).
 2. Add a volume mounted at `/data` (SQLite at `/data/engine.db`).
 3. Keep **one replica**: nonces, rate limits and the demo lock are in process memory.
 4. Set variables (see `.env.example`). Minimum for the full product:
