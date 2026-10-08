@@ -1,3 +1,4 @@
+import { rpcPriority } from '../chain/rpcLimiter.js';
 import { encodeFunctionData } from 'viem';
 import { mirrorAccountAbi } from '../abi/MirrorAccount.js';
 import type { Db } from '../db.js';
@@ -51,6 +52,11 @@ export class Copier {
   }
 
   async onLeaderChange(c: LeaderChange): Promise<void> {
+    // Copies go ahead of background reads in the RPC budget (chain/rpcLimiter.ts).
+    return rpcPriority.run('high', () => this.copyLeaderChange(c));
+  }
+
+  private async copyLeaderChange(c: LeaderChange): Promise<void> {
     // Accounts that detached this leader ("stop following, keep my positions") get no copies of it: their contract
     // refuses every one (Blocked LeaderDetached), so sending would only cost gas. Paused accounts still get the
     // leader's closes (the contract refuses only their opens).

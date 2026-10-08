@@ -67,6 +67,8 @@ const EnvSchema = z.object({
   /** auto: monadLogs/monadNewHeads when the WS endpoint supports them, else standard eth_subscribe, else polling. */
   LOG_SUBSCRIPTION: z.enum(['auto', 'monad', 'standard', 'poll']).default('auto'),
   POLL_INTERVAL_MS: int(400),
+  /** Requests per second for the engine's JSON-RPC calls (0 = unlimited). The public testnet RPC allows 15. */
+  RPC_MAX_RPS: int(0),
 
   FACTORY_ADDRESS: optAddress,
   KEEPER_REGISTRY_ADDRESS: optAddress,

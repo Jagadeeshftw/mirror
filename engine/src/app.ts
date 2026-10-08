@@ -1,4 +1,5 @@
 import { createPublicClient, defineChain, http, type PublicClient } from 'viem';
+import { RpcLimiter } from './chain/rpcLimiter.js';
 import { privateKeyToAccount } from 'viem/accounts';
 import type { Config } from './config.js';
 import { Db } from './db.js';
@@ -81,7 +82,9 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
     rpcUrls: { default: { http: [cfg.rpcUrl] } },
   });
-  const client = createPublicClient({ chain, transport: http(cfg.rpcUrl, { timeout: 15_000, retryCount: 2, retryDelay: 200 }) }) as PublicClient;
+  const rpcLimiter = new RpcLimiter(env.RPC_MAX_RPS);
+  // retryDelay grows exponentially in viem (400, 800, 1600, 3200 ms): enough to ride out a rate-limited second.
+  const client = createPublicClient({ chain, transport: http(cfg.rpcUrl, { timeout: 15_000, retryCount: 4, retryDelay: 400, fetchFn: rpcLimiter.fetchFn() }) }) as PublicClient;
   const db = new Db(env.DB_PATH);
   const bus = new Bus();
   const limiter = new RateLimiter();

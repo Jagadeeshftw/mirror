@@ -254,7 +254,21 @@ class Device:
             if choose and not any(e.startswith("choose:") for e in events):
                 # Account picker ("Choose a saved passkey for ..."): tap the first entry matching `choose`.
                 pick = next((n for n in nodes if n.pkg in CREDMAN_PKGS and n.text and re.search(choose, n.text)), None)
-                if pick is None and any(n.pkg in CREDMAN_PKGS for n in nodes) and re.search(r"Choose a saved passkey", visible_text):
+                # The compact sheet lists only the most recent passkeys: open the full list once, then scroll it.
+                more = next((n for n in nodes if n.pkg in CREDMAN_PKGS and n.enabled and re.match(r"^(Sign-in options|More options|View all|Show more)$", (n.text or n.desc or "").strip())), None)
+                if pick is None and more is not None and "more" not in events:
+                    events.append("more")
+                    self.log(f"  passkey: '{more.text or more.desc}' (wanted passkey not in the short list)")
+                    self.tap_xy(*more.center)
+                    stalled_since = None
+                    time.sleep(2)
+                    continue
+                if pick is None and "more" in events and events.count("scroll") < 6 and any(n.pkg in CREDMAN_PKGS for n in nodes):
+                    events.append("scroll")
+                    self.sh("input swipe 540 1700 540 900 350")
+                    time.sleep(1.2)
+                    continue
+                if pick is None and any(n.pkg in CREDMAN_PKGS for n in nodes) and re.search(r"Choose a saved passkey|Sign-in options|passkey", visible_text):
                     stalled_since = stalled_since or time.time()
                     if time.time() - stalled_since > 8:  # e.g. the passkey has not synced to this device yet
                         self.screenshot("passkey-choice-missing")
