@@ -30,3 +30,4 @@ contracts/deployments/local-*.json
 
 # Passkey-sheet screenshots show the Google account address: kept local, never committed.
 devices/evidence/**/*passkey*.png
+/.stage-b/
