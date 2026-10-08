@@ -7,9 +7,11 @@ async function main() {
   const cfg = loadConfig();
   const engine = buildEngine(cfg, log);
   const server = buildServer(engine, log);
-  await engine.start();
+  // Listen first: the first sync can take minutes (registry backfill in 100-block getLogs chunks), and a host's
+  // health check must see /v1/health answer meanwhile (it reports ready: false; other routes answer 503).
   await server.listen({ host: cfg.env.HOST, port: cfg.env.PORT });
   log.info({ port: cfg.env.PORT }, 'http listening');
+  await engine.start();
 
   let stopping = false;
   const shutdown = async (signal: string) => {

@@ -30,6 +30,13 @@ export function buildServer(e: Engine, log: Logger) {
   app.setReplySerializer((p) => json(p));
   void app.register(cors, { origin: e.cfg.env.CORS_ORIGINS === '*' ? true : e.cfg.env.CORS_ORIGINS.split(',') });
 
+  // While the engine is still backfilling (start() not finished), only the health check and the root answer, so a
+  // host's health check passes during a long first sync and no route serves half-synced data.
+  app.addHook('onRequest', async (req, reply) => {
+    if (e.ready || req.url.startsWith('/v1/health') || req.url === '/') return;
+    return reply.code(503).header('retry-after', 10).send({ error: 'starting', message: 'Mirror is starting up; try again shortly.' });
+  });
+
   app.addHook('onResponse', async (req, reply) => {
     metrics.httpRequests.inc({ route: req.routeOptions.url ?? 'unknown', status: reply.statusCode });
     if (reply.statusCode >= 400 || req.method === 'POST') log.info({ method: req.method, url: req.url, status: reply.statusCode, ip: req.ip, ms: Math.round(reply.elapsedTime) }, 'http');
@@ -67,6 +74,7 @@ export function buildServer(e: Engine, log: Logger) {
     const relayer = e.relayerSender?.address;
     return {
       ok: e.streams.head > 0,
+      ready: e.ready,
       chainId: e.cfg.chainId,
       block: e.streams.head,
       uptimeSec: Math.round((Date.now() - e.startedMs) / 1000),

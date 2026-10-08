@@ -67,6 +67,8 @@ export interface Engine {
   balances: Map<string, bigint>;
   depositCap?: bigint;
   startedMs: number;
+  /** False until start() has finished its backfills; the HTTP server answers health checks before that. */
+  ready: boolean;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -229,7 +231,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
 
   const engine: Engine = {
     cfg, db, client, streams, reads, market, bus, limiter, fees, keepers, relayerSender, registry, watcher, copier, tracker, relayer, quote, demo,
-    leaders, views, push, nansen, stops, guard, quality, adversarial, backtest, equity, share, balances, startedMs: Date.now(),
+    leaders, views, push, nansen, stops, guard, quality, adversarial, backtest, equity, share, balances, startedMs: Date.now(), ready: false,
     async start() {
       const id = await client.getChainId();
       if (id !== cfg.chainId) throw new Error(`RPC chain id ${id} != configured ${cfg.chainId}`);
@@ -267,6 +269,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
         },
         'engine started',
       );
+      engine.ready = true;
     },
     async stop() {
       clearInterval(balanceTimer);
