@@ -16,4 +16,5 @@ bash scripts/build-app.sh
 npm run build
 vercel deploy --prod --yes
 echo "deployed; running the post-deploy check against $SITE_URL"
-node scripts/postdeploy-check.mjs --url "$SITE_URL" --own "$EXPO_PUBLIC_API_BASE" --out "$WEB_DIR/postdeploy-evidence/$(date -u +%Y%m%dT%H%M%SZ)"
+DOWN_ARGS=(); [ "${ENGINE_DOWN:-0}" = 1 ] && DOWN_ARGS=(--down "$EXPO_PUBLIC_API_BASE")
+node scripts/postdeploy-check.mjs --url "$SITE_URL" --own "$EXPO_PUBLIC_API_BASE" "${DOWN_ARGS[@]}" --out "$WEB_DIR/postdeploy-evidence/$(date -u +%Y%m%dT%H%M%SZ)"

@@ -1,6 +1,6 @@
 # Resume brief (Stage B)
 
-Kept current while Stage B runs. Last updated: 2026-10-08 19:10 IST.
+Kept current while Stage B runs. Last updated: 2026-10-08 19:00 IST (18:55 local machine time).
 
 ## Waiting on Jagadeesh
 
@@ -12,6 +12,11 @@ Kept current while Stage B runs. Last updated: 2026-10-08 19:10 IST.
 | 4 | Free disk space: at least 15 GB on the Data volume (was 119 MB free at 18:20 on 8 Oct; 3.4 GB after I removed Mirror's own build outputs). The large items are not Mirror's to delete: `~/Library/Caches` 23 GB, Colima's VM `~/.colima` 44 GB (images shared with other projects), `~/.gradle` 13 GB, AVD `mirror-dev` 3 GB (not mine; mine are mirror-a/b) | The release APK build, the Docker dry-run of the hosted images, and emulator runs (each needs several GB) |
 
 ## Decisions taken without review
+
+- The post-deploy check takes `--down <origin>` (deploy.sh: `ENGINE_DOWN=1`) while the hosted engine is not deployed: errors naming the engine's origin are listed as expected, every other error still fails the check.
+- Judges who ask (GitHub issue "test AUSD") get 100 test AUSD from the tester pool; each counts toward the 25.
+- Minimum Android stated as 14 everywhere (passkey PRF in Google Password Manager); testing was on Android 15 emulators.
+- Board posts run 11-14 Oct (four milestones that are true: onchain detach, builder fee, encrypted alerts, testnet deploy).
 
 - Detach is per leader and onchain; `setPolicy` keeps it, `follow()` and removing the leader clear it (approved in principle; the clearing rules are mine).
 - Main's unpushed history was rewritten (filter-branch, unpushed range only) to drop the workflow file before pushing; the original commits are on the local branch `postdeploy-workflow`.
@@ -27,7 +32,7 @@ Kept current while Stage B runs. Last updated: 2026-10-08 19:10 IST.
 
 ## Work queue (in order)
 
-Done: 5 (mainnet prep), 7 (board clips/snippets for 11-14 Oct in marketing/board/), hosted bring-up script (4, minus the image dry-run, which waits on disk space).
+Done: 3 (first-run fixes and engine-down states), 5 (mainnet prep), 6 (submission), 7 (board clips/snippets for 11-14 Oct in marketing/board/), 8 (storyboards), 9 (tester kit, judges guide, README, adversarial walk-through), hosted bring-up script (4, minus the image dry-run, which waits on disk space).
 
 1. Site + web app deploy, working without the hosted engine; post-deploy check.
 2. Testnet APK, release notes, download page.

@@ -30,8 +30,12 @@ const all = (k) => args.flatMap((a, i) => (a === `--${k}` ? [args[i + 1]] : []))
 const BASE = (arg("url", process.env.POSTDEPLOY_URL ?? "https://mirror.0xo.in")).replace(/\/$/, "");
 const OWN = [new URL(BASE).origin, ...all("own").map((u) => new URL(u).origin)];
 const ONLY = arg("only", "");
+// --down <origin>: a backend known to be down (the engine before its first deploy). Console errors and failed
+// requests naming that origin are listed as expected, not failures; everything else is still checked.
+const DOWN = all("down").map((u) => new URL(u).origin);
+const isDown = (text) => DOWN.some((o) => String(text).includes(o));
 const OUT = arg("out", join(process.cwd(), "postdeploy-evidence", new Date().toISOString().replace(/[:.]/g, "-")));
-const DEFAULT_PAGES = ["/", "/docs", "/docs/fees", "/stats", "/perpl", "/download", "/app", "/app/welcome"];
+const DEFAULT_PAGES = ["/", "/docs", "/docs/fees", "/stats", "/perpl", "/download", "/c/leader/1000", "/app", "/app/welcome"];
 const PAGES = all("page").length ? all("page") : DEFAULT_PAGES;
 const SETTLE_MS = Number(arg("settle", 4000));
 const IPHONE_UA =
@@ -68,15 +72,16 @@ const COLLECT = `
 
 function verdict(name, page, r) {
   const problems = [];
+  const expected = [];
   if (!r.loaded) problems.push(`did not load: ${r.loadError}`);
   if (r.textLength !== undefined && r.textLength < 20) problems.push(`renders blank (${r.textLength} chars of text)`);
-  for (const e of r.consoleErrors ?? []) problems.push(`console error: ${e}`);
+  for (const e of r.consoleErrors ?? []) (isDown(e) ? expected : problems).push(`console error: ${e}`);
   for (const e of r.pageErrors ?? []) problems.push(`uncaught: ${e}`);
-  for (const f of r.failedRequests ?? []) if (isOwn(f.url) || f.kind === "font") problems.push(`failed request: ${f.status ?? ""} ${f.kind ?? ""} ${f.url}${f.error ? ` (${f.error})` : ""}`.replace(/\s+/g, " "));
+  for (const f of r.failedRequests ?? []) if (isDown(f.url)) expected.push(`failed request (backend down): ${f.url}`); else if (isOwn(f.url) || f.kind === "font") problems.push(`failed request: ${f.status ?? ""} ${f.kind ?? ""} ${f.url}${f.error ? ` (${f.error})` : ""}`.replace(/\s+/g, " "));
   for (const s of r.statuses ?? []) if (s.status === 0 || s.status >= 400) problems.push(`own resource ${s.status}: ${s.url}`);
   if (r.recorder === false) problems.push("error recorder missing from the page (deploy predates it?)");
   if (r.width !== undefined && r.expectWidth && Math.abs(r.width - r.expectWidth) > 40) problems.push(`viewport ${r.width}px, expected ~${r.expectWidth}px`);
-  const res = { browser: name, page, ok: problems.length === 0, problems: [...new Set(problems)], screenshot: r.screenshot, textStart: r.textStart };
+  const res = { browser: name, page, ok: problems.length === 0, problems: [...new Set(problems)], expectedWhileDown: [...new Set(expected)], screenshot: r.screenshot, textStart: r.textStart };
   results.push(res);
   console.log(`${res.ok ? "PASS" : "FAIL"}  ${name.padEnd(15)} ${page}${res.ok ? "" : "\n      " + res.problems.join("\n      ")}`);
 }
@@ -185,7 +190,7 @@ async function safariRun() {
   }
 }
 
-console.log(`post-deploy check: ${BASE} · own origins ${OWN.join(", ")} · ${PAGES.length} pages · evidence ${OUT}`);
+console.log(`post-deploy check: ${BASE} · own origins ${OWN.join(", ")}${DOWN.length ? ` · known down ${DOWN.join(", ")}` : ""} · ${PAGES.length} pages · evidence ${OUT}`);
 if (!ONLY || ONLY === "chrome") {
   await chromeRun("Chrome desktop", { viewport: { width: 1440, height: 900 } }, 1440);
   await chromeRun("Chrome phone", { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IPHONE_UA }, 390);
