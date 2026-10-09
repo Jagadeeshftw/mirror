@@ -1,0 +1,81 @@
+# Stage-B hosted, part 4: continues stage-b-hosted.flow after step 10 (run devices/run-stage-b-android.sh --hosted
+# --keep-emulators --flow devices/e2e/flows/stage-b-hosted-part4.flow). The test user is signed in on mirror-b with
+# 100 test AUSD deposited; on 9 Oct its account had been paused by an account stop the engine triggered on the empty
+# account right after "Follow again" (fixed in the engine since: no account stop on an account with no equity).
+
+step 10b the test user resumes copying on the leader's profile (one passkey prompt): the stop no longer holds after the deposit
+device b
+launch
+open /funds
+readText id:funds.address addrB "^0x[0-9a-fA-F ]{40,60}$" 30
+squash addrB
+assertVar addrB "^0x1[bB][bB][dD]7[eE]3333"
+open /leader/1000
+waitFor id:leader.screen 30
+expectResult id:follow.status "^Paused$" 60
+tap id:leader.pause
+passkey 90
+expectResult id:follow.status "^Following$" 120
+
+step 11 the demo leader opens 50 lots BTC on Perpl testnet: the test user's copy lands with builder 26's fee; Firebase delivers the alert
+shell ${HOOK} notif-mark emulator-5556
+home
+sleep 2
+shell ${HOOK} leader-trade open 50
+shell ${HOOK} wait-copy ${addrB} open
+shell ${HOOK} notif emulator-5556 com.zeroxo.mirror 150
+shade fcm-notification-shade
+launch
+shell ${HOOK} lots ${addrB} lotsB
+assertVar lotsB "^[1-9][0-9]*$"
+
+step 12 stop following, keep my positions (one passkey prompt): set onchain by the test user's own contract
+open /leader/1000
+waitFor id:leader.screen 30
+tap id:leader.stopFollow
+waitFor id:stop.sheet 15
+tap id:stop.option.keep
+tap id:stop.confirm
+passkey 90
+shell ${HOOK} detached ${addrB} 1
+expectResult id:follow.status "Stopped, positions kept" 120
+
+step 13 the leader exits: the demo follower's close is copied with no fee; the detached test user keeps the position
+shell ${HOOK} demo-mark
+shell ${HOOK} leader-trade close 50
+shell ${HOOK} demo-copy close
+shell ${HOOK} lots ${addrB} lotsKept
+assertVar lotsKept "^${lotsB}$"
+
+step 14 close all (one passkey prompt)
+open /home
+tap id:home.tab.portfolio
+tap id:portfolio.closeAll
+waitFor id:closeAll.dialog 10
+tap id:portfolio.closeAll.confirm
+passkey 90
+expectResult id:portfolio.positions.count "^0$" 180
+shell ${HOOK} lots ${addrB} lotsAfter
+assertVar lotsAfter "^0$"
+
+step 15 withdraw to the wallet (one passkey prompt)
+open /withdraw
+tap id:withdraw.max 20
+tap id:withdraw.continue
+waitFor id:withdraw.sheet 10
+tap id:withdraw.confirm
+passkey 90
+expectResult id:withdraw.status "^Confirmed$" 180
+shell ${HOOK} wallet ${addrB}
+
+# ---------- 4. a copy the demo follower's rule blocks ----------
+step 16 the demo leader opens at 10x: the demo follower's 2x rule blocks the copy onchain (watch feed, mirror-a)
+device a
+launch
+shell ${HOOK} demo-mark
+shell ${HOOK} leader-trade open 20 1000
+shell ${HOOK} demo-blocked
+open /home
+scrollTo "idtext:watch\.feed\.\d+~Not copied.*${demo_blocked_tx}"
+expectResult "idtext:watch\.feed\.\d+~Not copied.*${demo_blocked_tx}" "Not copied" 60
+shell ${HOOK} leader-trade close 20

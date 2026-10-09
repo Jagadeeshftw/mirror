@@ -260,6 +260,9 @@ try {
   });
   await ph.context.close();
 } finally {
+  // The run's own accounts are the team's: add them to the engine's TEAM_TEST_ADDRESSES so public numbers skip them.
+  const owners = [state.address, state.owner].filter(Boolean);
+  if (owners.length) R.note("team test accounts: add these owners to TEAM_TEST_ADDRESSES on the engine", { owners });
   const rep = R.finish({});
   console.log(`\n${rep.passed} passed, ${rep.failed} failed. Evidence: ${OUT}/index.html`);
   await browser.close();

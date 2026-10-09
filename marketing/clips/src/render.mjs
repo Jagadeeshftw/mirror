@@ -205,6 +205,18 @@ const CLIPS = {
       ],
       per: 4.5,
     }),
+  // Try it on testnet: screens from the 9 Oct run against the hosted testnet service (devices/evidence/stage-b-hosted/README.md).
+  "day-15": () =>
+    slidesPage({
+      tag: "Monad testnet",
+      note: "Hosted testnet service, Android emulator, 9 Oct 2026 · mirror.0xo.in/app",
+      slides: [
+        { img: "devices/evidence/stage-b-hosted-android-20261009-153121/12-emulator-5554-s23-expectResult.png", crop: 0.72, cap: "One passkey, no funds: watch a team-run account copy Perpl." },
+        { img: "devices/evidence/stage-b-hosted-android-20261009-153121/25-emulator-5554-s38-readText.png", from: 0.42, crop: 0.95, cap: "Run demo trade: copied 2 blocks later, fee shown." },
+        { img: "devices/evidence/stage-b-hosted-android-20261009-153121/36-emulator-5554-s53-expectResult.png", from: 0.28, crop: 0.98, cap: "Run blocked trade: 10x meets a 2x rule. Blocked." },
+      ],
+      per: 4,
+    }),
   "day-14": () => {
     const { d, v } = deployLines();
     return terminalPage({
@@ -221,7 +233,8 @@ const CLIPS = {
 };
 
 // ------------------------------------------------------------------ screenshot slides (real evidence)
-// crop: fraction of the screenshot's height to show from the top (keeps unrelated rows out of frame).
+// crop: fraction of the screenshot's height to show from the top (keeps unrelated rows out of frame); from: where the
+// visible part starts (fraction from the top, default 0).
 function slidesPage({ slides, tag, note, per = 4 }) {
   const fade = 0.35;
   const total = slides.length * per;
@@ -237,7 +250,7 @@ function slidesPage({ slides, tag, note, per = 4 }) {
   .note{position:absolute;left:0;right:0;bottom:30px;text-align:center;color:#7A808C;font-size:22px}
   </style></head><body>
   <div class="top">${SAIL}<b>Mirror</b><span class="tag">${esc(tag)}</span></div>
-  ${slides.map((s, i) => `<div class="slide" id="s${i}"><div class="cap">${esc(s.cap)}</div><div class="phone"><div style="height:${Math.round(560 * (2400 / 1080) * (s.crop ?? 1))}px;background-image:url(${b64(path.join(repo, s.img))})"></div></div></div>`).join("")}
+  ${slides.map((s, i) => `<div class="slide" id="s${i}"><div class="cap">${esc(s.cap)}</div><div class="phone"><div style="height:${Math.round(560 * (2400 / 1080) * ((s.crop ?? 1) - (s.from ?? 0)))}px;background-image:url(${b64(path.join(repo, s.img))});background-position:0 -${Math.round(560 * (2400 / 1080) * (s.from ?? 0))}px"></div></div></div>`).join("")}
   <div class="note">${esc(note)}</div>
   <script>
   const n=${slides.length}, per=${per}, fade=${fade}, total=${total};
@@ -295,7 +308,7 @@ function introPage() {
 // ------------------------------------------------------------------ encode
 async function renderClip(browser, name) {
   const { html, duration } = CLIPS[name]();
-  const out = path.join(repo, "marketing/clips", `${name}-${{ "day-07": "intro", "day-08": "blocked-by-your-rule", "day-09": "keeper-cannot-withdraw", "day-10": "why-monad", "day-11": "stop-following-keep-positions", "day-12": "builder-fee", "day-13": "encrypted-alerts", "day-14": "live-on-testnet" }[name]}.mp4`);
+  const out = path.join(repo, "marketing/clips", `${name}-${{ "day-07": "intro", "day-08": "blocked-by-your-rule", "day-09": "keeper-cannot-withdraw", "day-10": "why-monad", "day-11": "stop-following-keep-positions", "day-12": "builder-fee", "day-13": "encrypted-alerts", "day-14": "live-on-testnet", "day-15": "try-it-on-testnet" }[name]}.mp4`);
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   await page.setContent(html, { waitUntil: "networkidle" });
   await page.evaluate(() => document.fonts.ready);
