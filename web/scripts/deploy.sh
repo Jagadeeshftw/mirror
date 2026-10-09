@@ -15,6 +15,12 @@ cd "$WEB_DIR"
 bash scripts/build-app.sh
 npm run build
 vercel deploy --prod --yes
+# The same check on GitHub Actions (macOS runner: Chrome and Safari), started only as Jagadeeshftw.
+if command -v gh >/dev/null && [ "$(gh api user --jq .login 2>/dev/null)" = "Jagadeeshftw" ]; then
+  WF_ARGS=(-f url="$SITE_URL")
+  [ "${ENGINE_DOWN:-0}" = 1 ] && WF_ARGS+=(-f down="$EXPO_PUBLIC_API_BASE")
+  gh workflow run postdeploy.yml --repo Jagadeeshftw/mirror "${WF_ARGS[@]}" && echo "started the post-deploy workflow on GitHub"
+fi
 echo "deployed; running the post-deploy check against $SITE_URL"
 DOWN_ARGS=(); [ "${ENGINE_DOWN:-0}" = 1 ] && DOWN_ARGS=(--down "$EXPO_PUBLIC_API_BASE")
 node scripts/postdeploy-check.mjs --url "$SITE_URL" --own "$EXPO_PUBLIC_API_BASE" "${DOWN_ARGS[@]}" --out "$WEB_DIR/postdeploy-evidence/$(date -u +%Y%m%dT%H%M%SZ)"

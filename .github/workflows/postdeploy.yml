@@ -1,0 +1,45 @@
+# Post-deploy check against the public URL in desktop Chrome and Safari and at phone width, in clean profiles
+# with no cache (web/scripts/postdeploy-check.mjs). Runs after every successful production deployment that
+# GitHub hears about, and on demand; web/scripts/deploy.sh starts it after every CLI deploy and also runs the
+# same check locally.
+name: post-deploy check
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Public URL to check
+        default: https://mirror.0xo.in
+      down:
+        description: Origin of a backend known to be down (its errors are listed as expected); empty when all is up
+        default: ""
+jobs:
+  check:
+    if: github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Only Playwright is needed (the check drives the installed Google Chrome and Safari); installed at the repo
+      # root so web/scripts/postdeploy-check.mjs resolves it without installing the site's dependencies.
+      - run: npm install --no-save --no-package-lock playwright@1.56
+      - run: sudo safaridriver --enable
+      - name: Check the public URL
+        working-directory: web
+        env:
+          URL: ${{ github.event.inputs.url || 'https://mirror.0xo.in' }}
+          DOWN: ${{ github.event.inputs.down || '' }}
+          API: ${{ vars.MIRROR_API_BASE || 'https://engine-production-0fd2.up.railway.app' }}
+        run: |
+          set -o pipefail
+          ARGS=(--url "$URL" --own "$API" --out postdeploy-evidence)
+          [ -n "$DOWN" ] && ARGS+=(--down "$DOWN")
+          node scripts/postdeploy-check.mjs "${ARGS[@]}"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postdeploy-evidence
+          path: web/postdeploy-evidence
