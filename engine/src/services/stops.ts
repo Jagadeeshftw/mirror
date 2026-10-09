@@ -117,8 +117,11 @@ export class StopExecutor {
         r.readContract({ ...c, functionName: 'paused' }),
       ]);
       const hit = accountStopHit({ now, equity, riskDay: Number(riskDay), dayStartEquity, highWaterEquity, dailyLossBps: f.dailyLossBps, drawdownBps: f.drawdownBps });
-      // Once paused and flat there is nothing left for the trigger to do.
-      if (hit && (!paused || (await this.hasOpenPosition(f)))) {
+      // Once paused and flat there is nothing left for the trigger to do. Nor with no equity at all: an account
+      // emptied after a loss keeps a high-water mark above zero (withdrawals lower it by the amount, not to zero),
+      // so the stop reads as hit until the next deposit; pausing it then would only make a returning user's
+      // deposit land in a paused account. Copies stay blocked onchain while the stop holds.
+      if (hit && equity > 0n && (!paused || (await this.hasOpenPosition(f)))) {
         out.push({ account, kind: 'account', scope: 0, reason: hit, data: encodeFunctionData({ abi: mirrorAccountAbi, functionName: 'triggerAccountStop' }) });
       }
     }

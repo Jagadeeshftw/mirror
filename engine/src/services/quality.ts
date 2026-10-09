@@ -50,7 +50,7 @@ export class CopyQualityService {
         builderFeesCNS: 'builder fees Perpl charged on copies in scope (keeper and match-now, opening size only), collateral units',
       },
       ...view(src.global),
-      teamRun: { label: 'team-run (demo leader / demo follower); excluded from every number above', ...view(src.teamRun) },
+      teamRun: { label: "team-run (demo leader / demo follower) and the team's own test accounts; excluded from every number above", ...view(src.teamRun) },
     };
   }
 

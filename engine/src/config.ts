@@ -87,6 +87,9 @@ const EnvSchema = z.object({
   DEMO_LEADER_PRIVATE_KEY: privateKey.optional(),
   DEMO_FOLLOWER_ACCOUNT: optAddress,
   TEAM_RUN_ADDRESSES: addressList,
+  /** The team's own end-to-end test accounts (owners or accounts): left out of /v1/stats and copy-quality numbers
+   *  like team-run, but alerted and served like any user (team-run accounts never alert). */
+  TEAM_TEST_ADDRESSES: addressList,
 
   DB_PATH: z.string().default(join(engineRoot, 'data', 'engine.db')),
 
@@ -299,6 +302,7 @@ export interface Config {
   demoLeaderKey: Hex | undefined;
   demoFollowerAccount: Address | undefined;
   teamRun: Set<string>;
+  teamTest: Set<string>;
   perplApiUrl: string;
   perplWsUrl: string;
   perplChainId: number;
@@ -327,6 +331,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
   if (!exchange || !collateral) throw new Error('PERPL_EXCHANGE and COLLATERAL_TOKEN must be configured');
 
   const teamRun = new Set<string>(env.TEAM_RUN_ADDRESSES.map((a) => a.toLowerCase()));
+  const teamTest = new Set<string>(env.TEAM_TEST_ADDRESSES.map((a) => a.toLowerCase()));
   for (const a of [main.teamRun?.demoLeaderAddress, main.teamRun?.demoFollowerAccount, env.DEMO_FOLLOWER_ACCOUNT]) {
     if (a && isAddress(a)) teamRun.add(a.toLowerCase());
   }
@@ -354,6 +359,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     demoLeaderKey: env.DEMO_LEADER_PRIVATE_KEY as Hex | undefined,
     demoFollowerAccount: env.DEMO_FOLLOWER_ACCOUNT ?? addr(main.teamRun?.demoFollowerAccount),
     teamRun,
+    teamTest,
     perplApiUrl: env.PERPL_API_URL ?? main.perplApi ?? 'https://app.perpl.xyz/api',
     perplWsUrl: env.PERPL_WS_URL ?? main.perplWs ?? 'wss://app.perpl.xyz',
     perplChainId: env.PERPL_CHAIN_ID ?? net.chainId ?? 143,

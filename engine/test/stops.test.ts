@@ -95,6 +95,39 @@ function harness(callReverts: boolean) {
   return { ex, calls, sends, db };
 }
 
+describe('StopExecutor account stop', () => {
+  /** A flat account with flattenOnStop and a 20% drawdown stop; its risk state comes from `state`. */
+  const executor = (state: { equity: bigint; highWaterEquity: bigint; paused?: boolean }) => {
+    const reads = {
+      client: {
+        async readContract({ functionName }: { functionName: string }) {
+          const v: Record<string, unknown> = { equity: state.equity, riskDay: 0n, dayStartEquity: state.highWaterEquity, highWaterEquity: state.highWaterEquity, paused: state.paused ?? false };
+          return v[functionName];
+        },
+      },
+      async position() {
+        return { side: LONG, lots: 0n, mark: 1_000n, markValid: true, depositCNS: 0n, entryPricePNS: 0n, pnlCNS: 0n };
+      },
+      async oracle() {
+        return { oraclePNS: 0n, fresh: false };
+      },
+    } as unknown as Reads;
+    return new StopExecutor(new Db(':memory:'), reads, () => [], () => undefined as never, new Bus(), { intervalMs: 0, retryMs: 60_000 }, log);
+  };
+  const f = follower({ flattenOnStop: true, drawdownBps: 2_000, levels: new Map() });
+
+  it('leaves an emptied account alone: after a loss and a full withdrawal the stop reads as hit until the next deposit', async () => {
+    // 150 deposited, 0.266584 lost, 149.733416 withdrawn: high-water 0.266584, equity 0 (the 9 Oct test user).
+    expect(await executor({ equity: 0n, highWaterEquity: 266_584n }).candidatesFor(f, 86_400)).toEqual([]);
+  });
+
+  it('still triggers on a funded account below its drawdown floor, flat or not, until it is paused', async () => {
+    const c = await executor({ equity: 70_000_000n, highWaterEquity: 100_000_000n }).candidatesFor(f, 86_400);
+    expect(c.map((x) => [x.kind, x.reason])).toEqual([['account', 'Drawdown']]);
+    expect(await executor({ equity: 70_000_000n, highWaterEquity: 100_000_000n, paused: true }).candidatesFor(f, 86_400)).toEqual([]);
+  });
+});
+
 describe('StopExecutor', () => {
   it('never sends a trigger whose eth_call simulation reverts', async () => {
     const h = harness(true);

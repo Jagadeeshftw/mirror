@@ -53,10 +53,15 @@ export class Views {
     private readonly relayer: Relayer | undefined,
     private readonly explorerTx: string,
     private readonly equity?: EquityService,
+    private readonly teamTest: Set<string> = new Set(),
   ) {}
 
   private teamRun(r: { address: string; owner: string }) {
     return this.registry.isTeamRun(r.address) || this.registry.isTeamRun(r.owner);
+  }
+
+  private teamTestAccount(r: { address: string; owner: string }) {
+    return this.teamTest.has(r.address.toLowerCase()) || this.teamTest.has(r.owner.toLowerCase());
   }
 
   async account(address: string) {
@@ -206,6 +211,7 @@ export class Views {
   stats(page = 1, limit = 50, keepers: string[] = []) {
     const accounts = this.db.all<AccountRow>('SELECT * FROM accounts');
     const team = new Set(accounts.filter((a) => this.teamRun(a)).map((a) => a.address));
+    const testing = new Set(accounts.filter((a) => !team.has(a.address) && this.teamTestAccount(a)).map((a) => a.address));
     const build = (rows: AccountRow[]) => {
       const set = new Set(rows.map((a) => a.address));
       const inSet = (f: { account: string }) => set.has(f.account);
@@ -239,11 +245,13 @@ export class Views {
         executed: copies,
       };
     };
-    const users = build(accounts.filter((a) => !team.has(a.address)));
+    const users = build(accounts.filter((a) => !team.has(a.address) && !testing.has(a.address)));
     const teamRun = build(accounts.filter((a) => team.has(a.address)));
+    const teamTest = build(accounts.filter((a) => testing.has(a.address)));
     const pageRows = (rows: FeedRow[]) => rows.slice((page - 1) * limit, page * limit).map((r) => feedJson(r, this.explorerTx));
     const { executed: ue, ...userStats } = users;
     const { executed: te, ...teamStats } = teamRun;
+    const { executed: xe, ...testStats } = teamTest;
     return {
       excludesTeamRun: true,
       ...userStats,
@@ -254,6 +262,12 @@ export class Views {
         accounts: [...team],
         ...teamStats,
         copies: { page, limit, total: te.length, items: pageRows(te) },
+      },
+      teamTest: {
+        label: "the team's own end-to-end test accounts (Android emulators, web app); excluded from every count above",
+        accounts: [...testing],
+        ...testStats,
+        copies: { page, limit, total: xe.length, items: pageRows(xe) },
       },
     };
   }

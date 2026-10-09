@@ -101,6 +101,16 @@ describe('builder fee totals (team-run excluded)', () => {
     expect(s.teamRun).toMatchObject({ builderFeesCNS: '7777' });
   });
 
+  it("/v1/stats leaves the team's own test accounts out of the user numbers and lists them separately", () => {
+    const db = new Db(':memory:');
+    seed(db);
+    const views = new Views(db, reads, {} as MarketData, nullRegistry(new Set([TEAM])), undefined, 'https://x/tx/', undefined, new Set([USER]));
+    const s = views.stats();
+    expect(s).toMatchObject({ accountsCreated: 0, fundedAccounts: 0, copiesExecuted: 0, builderFeesCNS: '0' });
+    expect(s.teamTest).toMatchObject({ accounts: [USER], accountsCreated: 1, copiesExecuted: 2, builderFeesCNS: '1250' });
+    expect(s.teamRun).toMatchObject({ accounts: [TEAM], builderFeesCNS: '7777' });
+  });
+
   it('account view sums its own copies and shows the signed max in the policy', async () => {
     const db = new Db(':memory:');
     seed(db);

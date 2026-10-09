@@ -180,8 +180,10 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
     : undefined;
   const fallbackRegistry = registry ?? nullRegistry(cfg.teamRun);
   const indexer = new IndexerClient(env.INDEXER_GRAPHQL_URL, log.child({ mod: 'indexer' }));
+  // Public numbers leave out team-run accounts, copies of the demo leader and the team's own test accounts.
+  const isTeamTest = (a: string | null) => a !== null && cfg.teamTest.has(a.toLowerCase());
   const isTeamRun = (account: string, owner: string | null, leaderId: number) =>
-    fallbackRegistry.isTeamRun(account) || (owner !== null && fallbackRegistry.isTeamRun(owner)) || (leaderId !== 0 && leaderId === (demo?.leaderAccountId ?? 0));
+    fallbackRegistry.isTeamRun(account) || (owner !== null && fallbackRegistry.isTeamRun(owner)) || (leaderId !== 0 && leaderId === (demo?.leaderAccountId ?? 0)) || isTeamTest(account) || isTeamTest(owner);
   const quality = new CopyQualityService(db, indexer, isTeamRun);
   const adversarial = new AdversarialService(db, {
     exitBlocks: env.ADVERSARIAL_EXIT_BLOCKS,
@@ -198,7 +200,7 @@ export function buildEngine(cfg: Config, log: Logger): Engine {
   const equity = new EquityService(db, (a) => reads.equity(a), { intervalMs: env.EQUITY_SNAPSHOT_MS }, log.child({ mod: 'equity' }));
   // Every copy, deposit, withdrawal and close-all records the account's equity right away.
   if (registry) registry.onAccountActivity = (account, kind) => void equity.snapshot(account, kind, true);
-  const views = new Views(db, reads, market, fallbackRegistry, relayer, cfg.explorerTx, equity);
+  const views = new Views(db, reads, market, fallbackRegistry, relayer, cfg.explorerTx, equity, cfg.teamTest);
   // Endpoint override is a Stage-A test hook: refused outside the localnet.
   if (env.PUSH_WEBPUSH_ENDPOINT_OVERRIDE && env.NETWORK !== 'localnet') throw new Error('PUSH_WEBPUSH_ENDPOINT_OVERRIDE is only allowed with NETWORK=localnet');
   const fcm = fcmFromEnv(env);

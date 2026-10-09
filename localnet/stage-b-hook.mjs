@@ -6,7 +6,8 @@
 // Monad's eth_estimateGas (viem's default on the testnet RPC). Prints "VAR name=value" lines for flow.py.
 //
 //   node stage-b-hook.mjs leader-trade <open|close> <lots> [leverageHdths]   demo leader (Perpl account 1000) BTC IOC
-//   node stage-b-hook.mjs wait-copy <owner> <open|close>     the owner's follow account copy: tx, builder 26 fee onchain
+//   node stage-b-hook.mjs wait-copy <owner> <open|close>     the owner's follow account copy mined after the last
+//                                                            leader-trade of that side: tx, builder 26 fee onchain
 //   node stage-b-hook.mjs follow-check <owner>               the owner's follow account is deployed, funded, following 1000
 //   node stage-b-hook.mjs detached <owner> <0|1>             leaderDetached(1000) onchain
 //   node stage-b-hook.mjs lots <owner> <var>                 the follow account's BTC lots onchain
@@ -35,6 +36,7 @@ const X_ABI = X.abi ?? X;
 const PORT = Number(process.env.STAGEB_ENGINE_PORT ?? 8838);
 const ENGINE = (process.env.ENGINE_URL || `http://127.0.0.1:${PORT}`).replace(/\/$/, "");
 const MARK = join(ROOT, ".stage-b", "demo-mark.json");
+const LAST = (side) => join(ROOT, ".stage-b", `leader-last-${side}.json`);
 const LEADER = Number(shared.teamRun.demoLeaderAccountId);
 const BTC = 16n;
 const chain = defineChain({ id: 10143, name: "monad-testnet", nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 }, rpcUrls: { default: { http: [shared.rpc] } } });
@@ -114,6 +116,9 @@ switch (cmd) {
         const hash = await wallet.writeContract(request);
         const r = await pub.waitForTransactionReceipt({ hash });
         if (r.status !== "success") throw new Error(`reverted ${hash}`);
+        // wait-copy only accepts a copy mined after this trade (an older copy must never pass for this one).
+        mkdirSync(dirname(LAST(side)), { recursive: true });
+        writeFileSync(LAST(side), JSON.stringify({ block: Number(r.blockNumber), hash }));
         out(`leader_${side}_tx`, short(hash));
         console.log(JSON.stringify({ ok: true, hash, gasUsed: String(r.gasUsed) }));
         break;
@@ -126,9 +131,10 @@ switch (cmd) {
   }
   case "wait-copy": {
     const [owner, side] = a;
+    const after = JSON.parse(readFileSync(LAST(side), "utf8")).block;
     const fa = await waitFor("follow account", () => followAccount(owner), 60_000);
-    const item = await waitFor(`${side} copy`, async () => (await feed(fa.address))
-      .filter((i) => i.kind === "Mirrored" && (side === "open" ? Number(i.orderType) <= 1 : Number(i.orderType) >= 2))
+    const item = await waitFor(`${side} copy after block ${after}`, async () => (await feed(fa.address))
+      .filter((i) => i.kind === "Mirrored" && Number(i.block ?? 0) > after && (side === "open" ? Number(i.orderType) <= 1 : Number(i.orderType) >= 2))
       .sort((x, y) => Number(y.block ?? 0) - Number(x.block ?? 0))[0], 120_000);
     const b = await takerBuilder(item.txHash);
     out(`copy_${side}_tx`, short(item.txHash));

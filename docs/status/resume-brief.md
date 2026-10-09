@@ -1,14 +1,15 @@
 # Resume brief (Stage B, hosted bring-up block)
 
-Kept current while Stage B runs. Last updated: 2026-10-09 01:40 IST.
+Kept current while Stage B runs. Last updated: 2026-10-09 15:35 IST.
 
 ## Waiting on Jagadeesh
 
 | # | Action (exact) | Unblocks |
 |---|---|---|
-| 1 | `gh auth refresh -h github.com -s workflow --user Jagadeeshftw` (the **Jagadeeshftw** account; on 9 Oct the refresh had landed on the active account Baskarayelu, and Jagadeeshftw still had no `workflow` scope) | Pushing `.github/workflows/postdeploy.yml` from the local branch `postdeploy-workflow`, then running it |
-| 2 | `cd ~/personal/projects/grants/monad/mirror && bash scripts/railway-secrets.sh`, from this checkout (the one linked to Railway project `mirror-testnet`). On 9 Oct 00:50 IST none of its variables were set on Railway; the script works from here (its stdin mechanism was checked with a dummy variable, then removed). It prints a `set X on Y` line per variable. | The hosted engine, relayer, both indexers and the HyperSync proxy; then `bash scripts/railway-up.sh` |
-| 3 | More testnet MON (optional) | Ops wallet holds 63.14 MON: the 25-tester round needs about 22, demos at most about 8 a day |
+| 1 | Decide where 100 test AUSD for one more funded web run comes from: take it from the tester pool (2,500 → 2,400, enough for 24 testers at 100), or ask Perpl for 100 or more test AUSD to the ops wallet `0x299E…e82C`. The demo leader's Perpl account holds 99.74, below Perpl's 100 minimum for a new account, and the first web run's 100 cannot be recovered (`docs/funding-ledger.md`, 9 Oct 09:35). Once decided, the run is `ENGINE_URL=https://engine-production-0fd2.up.railway.app node localnet/e2e-live-web.mjs --parts phone` (it opens a Chrome window: Web Push needs Chrome's real push service). | A real Web Push delivered in the web app; Send's Max fix checked live; the web funded flow through withdraw and send-back |
+| 2 | Tester addresses, and the go for the tester round | Sending the invites and the test AUSD (nothing is sent before that) |
+| 3 | Optional: leave the Mac unlocked while a deploy runs | The local Safari half of the post-deploy check: safaridriver cannot open Safari while the screen is locked (9 Oct). The GitHub macOS runner checks Safari meanwhile. |
+| 4 | Optional: more testnet MON | Ops wallet holds 62.0 MON: the 25-tester round needs about 22, demos at most about 8 a day |
 
 ## Later tasks
 
