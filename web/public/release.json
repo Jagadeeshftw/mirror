@@ -1,10 +1,10 @@
 {
   "available": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "channel": "testnet beta",
-  "versionCode": 101,
-  "size": 43845077,
-  "sha256": "2cee6e97e170a0d033e3d17cec712c38e5caa8dac0b6673219ca9e44a51a7728",
-  "url": "https://github.com/Jagadeeshftw/mirror/releases/download/v1.0.1-testnet/mirror-1.0.1-testnet.apk",
-  "date": "2026-10-08"
+  "versionCode": 102,
+  "size": 43855153,
+  "sha256": "713b904fe2d548ae542a40e06c83a69697a13ee9928a5f67440da33c667ea566",
+  "url": "https://github.com/Jagadeeshftw/mirror/releases/download/v1.0.2-testnet/mirror-1.0.2-testnet.apk",
+  "date": "2026-10-09"
 }

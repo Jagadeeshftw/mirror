@@ -13,7 +13,7 @@ CHANNELS
 - Building in public on X. Every post carries transaction links for real copies and real "blocked by your rule" events.
 - Leader profiles. Every leaderboard entry is a shareable page, and leaders have a reason to share that they are being followed.
 - Monad's Discord and community, for Android users who already use passkeys.
-Status (8 Oct 2026): none of these channels has been used for outreach yet. Outreach starts with the testnet tester round below, once the hosted engine is live (the web app and the APK have been live since 8 Oct 2026).
+Status (9 Oct 2026): none of these channels has been used for outreach yet. Outreach starts with the testnet tester round below; the hosted engine has been live since 9 Oct 2026 (the web app and the APK since 8 Oct), and no invites have gone out yet.
 
 FROM INSTALL TO FIRST FUNDED ACTION
 1. Download the APK from the site.
@@ -25,12 +25,12 @@ FROM INSTALL TO FIRST FUNDED ACTION
 Target: under 3 minutes from install to a funded follow. Not measured with outside users yet.
 
 NUMBERS MEASURED SO FAR (ONCHAIN)
-Mirror has no users yet. As of 8 Oct 2026:
-- Monad testnet: Mirror's contracts are deployed and verified (7 Oct 2026, 21:56 UTC); the tester round has not started.
+Mirror has no users yet. As of 9 Oct 2026:
+- Monad testnet: Mirror's contracts are deployed and verified (7 Oct 2026, 21:56 UTC); the tester round has not started. The public stats page counts 0 outside accounts: the team-run demo accounts and the team's own test accounts are listed separately and left out.
 - Monad mainnet: Mirror's contracts are not deployed; 0 MirrorAccounts, 0 AUSD deposited, 0 copies.
 The Perpl figures above are read directly from Perpl's mainnet contracts.
 
-The public stats page will show these metrics, read from our Envio indexer, once the hosted indexer is live, and this section will be updated from it:
+The public stats page (https://mirror.0xo.in/stats) shows these metrics from Mirror's hosted engine, with copy quality from our Envio indexer, and this section will be updated from it once outside testers start:
 - accounts created
 - funded accounts
 - net AUSD deposited
@@ -43,8 +43,8 @@ Testnet tester round: Perpl sent 2,500 test AUSD for testers, enough for 25 outs
 
 Targets before judging:
 - the public APK and web app on testnet: met on 8 Oct 2026 (APK 1.0.1 on /download, web app at /app)
-- 25 outside testers through the testnet round, with their copies and blocks on the stats page: not started (needs the hosted engine)
-- the team-run demo leader and demo follower copying on testnet, with tx links: met on 8 Oct 2026, with the engine run on the developer's machine (the hosted engine is not live yet). Demo leader: Perpl testnet account 1000. Copy of its BTC open, builder 26 charged 0.000166 test AUSD (test funds, not revenue): https://testnet.monadvision.com/tx/0xc14cd15a3d3243263fc3b43cd2b7d1ae349c407622bf7479dc788ef7c873aa9b. Close copied with no fee: https://testnet.monadvision.com/tx/0x83922244bd82b863b07e8e7c771d39757d631d61327459afb89054ee04bfe373. 10x copy blocked by the 2x rule: https://testnet.monadvision.com/tx/0xcfeeda062c5a5590e051c892d7c379c0019d93548f5f66f13043718f7a6d80aa
+- 25 outside testers through the testnet round, with their copies and blocks on the stats page: not started (the hosted engine is live since 9 Oct; invites wait on the owner's go)
+- the team-run demo leader and demo follower copying on testnet, with tx links: met on 8 Oct 2026 from the developer's machine, and on 9 Oct 2026 from the hosted engine. Demo leader: Perpl testnet account 1000. Hosted engine, 9 Oct: copy of a demo open with builder 26 charged 0.000166 test AUSD (test funds, not revenue): https://testnet.monadvision.com/tx/0xfd60066f5cb2613ef657c0026781783b784ccb38dbf3cf5a04d1e66777c93110. Its close copied with no fee: https://testnet.monadvision.com/tx/0xdad63b1568311e1251c6d811ea4ba2fd96780160821957cae03ef249481bcb7e. 10x copy blocked by the 2x rule: https://testnet.monadvision.com/tx/0x464e326f240fe3392dba0ab92968fa4632cb9e8e7637523a9b1c6a933e97a57e
 Mainnet follows the testnet round. Our own capital is capped at 30 USD in total. External users fund their own accounts.
 
 PATH TO A BUSINESS

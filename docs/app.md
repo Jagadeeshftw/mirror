@@ -103,7 +103,7 @@ With Mirror's service down (refused, 5xx or no answer):
 - **Settings → Network**: the Monad row is a direct `eth_blockNumber` (host, latency, block) against the live,
   cached or bundled RPC; Mirror's service is a separate row.
 - **Relayed actions** (follow, add leader, deposit, edit rules, withdraw, send): the buttons are disabled with a
-  "Not live yet" note when the health check fails, and every flow in `lib/actions.ts` re-checks `/v1/health` (6 s)
+  "Can't reach Mirror's service" note when the health check fails, and every flow in `lib/actions.ts` re-checks `/v1/health` (6 s)
   before the passkey prompt (`ensureRelay`). Nothing is signed that can't be sent. Creating the account itself (the
   passkey on Welcome) is local and works offline; the onchain account is created by the relayer with the first follow.
 

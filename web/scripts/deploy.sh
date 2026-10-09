@@ -5,7 +5,9 @@
 #   EXPO_PUBLIC_API_BASE=https://<engine> bash scripts/deploy.sh
 #
 # Env: EXPO_PUBLIC_API_BASE (required; baked into the web app), SITE_URL (default https://mirror.0xo.in),
-#      EXPO_PUBLIC_NETWORK (bundled fallback network, default testnet; see scripts/build-app.sh).
+#      EXPO_PUBLIC_NETWORK (bundled fallback network, default testnet; see scripts/build-app.sh),
+#      POSTDEPLOY_ONLY=chrome to skip the local Safari half (it cannot open Safari while the Mac's screen is locked;
+#      the GitHub workflow started below checks Safari either way).
 set -euo pipefail
 WEB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SITE_URL="${SITE_URL:-https://mirror.0xo.in}"
@@ -23,4 +25,5 @@ if command -v gh >/dev/null && [ "$(gh api user --jq .login 2>/dev/null)" = "Jag
 fi
 echo "deployed; running the post-deploy check against $SITE_URL"
 DOWN_ARGS=(); [ "${ENGINE_DOWN:-0}" = 1 ] && DOWN_ARGS=(--down "$EXPO_PUBLIC_API_BASE")
+[ -n "${POSTDEPLOY_ONLY:-}" ] && DOWN_ARGS+=(--only "$POSTDEPLOY_ONLY")
 node scripts/postdeploy-check.mjs --url "$SITE_URL" --own "$EXPO_PUBLIC_API_BASE" ${DOWN_ARGS[@]+"${DOWN_ARGS[@]}"} --out "$WEB_DIR/postdeploy-evidence/$(date -u +%Y%m%dT%H%M%SZ)"

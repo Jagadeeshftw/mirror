@@ -1,19 +1,19 @@
 ---
 title: Judges guide
-description: What you can verify today, what is deployed on Monad testnet, and the app path once the hosted service is live.
+description: What you can verify today, what is deployed on Monad testnet, and the app path on Mirror's hosted testnet service.
 ---
 
 This page mirrors the judge access instructions in the Metropolis submission. It is updated with real links and transaction hashes as each piece goes live, and it says "pending" for anything that is not live yet.
 
-## Status (8 Oct 2026)
+## Status (9 Oct 2026)
 
 - **Contracts on Monad testnet (chain 10143):** deployed on 7 Oct 2026 at 21:56 UTC (block 69,083,005) and verified on [Sourcify](https://repo.sourcify.dev/10143/0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39). Addresses below and on [Contracts](/docs/contracts).
 - **Mirror's fee is in that deployment:** Perpl builder 26, 0.02% of opening size only, confirmed by Perpl on 7 Oct 2026. No revenue yet: on testnet it has only been charged in test AUSD (for example 0.000166 test AUSD on a copied open), which is test funds.
-- **Hosted copy engine, relayer and indexer:** prepared, **not live yet**. Until they are, the app reads balances and the demo account from Monad directly and says when an action needs the service.
-- **Web app and Android APK:** live since 8 Oct 2026. The web app is at [/app](/app) (testnet build). The APK is Mirror 1.0.1 (testnet beta) on [/download](/download), GitHub Release `v1.0.1-testnet`, SHA-256 `2cee6e97e170a0d033e3d17cec712c38e5caa8dac0b6673219ca9e44a51a7728`, for Android 14 or newer with Google Password Manager. Until the hosted service is live, both show the team-run demo account's copies read from Monad with the Run buttons off, and creating an account, deposits and follows say "not live yet" before any passkey prompt.
-- **Public testnet, end to end:** 11 of 11 steps on Android emulators against Mirror's testnet contracts and Perpl testnet, with the engine run on the developer's machine: a copied Perpl testnet open with builder 26 charged ([tx](https://testnet.monadvision.com/tx/0xc14cd15a3d3243263fc3b43cd2b7d1ae349c407622bf7479dc788ef7c873aa9b)), the close copied with no fee ([tx](https://testnet.monadvision.com/tx/0x83922244bd82b863b07e8e7c771d39757d631d61327459afb89054ee04bfe373)), a stop-following set onchain ([tx](https://testnet.monadvision.com/tx/0x741241722325f5536d633d084b824734ed2539c5d14aa7a2677d6f6f2b89537a)) and a 10x copy blocked by a 2x rule ([tx](https://testnet.monadvision.com/tx/0xcfeeda062c5a5590e051c892d7c379c0019d93548f5f66f13043718f7a6d80aa)). Every step is listed in `devices/evidence/stage-b/README.md` in the repository.
+- **Hosted copy engine, relayer and indexer:** live on Railway since 9 Oct 2026. The engine answers at [engine-production-0fd2.up.railway.app/v1/health](https://engine-production-0fd2.up.railway.app/v1/health); the indexers' read-only GraphQL is public ([testnet](https://hasura-testnet-production.up.railway.app/v1/graphql), [mainnet](https://hasura-mainnet-production.up.railway.app/v1/graphql)) and still catching up on history. If the service is ever unreachable, the app reads balances and the demo account from Monad and says so.
+- **Web app and Android APK:** live since 8 Oct 2026. The web app is at [/app](/app) (testnet build). The APK is Mirror 1.0.2 (testnet beta) on [/download](/download), GitHub Release `v1.0.2-testnet`, SHA-256 `713b904fe2d548ae542a40e06c83a69697a13ee9928a5f67440da33c667ea566`, for Android 14 or newer with Google Password Manager. Both work against the hosted service: accounts, permit deposits, follows and the demo trades.
+- **Public testnet, end to end, against the hosted service (9 Oct 2026):** 16 of 16 steps on Android emulators against Mirror's testnet contracts and Perpl testnet: a demo trade from an account with no funds, copied with builder 26 charged ([tx](https://testnet.monadvision.com/tx/0xfd60066f5cb2613ef657c0026781783b784ccb38dbf3cf5a04d1e66777c93110)) and its close with no fee ([tx](https://testnet.monadvision.com/tx/0xdad63b1568311e1251c6d811ea4ba2fd96780160821957cae03ef249481bcb7e)); a follower's copy after a permit deposit, with its Firebase alert ([tx](https://testnet.monadvision.com/tx/0x297284a6b1f2259ee4a927d40643ae349fde14ed528d721bb9032c6ca1f6fb7b)); stop following with the position kept ([tx](https://testnet.monadvision.com/tx/0xb08c19d6a072c7d3ebb465bc111051217038f97a4ad2666d140a640136c558b0)); close all, withdraw; and a 10x copy blocked by a 2x rule ([tx](https://testnet.monadvision.com/tx/0x464e326f240fe3392dba0ab92968fa4632cb9e8e7637523a9b1c6a933e97a57e)). The live web app passed the same flows except withdraw and Web Push, which wait on a rerun. Every step and transaction: `devices/evidence/stage-b-hosted/README.md` in the repository (the 8 Oct run from the developer's machine: `devices/evidence/stage-b/README.md`).
 - **Monad mainnet:** Mirror's contracts are **not deployed**. The team-run demo leader exists there as Perpl account 5416 (10.00 AUSD, no trades).
-- **Users:** none yet. The testnet tester round (25 outside testers, 100 test AUSD each, from Perpl) starts once the hosted service is live.
+- **Users:** none yet. The testnet tester round (25 outside testers, 100 test AUSD each, from Perpl) is next; no invites have gone out yet.
 - **Devices:** Mirror has been tested on Android emulators and in Chrome; the site's pages were also checked in Safari.
 
 ## Deployed on Monad testnet
@@ -64,11 +64,11 @@ You need a computer with [Foundry](https://getfoundry.sh) and Node.
 
    Expected: the API run passes 29 of 29 and the web app run 64 of 64, with one optional check skipped (restoring the passkey in a second browser, which Chrome's virtual authenticator does not support). The Android run, `devices/run-stage-a-android.sh`, passes 34 of 34 on two Android emulators signed in to the same Google account, with real Google passkeys.
 
-6. Optional: unit tests of the engine (218), indexer (44), app (205) and site (25), Slither ([static analysis](https://github.com/Jagadeeshftw/mirror/blob/main/docs/security/static-analysis.md): 137 findings, each fixed or explained), and the deployment plan. Commands are on [Run the tests](/docs/run-the-tests).
+6. Optional: unit tests of the engine (227), indexer (44), app (252) and site (25), Slither ([static analysis](https://github.com/Jagadeeshftw/mirror/blob/main/docs/security/static-analysis.md): 137 findings, each fixed or explained), and the deployment plan. Commands are on [Run the tests](/docs/run-the-tests).
 
-## The app on testnet (pending)
+## The app on testnet
 
-These steps need the hosted service; the web app and the APK are live. Until the service is live, the app only shows the team-run demo account's copies, read from Monad, and the rest of this section is a description, not something you can do.
+These steps run against Mirror's hosted testnet service, live since 9 Oct 2026.
 
 **What you need:** an Android phone with Google Play services, signed in to a Google account, with a screen lock; or a desktop browser with passkey support. No wallet, no seed phrase, no MON.
 
@@ -81,4 +81,4 @@ These steps need the hosted service; the web app and the APK are live. Until the
 7. **Close all positions** and **Withdraw**: gasless, and always to you.
 8. Optional: on a second device signed in to the same Google account, tap **I already have an account**. The same address comes back.
 
-Team-run accounts are labelled and excluded from every count ([Team-run accounts](/docs/team-run-accounts)). Testnet tokens have no value. Live counts and every executed copy will be on the [public stats page](/stats) once the hosted indexer is live.
+Team-run accounts are labelled and excluded from every count ([Team-run accounts](/docs/team-run-accounts)). Testnet tokens have no value. Live counts and every executed copy are on the [public stats page](/stats), from the hosted engine.

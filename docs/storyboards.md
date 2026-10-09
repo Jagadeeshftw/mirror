@@ -16,12 +16,12 @@ testIDs are from `app/TESTIDS.md` (on the web build they are `data-testid`). Ste
 
 ### Before recording (all four videos)
 
-| Needed | Why | Status (8 Oct 2026) |
+| Needed | Why | Status (9 Oct 2026) |
 |---|---|---|
-| Hosted testnet engine and relayer | Account creation, deposits, follows, Run demo trade, copies, the feed | prepared on Railway (`mirror-testnet`), not live; the engine has run against public testnet from the developer's machine (`devices/evidence/stage-b/README.md`) |
-| Hosted testnet indexer | Leaderboard, stats page, per-copy quality | prepared, not live |
+| Hosted testnet engine and relayer | Account creation, deposits, follows, Run demo trade, copies, the feed | live on Railway (`mirror-testnet`) since 9 Oct 2026; public testnet end to end against it in `devices/evidence/stage-b-hosted/README.md` |
+| Hosted testnet indexer | Leaderboard, stats page, per-copy quality | live since 9 Oct 2026, still catching up on history (read-only GraphQL at https://hasura-testnet-production.up.railway.app/v1/graphql) |
 | Team-run demo leader's Perpl testnet account and the demo follower (`0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896`) | Watch mode, Run demo trade, Run blocked trade | done 8 Oct 2026: demo leader Perpl account 1000 (200 test AUSD); demo follower created, 150 test AUSD, following 1000 (max 2x, BTC and ETH, 1% of the leader's size) |
-| Testnet APK and web app published | Every app shot | done 8 Oct 2026: APK 1.0.1 on `/download`, web app at `/app` |
+| Testnet APK and web app published | Every app shot | done 8 Oct 2026: APK on `/download` (1.0.2 since 9 Oct), web app at `/app` |
 | Test AUSD for the recording account: 100 from the tester pool | Perpl's testnet minimum to open an account is 100 test AUSD | in the ops wallet |
 | A second wallet with a little test MON (the "stranger") | Executing someone else's take-profit | to create |
 

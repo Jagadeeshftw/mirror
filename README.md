@@ -3,7 +3,7 @@
 Copy the best traders on Perpl with your limits enforced onchain. Your own contract checks every copied order and can trade for you but never withdraw. Built on Monad.
 
 - Site and docs: https://mirror.0xo.in · Judges guide: https://mirror.0xo.in/docs/judges-guide
-- Web app: https://mirror.0xo.in/app · Android APK: https://mirror.0xo.in/download (both live on testnet since 8 Oct 2026; until the hosted engine is live they show the demo account's copies read from Monad, and creating an account, deposits and follows say "not live yet") · Public stats: https://mirror.0xo.in/stats
+- Web app: https://mirror.0xo.in/app · Android APK: https://mirror.0xo.in/download (both live on testnet since 8 Oct 2026, against Mirror's hosted testnet service since 9 Oct) · Public stats: https://mirror.0xo.in/stats
 - X: [@MirrorOnMonad](https://x.com/MirrorOnMonad)
 - Monad Metropolis, Track 01 Onchain Finance & Trading
 
@@ -30,12 +30,12 @@ The owner is the follower's passkey (Mera, WebAuthn PRF): one prompt, no seed ph
 |---|---|
 | Contracts (`contracts/`) | **Deployed on Monad testnet** and verified on Sourcify (7 Oct 2026, 21:56 UTC; addresses below). Not deployed on mainnet. 158 Foundry tests: unit, fuzz (1,000 runs), 12 invariant properties plus a call summary, and 6 mainnet-fork tests against the live Perpl Exchange and AUSD. Slither: 137 findings, each fixed or explained (`docs/security/static-analysis.md`). |
 | Local network (`localnet/`) | Perpl's real exchange code deployed as in Perpl's dex-sdk test kit, with Mirror on top. Stage A: API 29/29, web app 64/64 (one optional check skipped: second-browser passkey restore, unsupported by Chrome's virtual authenticator), Android app 34/34 on two Android emulators (`mirror-a`, `mirror-b`). |
-| Copy engine and relayer (`engine/`) | Built, 218 tests. Run against public Monad testnet from the developer's machine on 8 Oct 2026 (`devices/evidence/stage-b/README.md`). Hosting prepared on Railway (project `mirror-testnet`), **not live yet**. |
-| Indexer (`indexer/`) | Built (Envio HyperIndex; mainnet and testnet configs), with per-copy quality proof. 44 tests. Hosting prepared, **not live yet**. |
-| App (`app/`) | Android app and web app 1.0.1 (Expo, Mera passkeys), 205 tests. Tested on Android emulators and in Chrome. **Live on testnet since 8 Oct 2026:** web app at https://mirror.0xo.in/app; APK 1.0.1 (versionCode 101) on https://mirror.0xo.in/download, GitHub Release `v1.0.1-testnet`, SHA-256 `2cee6e97e170a0d033e3d17cec712c38e5caa8dac0b6673219ca9e44a51a7728` (notes: `docs/releases/1.0.1-testnet.md`). Public testnet end to end: 11 of 11 steps on Android emulators with the engine run on the developer's machine (`devices/evidence/stage-b/README.md`). |
+| Copy engine and relayer (`engine/`) | Built, 227 tests. **Hosted on Railway since 9 Oct 2026** (project `mirror-testnet`): https://engine-production-0fd2.up.railway.app. Public testnet end to end against it: `devices/evidence/stage-b-hosted/README.md` (the 8 Oct run from the developer's machine: `devices/evidence/stage-b/README.md`). |
+| Indexer (`indexer/`) | Built (Envio HyperIndex; mainnet and testnet configs), with per-copy quality proof. 44 tests. **Hosted since 9 Oct 2026**, public read-only GraphQL (https://hasura-testnet-production.up.railway.app/v1/graphql, https://hasura-mainnet-production.up.railway.app/v1/graphql), still catching up on history. |
+| App (`app/`) | Android app and web app 1.0.2 (Expo, Mera passkeys), 252 tests. Tested on Android emulators and in Chrome. **Live on testnet since 8 Oct 2026:** web app at https://mirror.0xo.in/app; APK 1.0.2 (versionCode 102) on https://mirror.0xo.in/download, GitHub Release `v1.0.2-testnet`, SHA-256 `713b904fe2d548ae542a40e06c83a69697a13ee9928a5f67440da33c667ea566` (notes: `docs/releases/1.0.2-testnet.md`). Public testnet end to end against the hosted engine: 16 of 16 steps on Android emulators; in the live web app, every step except withdraw and Web Push, which wait on a rerun (`devices/evidence/stage-b-hosted/README.md`). |
 | Site, docs, stats (`web/`) | Live at https://mirror.0xo.in. 25 tests. |
-| Team-run demo leader | Mainnet: Perpl account 5416, 10.00 AUSD, no trades (`docs/funding-ledger.md`). Testnet: Perpl account 1000, 200 test AUSD; demo follower MirrorAccount `0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896` created and funded with 150 test AUSD on 8 Oct 2026. |
-| Users | None yet. Testnet tester round: 25 outside testers at 100 test AUSD each, from 2,500 test AUSD Perpl provided (`docs/tester-kit.md`). |
+| Team-run demo leader | Mainnet: Perpl account 5416, 10.00 AUSD, no trades (`docs/funding-ledger.md`). Testnet: Perpl account 1000 (opened with 200 test AUSD; 99.65 after 100 went to a test run on 9 Oct, `docs/funding-ledger.md`); demo follower MirrorAccount `0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896` created and funded with 150 test AUSD on 8 Oct 2026. |
+| Users | None yet: the public stats page counts 0 outside accounts (team-run and the team's own test accounts are listed separately). Testnet tester round next: 25 outside testers at 100 test AUSD each, from 2,500 test AUSD Perpl provided (`docs/tester-kit.md`); no invites sent yet. |
 
 ## Repository layout
 

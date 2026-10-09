@@ -2,7 +2,7 @@
 
 Link: **https://mirror.0xo.in/app** (testnet; test funds only). Android: the APK on https://mirror.0xo.in/download.
 
-Needs the hosted engine for steps 3-8 (the demo runs, creating an onchain account, following). Until it is live, steps 1-2 work and the rest say "not live yet" before any passkey prompt. Safari on iPhone has not been through Mirror's automated passkey tests yet (they run in Chrome and on Android emulators), so tell me exactly where anything differs.
+Steps 3-8 (the demo runs, creating an onchain account, following) use Mirror's hosted testnet service, live since 9 Oct 2026. If it is ever unreachable, steps 1-2 still work and the rest say "Can't reach Mirror's service" before any passkey prompt. Safari on iPhone has not been through Mirror's automated passkey tests yet (they run in Chrome and on Android emulators), so tell me exactly where anything differs.
 
 ## iPhone, Safari (iOS 18 or newer, iCloud Keychain on)
 

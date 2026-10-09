@@ -34,31 +34,31 @@ Status is updated as the product ships. Targets are targets, not results. Every 
 
 Target: under 3 minutes from install to a funded follow, timed in the demo video. Status: pending.
 
-## What we measure (public stats page, read from the Envio indexer)
+## What we measure (public stats page, from the hosted engine)
 | Metric | Source | Value now |
 |---|---|---|
-| MirrorAccounts created | `AccountCreated` events | 0 (testnet contracts deployed 7 Oct 2026; mainnet not deployed) |
+| MirrorAccounts created | `AccountCreated` events | 0 on 9 Oct 2026 (testnet contracts deployed 7 Oct 2026; mainnet not deployed) |
 | Funded accounts | `Deposited` events | 0 |
 | AUSD deposited, net | `Deposited` minus `Withdrawn` | 0 |
 | Copies executed | `Mirrored` events | 0 |
 | Copies blocked by a rule, per rule | `Blocked` events | 0 |
-| Median leader-to-copy latency | leader fill block/time vs `Mirrored` tx | not measured yet |
+| Median leader-to-copy latency | leader fill block/time vs `Mirrored` tx | no outside copies yet (team-run demo copies: about 0.6 s, 2 blocks) |
 | Followers active in the last 7 days | accounts with a `Mirrored` event | 0 |
 
-These are outside users' figures. The team's own testnet accounts (the team-run demo follower and one test account, 8 Oct 2026) have testnet activity, including real copies and a block on the demo follower (`devices/evidence/stage-b/README.md`), and are not counted.
+These are outside users' figures, as the stats page shows them on 9 Oct 2026. The team's own testnet accounts (the team-run demo follower and the test accounts from the end-to-end runs on 8 and 9 Oct) have real copies and blocks (`devices/evidence/stage-b/README.md`, `devices/evidence/stage-b-hosted/README.md`) and are listed separately, not counted.
 
-The stats page is built; its numbers need the hosted indexer, which is not live yet. It will be served from the same indexer as the app, so the submission numbers and the page always agree.
+The stats page is live at https://mirror.0xo.in/stats, served by the same hosted engine as the app, so the submission numbers and the page always agree; its copy-quality figures come from the hosted Envio indexer, which is still catching up on history.
 
 ## Milestones and targets
 | Milestone | Target | Status |
 |---|---|---|
 | Contracts tested, including against live Perpl on a mainnet fork | done | done: 158 tests passing, 6 of them fork tests |
 | Contracts deployed and verified on Monad testnet | before the tester round | done: 7 Oct 2026, 21:56 UTC, verified on Sourcify |
-| Hosted testnet engine and indexer | before the tester round | prepared on Railway, not live |
+| Hosted testnet engine and indexer | before the tester round | done: live on Railway since 9 Oct 2026 (the indexers still catching up on history) |
 | Testnet tester round | 25 outside testers at 100 test AUSD each (2,500 test AUSD from Perpl) | pending |
 | Contracts deployed and verified on Monad mainnet | after the testnet round, on the owner's go | pending |
-| Demo leader and demo follower copying | first real copies with tx links (testnet first) | done on testnet, 8 Oct 2026, with the engine run on the developer's machine: [copy](https://testnet.monadvision.com/tx/0xc14cd15a3d3243263fc3b43cd2b7d1ae349c407622bf7479dc788ef7c873aa9b), [close](https://testnet.monadvision.com/tx/0x83922244bd82b863b07e8e7c771d39757d631d61327459afb89054ee04bfe373), [blocked](https://testnet.monadvision.com/tx/0xcfeeda062c5a5590e051c892d7c379c0019d93548f5f66f13043718f7a6d80aa); from the hosted engine: pending |
-| Android APK public | download link on the site | done for testnet: APK 1.0.1 on `/download`, 8 Oct 2026 |
+| Demo leader and demo follower copying | first real copies with tx links (testnet first) | done on testnet: 8 Oct 2026 from the developer's machine (`devices/evidence/stage-b/README.md`), 9 Oct from the hosted engine: [copy](https://testnet.monadvision.com/tx/0xfd60066f5cb2613ef657c0026781783b784ccb38dbf3cf5a04d1e66777c93110), [close, fee 0](https://testnet.monadvision.com/tx/0xdad63b1568311e1251c6d811ea4ba2fd96780160821957cae03ef249481bcb7e), [blocked](https://testnet.monadvision.com/tx/0x464e326f240fe3392dba0ab92968fa4632cb9e8e7637523a9b1c6a933e97a57e) |
+| Android APK public | download link on the site | done for testnet: APK on `/download` since 8 Oct 2026, now 1.0.2 (9 Oct) |
 | First external funded follower | 1 | pending |
 | External funded followers before judging (13 Oct) | 10 | pending (target) |
 

@@ -7,7 +7,7 @@ For the testnet round: 25 outside testers, 100 test AUSD each. The steps are pub
 > I'm testing Mirror, a copy-trading app for Perpl on Monad: your own contract copies a trader for you, checks your limits on every order, and can never withdraw.
 >
 > Could you try it on Monad testnet for about 15 minutes and tell me what broke or confused you? I'll send you 100 test AUSD to trade with.
-> - Android: https://github.com/Jagadeeshftw/mirror/releases/download/v1.0.1-testnet/mirror-1.0.1-testnet.apk (Mirror 1.0.1, SHA-256 2cee6e97e170a0d033e3d17cec712c38e5caa8dac0b6673219ca9e44a51a7728; Android 14 or newer). Install steps: https://mirror.0xo.in/download
+> - Android: https://github.com/Jagadeeshftw/mirror/releases/download/v1.0.2-testnet/mirror-1.0.2-testnet.apk (Mirror 1.0.2, SHA-256 713b904fe2d548ae542a40e06c83a69697a13ee9928a5f67440da33c667ea566; Android 14 or newer). Install steps: https://mirror.0xo.in/download
 > - Laptop: https://mirror.0xo.in/app in Chrome
 > - Steps and what to send back: https://mirror.0xo.in/docs/testers
 >
@@ -68,18 +68,18 @@ Please don't send passkeys, recovery phrases or private keys. Mirror never asks 
   2. Send, with the nonce the plan printed: `node send-test-ausd.mjs --network testnet --to <address> ... --send --expect-nonce <n>`.
   3. Paste the printed ledger rows into `docs/funding-ledger.md`, and tell the tester to look for 100.00 in the balance chip.
   The script refuses any network but testnet, duplicate addresses, and a send that would overdraw the pool (`--keep <AUSD>` sets a floor).
-- **Gas budget (test MON, from the gas limits Monad charged in the Stage B runs, at 102 gwei):** per tester about 0.87 MON, made up of create 200,421 + permit deposit 516,436 + follow with match-now about 1.02M + levels about 0.2M + stop following 116,884 + close all 507,549 + withdraw 275,999 + about 10 copies at about 566k + the 100 test AUSD send 64,228 = about 8.5M gas. **25 testers: about 22 MON.** Each Run demo trade costs about 0.17 MON (leader open and close plus the demo follower's copies); the engine caps demos at 48 a day, at most about 8 MON a day. The ops wallet holds 63.14 MON (9 Oct), enough for the round plus a few days of demos at the cap.
+- **Gas budget (test MON, from the gas limits Monad charged in the Stage B runs, at 102 gwei):** per tester about 0.87 MON, made up of create 200,421 + permit deposit 516,436 + follow with match-now about 1.02M + levels about 0.2M + stop following 116,884 + close all 507,549 + withdraw 275,999 + about 10 copies at about 566k + the 100 test AUSD send 64,228 = about 8.5M gas. **25 testers: about 22 MON.** Each Run demo trade costs about 0.17 MON (leader open and close plus the demo follower's copies); the engine caps demos at 48 a day, at most about 8 MON a day. The ops wallet holds 61.13 MON (9 Oct, after the hosted end-to-end runs), enough for the round plus a few days of demos at the cap.
 - Gas for testers is paid by Mirror's relayer and keeper (the ops wallet's test MON), not by testers; watch its MON balance during the round.
 
 ### Before the first invite
 
 - [x] Contracts deployed and verified on testnet (KeeperRegistry `0x394B12D4355bE5B54DBCaa989cf44F8966195E41`, MirrorAccountFactory `0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39`, implementation `0x648e35cdfD4Aca744Ed33c69A0089A5621A76316`).
-- [ ] Hosted testnet engine, relayer and indexer live (`scripts/railway-up.sh`); `/v1/config` reports chain 10143 and the factory above.
+- [x] Hosted testnet engine, relayer and indexer live (`scripts/railway-up.sh`); `/v1/config` reports chain 10143 and the factory above (9 Oct 2026; the indexers are still catching up on history).
 - [x] Team-run demo leader's Perpl testnet account opened (account 1000, 200 test AUSD) and the demo follower created (`0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896`, 150 test AUSD, following 1000), 8 Oct 2026.
-- [ ] Run demo trade and Run blocked trade work once each (needs the hosted engine).
-- [x] APK published with its SHA-256 on `/download` (1.0.1, GitHub Release `v1.0.1-testnet`); web app live at `/app` (8 Oct 2026).
-- [ ] Ops wallet test MON topped up from the faucet: about 58.9 MON after the deploy, and the relayer and keeper pay every tester's gas.
-- [ ] Walk steps 1-8 once yourself on an Android emulator and in Chrome.
+- [x] Run demo trade and Run blocked trade work once each (9 Oct 2026, hosted engine, on an Android emulator and in Chrome; `devices/evidence/stage-b-hosted/README.md`).
+- [x] APK published with its SHA-256 on `/download` (1.0.2, GitHub Release `v1.0.2-testnet`, 9 Oct 2026); web app live at `/app` (8 Oct 2026).
+- [x] Ops wallet test MON enough for the round: 61.13 MON on 9 Oct against about 22 MON for 25 testers; the relayer and keeper pay every tester's gas.
+- [ ] Walk steps 1-8 once yourself on an Android emulator and in Chrome. Done against the hosted engine on 9 Oct except step 6 (stop-loss and take-profit levels, not part of those runs) and, in Chrome, step 8's withdraw (`devices/evidence/stage-b-hosted/README.md`).
 
 ### Sending test AUSD
 

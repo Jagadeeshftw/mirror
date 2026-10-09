@@ -4,10 +4,9 @@ STATUS (8 OCT 2026)
   MirrorAccountFactory 0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39
   MirrorAccount implementation 0x648e35cdfD4Aca744Ed33c69A0089A5621A76316
   They run against Perpl's testnet Exchange 0x1964C32f0bE608E7D29302AFF5E61268E72080cc and test AUSD 0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC. Perpl builder 26 (0.02% of opening size) is set in this deployment.
-- Hosted copy engine and indexer: prepared, not live yet. The engine has been run against public testnet from the developer's machine (below).
+- Hosted copy engine and relayer: live since 9 Oct 2026 at https://engine-production-0fd2.up.railway.app (/v1/health). Envio indexers with public read-only GraphQL: https://hasura-testnet-production.up.railway.app/v1/graphql (testnet, Mirror's data) and https://hasura-mainnet-production.up.railway.app/v1/graphql (mainnet, Perpl analytics), still catching up on history.
 - Site, docs and web app: live at https://mirror.0xo.in; the web app at https://mirror.0xo.in/app since 8 Oct 2026.
-- Android APK: Mirror 1.0.1 (testnet beta) at https://mirror.0xo.in/download, GitHub Release v1.0.1-testnet, SHA-256 2cee6e97e170a0d033e3d17cec712c38e5caa8dac0b6673219ca9e44a51a7728. Needs Android 14+ with Google Password Manager.
-- Until the hosted engine is live, the web app and the APK show the team-run demo account's copies read straight from Monad (Run buttons off), and creating an account, deposits and follows say "not live yet" before any passkey prompt.
+- Android APK: Mirror 1.0.2 (testnet beta) at https://mirror.0xo.in/download, GitHub Release v1.0.2-testnet, SHA-256 713b904fe2d548ae542a40e06c83a69697a13ee9928a5f67440da33c667ea566. Needs Android 14+ with Google Password Manager.
 - Team-run testnet accounts: demo leader Perpl account 1000; demo follower MirrorAccount 0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896 (max 2x, BTC and ETH, 1% of the leader's size).
 - Monad mainnet: Mirror's contracts are not deployed. The team-run demo leader exists as Perpl account 5416 (10.00 AUSD, no trades).
 - Mirror has been tested on Android emulators only.
@@ -21,15 +20,14 @@ WHAT YOU CAN VERIFY TODAY (a computer with Foundry and Node)
 4. Testnet contracts: open https://repo.sourcify.dev/10143/0xaD81567BF5ee4206Ef349E9CCe6719210f16bD39 (and the other two addresses) to compare the verified source with contracts/src.
 5. Full stack on a local network running Perpl's real exchange code (needs anvil): (cd contracts && forge build) && (cd scripts && npm install) && cd localnet && npm install && npm run fetch && ./run-stage-a.sh --all
    Expected: API 29 of 29, web app 64 of 64 (one optional check skipped: second-browser passkey restore, which Chrome's virtual authenticator does not support). The Android run (devices/run-stage-a-android.sh, 34 of 34) needs two signed-in Android emulators.
-6. Real copies on public Monad testnet, with the engine run on the developer's machine (Android emulators, 11 of 11 steps; every step and tx in devices/evidence/stage-b/README.md):
-   demo follower created https://testnet.monadvision.com/tx/0x64cb1e2e64a0f36f5876b1c8b66851dd7ea0349299ece130a7c5efbc77930d59, 150 test AUSD deposited by permit https://testnet.monadvision.com/tx/0xd4afdf05e36ed5d9f3a5fc86dda98bd25f20134164a801bf82c4f3447dc27833, follows leader 1000 https://testnet.monadvision.com/tx/0xe172e09112d5f3074d23b4b6233e10863d05e0b4ec001adb4f8a282106ea3987
-   copy of the leader's BTC open, builder 26 charged 166 units (0.000166 test AUSD, test funds) https://testnet.monadvision.com/tx/0xc14cd15a3d3243263fc3b43cd2b7d1ae349c407622bf7479dc788ef7c873aa9b
-   close copied with fee 0 https://testnet.monadvision.com/tx/0x83922244bd82b863b07e8e7c771d39757d631d61327459afb89054ee04bfe373
-   stop following, keep my positions (another account) https://testnet.monadvision.com/tx/0x741241722325f5536d633d084b824734ed2539c5d14aa7a2677d6f6f2b89537a
-   10x copy blocked by the 2x rule https://testnet.monadvision.com/tx/0xcfeeda062c5a5590e051c892d7c379c0019d93548f5f66f13043718f7a6d80aa
+6. Real copies on public Monad testnet against the hosted engine, 9 Oct 2026 (Android emulators, 16 of 16 steps, and the live web app; every step and tx in devices/evidence/stage-b-hosted/README.md; the 8 Oct run from the developer's machine is in devices/evidence/stage-b/README.md):
+   demo trade from an account with no funds: copy with builder 26 charged 166 units (0.000166 test AUSD, test funds) https://testnet.monadvision.com/tx/0xfd60066f5cb2613ef657c0026781783b784ccb38dbf3cf5a04d1e66777c93110, its close copied with fee 0 https://testnet.monadvision.com/tx/0xdad63b1568311e1251c6d811ea4ba2fd96780160821957cae03ef249481bcb7e
+   a follower's copy of the leader's BTC open after a permit deposit, builder 26 charged 0.016526 test AUSD, Firebase alert delivered https://testnet.monadvision.com/tx/0x297284a6b1f2259ee4a927d40643ae349fde14ed528d721bb9032c6ca1f6fb7b
+   stop following, keep my positions https://testnet.monadvision.com/tx/0xb08c19d6a072c7d3ebb465bc111051217038f97a4ad2666d140a640136c558b0; close all https://testnet.monadvision.com/tx/0xf8b251d53d9cdea821149ce0836603a6ac816e677fe890c4e22c42f75c4d98bb; withdraw https://testnet.monadvision.com/tx/0xb6a8713e0c7c297f94f7f1270e70f83f99a62c07b83e12309bf3d703f7118373
+   10x copy blocked by the 2x rule https://testnet.monadvision.com/tx/0x464e326f240fe3392dba0ab92968fa4632cb9e8e7637523a9b1c6a933e97a57e
 Every command and its expected output: https://mirror.0xo.in/docs/run-the-tests
 
-TESTNET PATH (PENDING: needs the hosted engine; the web app and the APK are live. Until it is, the app only shows the demo account's copies read from Monad, with the Run buttons off)
+TESTNET PATH (works against the hosted engine since 9 Oct 2026)
 What you need: an Android phone with Google Play services, signed in to a Google account, with a screen lock; or a desktop browser with passkey support. No wallet, no seed phrase, no MON. Mirror has been tested on Android 15 emulators and in Chrome; the site's pages were also checked in Safari.
 1. Open https://mirror.0xo.in/download for the Android APK, or https://mirror.0xo.in/app in a browser.
 2. Tap Create account and approve the single passkey prompt. That passkey is your account.
