@@ -47,7 +47,7 @@ export function copyToEvent(c: IndexerCopy, account: Address): FeedEvent {
     teamRun: c.teamRun,
     pricePNS: String(c.proofFillPNS !== "0" ? c.proofFillPNS : c.fillPricePNS),
     leverageHdths: c.leverageHdths,
-    ...(c.latencySeconds !== null && c.latencySeconds !== undefined ? { latencyMs: c.latencySeconds * 1000 } : {}),
+    // Block timestamps are whole seconds, so the indexer's latencySeconds would read as "0.00 s": blocks only.
     ...(c.latencyBlocks !== null && c.latencyBlocks !== undefined ? { latencyBlocks: c.latencyBlocks } : {}),
     proof: {
       leaderFillPNS: String(c.leaderFillReportedPNS),

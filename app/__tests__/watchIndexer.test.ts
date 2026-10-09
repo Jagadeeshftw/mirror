@@ -14,9 +14,10 @@ const blocked: IndexerBlocked = {
 };
 
 describe("watch mode from the indexer", () => {
-  it("maps a CopyEvent to a Mirrored feed event with its proof, fee and latency", () => {
+  it("maps a CopyEvent to a Mirrored feed event with its proof, fee and latency in blocks", () => {
     const e = copyToEvent(copy, A);
-    expect(e).toMatchObject({ kind: "Mirrored", orderType: 0, perpId: 16, leaderAccountId: 1000, txHash: copy.txHash, timestamp: copy.timestamp * 1000, latencyMs: 1000, latencyBlocks: 2, commitState: "finalized" });
+    expect(e).toMatchObject({ kind: "Mirrored", orderType: 0, perpId: 16, leaderAccountId: 1000, txHash: copy.txHash, timestamp: copy.timestamp * 1000, latencyBlocks: 2, commitState: "finalized" });
+    expect(e.latencyMs).toBeUndefined(); // whole-second block timestamps: never shown as "1.00 s" or "0.00 s"
     expect(e.proof).toMatchObject({ fillPNS: "826100", leaderEntryPNS: "826000", builderFeeCNS: "166", entryDeviationBps: 1 });
   });
   it("maps a BlockedCopy to a Blocked feed event with the rule and numbers", () => {

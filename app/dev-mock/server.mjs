@@ -502,6 +502,34 @@ demoFollower.hwm = 25_420_000n;
 demoFollower.realisedByLeader.set(DEMO_LEADER.accountId, 420_000n);
 const demo = { cycles: [], busy: false, dailyCap: 200, dailyUsed: 37, perIpPerHour: 6, ipHits: new Map() };
 (function seedDemo() {
+  // Earlier runs over the last three hours, as the hosted engine keeps them (its latest 20 at any age): trades with
+  // their open and close copies, and blocked runs with their Blocked event, oldest first.
+  const L = cs(DEMO_LEADER.address);
+  const plan = ["trade", "blocked", "trade", "trade", "blocked", "trade", "trade"];
+  plan.forEach((kind, i) => {
+    const age = (190 - i * 23) * 60e3;
+    const t = now() - age;
+    const id = `c-00${30 + i}`;
+    const lat = [612, 588, 641, 603, 667, 596, 624][i];
+    if (kind === "trade") {
+      const open = ev(demoFollower, "Mirrored", { leaderAccountId: DEMO_LEADER.accountId, leaderAddress: L, perpId: 1, orderType: 0, lotLNS: "1", pricePNS: String(1183000 + i * 230), leverageHdths: 300, notionalCNS: String(1183000 + i * 230), latencyMs: lat }, age - 900);
+      const close = ev(demoFollower, "Mirrored", { leaderAccountId: DEMO_LEADER.accountId, leaderAddress: L, perpId: 1, orderType: 2, lotLNS: "1", pricePNS: String(1183100 + i * 230), leverageHdths: 0, notionalCNS: String(1183100 + i * 230), realisedPnlCNS: String(100 * (i + 1)), latencyMs: lat - 20 }, age - 20900);
+      demo.cycles.push({ id, kind, startedAt: t, status: "done", steps: [
+        { key: "leader_open", label: "Demo leader opened 1 lot BTC long at 3x", status: "done", txHash: txHash(), at: t + 300, commitState: "finalized" },
+        { key: "copy_open", label: "Copied into the team-run demo account", status: "done", txHash: open.txHash, latencyMs: lat, at: t + 900, commitState: "finalized" },
+        { key: "leader_close", label: "Demo leader closed", status: "done", txHash: txHash(), at: t + 20300, commitState: "finalized" },
+        { key: "copy_close", label: "Copy closed", status: "done", txHash: close.txHash, latencyMs: lat - 20, at: t + 20900, commitState: "finalized" },
+      ] });
+    } else {
+      const b = ev(demoFollower, "Blocked", { leaderAccountId: DEMO_LEADER.accountId, leaderAddress: L, perpId: 1, orderType: 0, lotLNS: "1", pricePNS: String(1183000 + i * 230), leverageHdths: 1200, leaderLotLNS: "1", leaderLeverageHdths: 1200, latencyMs: lat,
+        blocked: { reason: "LeverageTooHigh", reasonCode: 6, limit: "500", actual: "1200", rule: "Max leverage 5x" } }, age - 1000);
+      demo.cycles.push({ id, kind, startedAt: t, status: "done", steps: [
+        { key: "leader_open", label: "Demo leader opened 1 lot BTC long at 12x", status: "done", txHash: txHash(), at: t + 300, commitState: "finalized" },
+        { key: "copy_blocked", label: "Copy blocked onchain: max leverage 5x", status: "blocked", txHash: b.txHash, latencyMs: lat, at: t + 1000, commitState: "finalized", detail: "Blocked event emitted in its own transaction. Funds untouched." },
+        { key: "leader_close", label: "Demo leader closed again", status: "done", txHash: txHash(), at: t + 4200, commitState: "finalized" },
+      ] });
+    }
+  });
   const t = now() - 26 * 60e3;
   demo.cycles.push({
     id: "c-0037",
@@ -519,11 +547,15 @@ const demo = { cycles: [], busy: false, dailyCap: 200, dailyUsed: 37, perIpPerHo
   ev(demoFollower, "Mirrored", { leaderAccountId: DEMO_LEADER.accountId, leaderAddress: cs(DEMO_LEADER.address), perpId: 1, orderType: 2, lotLNS: "1", pricePNS: "1184120", leverageHdths: 0, notionalCNS: "1184120", realisedPnlCNS: "1300", latencyMs: 588 }, 25.6 * 60e3);
 })();
 
+// Quiet: nothing in the last 2 hours. Like the engine (its latest 20 runs at any age), the runs stay listed, older.
+const QUIET_SHIFT = 2.2 * 3600e3;
+const quietCycle = (cy) => ({ ...cy, startedAt: cy.startedAt - QUIET_SHIFT, steps: cy.steps.map((st) => (st.at ? { ...st, at: st.at - QUIET_SHIFT } : st)) });
+
 function demoState() {
   return {
     leader: { accountId: DEMO_LEADER.accountId, address: cs(DEMO_LEADER.address), teamRun: true },
     follower: serializeAccount(demoFollower),
-    cycles: SW.demoQuiet ? [] : demo.cycles.slice(-6).reverse(),
+    cycles: (SW.demoQuiet ? demo.cycles.map(quietCycle) : demo.cycles).slice(-6).reverse(),
     busy: demo.busy,
     limits: { perIpPerHour: demo.perIpPerHour, dailyCap: demo.dailyCap, dailyRemaining: demo.dailyCap - demo.dailyUsed },
   };

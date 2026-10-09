@@ -23,14 +23,15 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const tid = (id) => `[data-testid="${id}"]`;
 
 const STATES = {
+  // A visitor arriving while the service is down: the app falls back to its bundled network (testnet) and reads the
+  // real demo account from Monad and Mirror's hosted indexer.
   down: async (p) => {
-    await sw({});
+    await sw({ backend: "down" });
     await post("/__mock/scenario", { default: "new" });
     await signIn(p);
-    await sw({ backend: "down" });
-    await p.reload();
     await p.waitForSelector(tid("home.offline"), { timeout: 30000 });
-    await wait(6000); // RPC reads of the demo account
+    await p.waitForSelector(tid("watch.feed.0"), { timeout: 45000 }).catch(() => {});
+    await wait(3000);
   },
   empty: async (p) => {
     await sw({ demoQuiet: true });
