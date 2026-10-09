@@ -6,7 +6,7 @@
  * travelling-mask animation are the original's. Colours come from CSS variables:
  * --beam-color-1/2/3 and --path-color.
  */
-import React, { useId } from "react";
+import React, { useEffect, useId, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 
@@ -34,9 +34,14 @@ export function BeamPath({
 }) {
   const uid = useId().replace(/[:«»]/g, "");
   const reduce = useReducedMotion();
+  // The server cannot know the visitor's reduced-motion setting, so the first client render must draw exactly what
+  // the server drew; the still version (fewer gradient stops) only after hydration. Rendering it during hydration
+  // changed the element count and failed hydration (React #418) for visitors with Reduce Motion on.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const id = (k: string) => `${k}-${uid}`;
   const t = { duration, repeat: Infinity, ease: "linear" as const, repeatDelay, delay };
-  const still = reduce || !active;
+  const still = (hydrated && !!reduce) || !active;
 
   return (
     <svg

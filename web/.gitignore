@@ -45,3 +45,4 @@ next-env.d.ts
 /postdeploy-evidence/
 # Written by `next dev` (Next 16 agent rules); not project content.
 /AGENTS.md
+/scripts/.diag/

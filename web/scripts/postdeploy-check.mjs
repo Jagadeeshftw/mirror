@@ -4,7 +4,7 @@
 // pages the way a first-time visitor does:
 //
 //   - desktop Chrome (real Google Chrome via Playwright), 1440x900
-//   - Chrome at phone width (390x844, touch, iPhone user agent)
+//   - Chrome at phone width (390x844, touch, iPhone user agent, Reduce Motion on)
 //   - desktop Safari (real Safari via safaridriver; needs Develop > "Allow Remote Automation")
 //   - Safari at phone width (window sized to 390 CSS px wide)
 //
@@ -78,7 +78,7 @@ function verdict(name, page, r) {
   for (const e of r.consoleErrors ?? []) (isDown(e) ? expected : problems).push(`console error: ${e}`);
   for (const e of r.pageErrors ?? []) problems.push(`uncaught: ${e}`);
   for (const f of r.failedRequests ?? []) if (isDown(f.url)) expected.push(`failed request (backend down): ${f.url}`); else if (isOwn(f.url) || f.kind === "font") problems.push(`failed request: ${f.status ?? ""} ${f.kind ?? ""} ${f.url}${f.error ? ` (${f.error})` : ""}`.replace(/\s+/g, " "));
-  for (const s of r.statuses ?? []) if (s.status === 0 || s.status >= 400) problems.push(`own resource ${s.status}: ${s.url}`);
+  for (const s of r.statuses ?? []) if (s.status === 0 || s.status >= 400) (isDown(s.url) ? expected : problems).push(`own resource ${s.status}: ${s.url}`);
   if (r.recorder === false) problems.push("error recorder missing from the page (deploy predates it?)");
   if (r.width !== undefined && r.expectWidth && Math.abs(r.width - r.expectWidth) > 40) problems.push(`viewport ${r.width}px, expected ~${r.expectWidth}px`);
   if (r.width !== undefined && r.minWidth && r.width < r.minWidth) problems.push(`viewport ${r.width}px, expected a desktop width (>= ${r.minWidth}px)`);
@@ -214,7 +214,8 @@ async function safariRun() {
 console.log(`post-deploy check: ${BASE} · own origins ${OWN.join(", ")}${DOWN.length ? ` · known down ${DOWN.join(", ")}` : ""} · ${PAGES.length} pages · evidence ${OUT}`);
 if (!ONLY || ONLY === "chrome") {
   await chromeRun("Chrome desktop", { viewport: { width: 1440, height: 900 } }, 1440);
-  await chromeRun("Chrome phone", { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IPHONE_UA }, 390);
+  // Phone width with Reduce Motion on (common on iPhones): components that branch on it must hydrate cleanly.
+  await chromeRun("Chrome phone", { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IPHONE_UA, reducedMotion: "reduce" }, 390);
 }
 if (!ONLY || ONLY === "safari") await safariRun();
 

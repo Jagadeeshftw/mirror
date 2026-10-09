@@ -23,4 +23,4 @@ if command -v gh >/dev/null && [ "$(gh api user --jq .login 2>/dev/null)" = "Jag
 fi
 echo "deployed; running the post-deploy check against $SITE_URL"
 DOWN_ARGS=(); [ "${ENGINE_DOWN:-0}" = 1 ] && DOWN_ARGS=(--down "$EXPO_PUBLIC_API_BASE")
-node scripts/postdeploy-check.mjs --url "$SITE_URL" --own "$EXPO_PUBLIC_API_BASE" "${DOWN_ARGS[@]}" --out "$WEB_DIR/postdeploy-evidence/$(date -u +%Y%m%dT%H%M%SZ)"
+node scripts/postdeploy-check.mjs --url "$SITE_URL" --own "$EXPO_PUBLIC_API_BASE" ${DOWN_ARGS[@]+"${DOWN_ARGS[@]}"} --out "$WEB_DIR/postdeploy-evidence/$(date -u +%Y%m%dT%H%M%SZ)"
