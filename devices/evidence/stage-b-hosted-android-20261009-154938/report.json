@@ -1,0 +1,61 @@
+{
+  "flow": "devices/e2e/flows/stage-b-hosted-part4.flow",
+  "apk": "/Users/jagadeesh/personal/projects/grants/monad/mirror/app/dist/mirror-1.0.2-release.apk",
+  "package": "com.zeroxo.mirror",
+  "ok": false,
+  "summary": [
+    {
+      "step": "10b the test user resumes copying on the leader's profile (one passkey prompt): the stop no longer holds after the deposit",
+      "ok": false,
+      "commands": 5
+    }
+  ],
+  "commands": [
+    {
+      "line": 6,
+      "step": "10b the test user resumes copying on the leader's profile (one passkey prompt): the stop no longer holds after the deposit",
+      "cmd": "step 10b the test user resumes copying on the leader's profile (one passkey prompt): the stop no longer holds after the deposit",
+      "ok": true,
+      "secs": 9.2,
+      "shots": []
+    },
+    {
+      "line": 7,
+      "step": "10b the test user resumes copying on the leader's profile (one passkey prompt): the stop no longer holds after the deposit",
+      "cmd": "device b",
+      "ok": true,
+      "secs": 9.4,
+      "shots": []
+    },
+    {
+      "line": 8,
+      "step": "10b the test user resumes copying on the leader's profile (one passkey prompt): the stop no longer holds after the deposit",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 3.1,
+      "shots": [
+        "01-emulator-5556-s8-launch.png"
+      ]
+    },
+    {
+      "line": 9,
+      "step": "10b the test user resumes copying on the leader's profile (one passkey prompt): the stop no longer holds after the deposit",
+      "cmd": "open /funds",
+      "ok": true,
+      "secs": 5.1,
+      "shots": [
+        "02-emulator-5556-s9-open.png"
+      ]
+    },
+    {
+      "line": 10,
+      "step": "10b the test user resumes copying on the leader's profile (one passkey prompt): the stop no longer holds after the deposit",
+      "cmd": "readText id:funds.address addrB \"^0x[0-9a-fA-F ]{40,60}$\" 30",
+      "ok": false,
+      "error": "readText id:funds.address: None !~ /^0x[0-9a-fA-F ]{40,60}$/",
+      "shots": [
+        "03-emulator-5556-s10-FAILED.png"
+      ]
+    }
+  ]
+}

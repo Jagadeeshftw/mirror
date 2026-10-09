@@ -1,0 +1,362 @@
+{
+  "flow": "devices/e2e/flows/stage-b-hosted-part2.flow",
+  "apk": "/Users/jagadeesh/personal/projects/grants/monad/mirror/app/dist/mirror-1.0.2-release.apk",
+  "package": "com.zeroxo.mirror",
+  "ok": false,
+  "summary": [
+    {
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "ok": true,
+      "commands": 14
+    },
+    {
+      "step": "07 restore the test user (mirror-b)",
+      "ok": true,
+      "commands": 14
+    },
+    {
+      "step": "08 alerts on (one passkey prompt signs the Firebase registration)",
+      "ok": false,
+      "commands": 5
+    }
+  ],
+  "commands": [
+    {
+      "line": 4,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "step 06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "ok": true,
+      "secs": 9.2,
+      "shots": []
+    },
+    {
+      "line": 5,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "device a",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 6,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "clear",
+      "ok": true,
+      "secs": 0.1,
+      "shots": []
+    },
+    {
+      "line": 7,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "01-emulator-5554-s7-launch.png"
+      ]
+    },
+    {
+      "line": 8,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": true,
+      "secs": 4.7,
+      "shots": [
+        "02-emulator-5554-s8-waitFor.png"
+      ]
+    },
+    {
+      "line": 9,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "tap id:onboarding.restore",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "03-emulator-5554-s9-tap-id_onboarding.restore.png"
+      ]
+    },
+    {
+      "line": 10,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "passkey 90 \"^Mirror probe 2026-10-06\"",
+      "ok": true,
+      "secs": 17.5,
+      "shots": [
+        "04-emulator-5554-passkey-picker.png",
+        "05-emulator-5554-passkey-biometric.png",
+        "06-emulator-5554-s10-after-passkey.png"
+      ]
+    },
+    {
+      "line": 11,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "waitFor id:restore.go.home 120",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "07-emulator-5554-s11-waitFor.png"
+      ]
+    },
+    {
+      "line": 12,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "tap id:restore.go.home",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "08-emulator-5554-s12-tap-id_restore.go.home.png"
+      ]
+    },
+    {
+      "line": 13,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "open /funds",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "09-emulator-5554-s13-open.png"
+      ]
+    },
+    {
+      "line": 14,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "readText id:funds.address addr \"^0x[0-9a-fA-F ]{40,60}$\" 30",
+      "ok": true,
+      "secs": 2.1,
+      "values": {
+        "addr": "0x3aBF 625B e454 F8F7 8e5a DA1B 4AB6 27Ed e6C2 6C78"
+      },
+      "shots": [
+        "10-emulator-5554-s14-readText.png"
+      ]
+    },
+    {
+      "line": 15,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "squash addr",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addr": "0x3aBF625Be454F8F78e5aDA1B4AB627Ede6C26C78"
+      },
+      "shots": []
+    },
+    {
+      "line": 16,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "assertVar addr \"^0x3[aA][bB][fF]625[bB][eE]454\"",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addr": "0x3aBF625Be454F8F78e5aDA1B4AB627Ede6C26C78"
+      },
+      "shots": []
+    },
+    {
+      "line": 17,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "shell ${HOOK} follow-check ${addr}",
+      "ok": true,
+      "secs": 3.3,
+      "values": {
+        "followAccount": "0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896",
+        "deposited": "150.000000"
+      },
+      "shell": [
+        "VAR followAccount=0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896\nVAR deposited=150.000000\n{\"account\":\"0x634BFE3c2E4c483e8F7F4f3F3b6B2B7383A74896\",\"leaders\":[1000],\"deposits\":\"150000000\"}"
+      ],
+      "shots": [
+        "11-emulator-5554-s17-shell.png"
+      ]
+    },
+    {
+      "line": 20,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "step 07 restore the test user (mirror-b)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 21,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "device b",
+      "ok": true,
+      "secs": 9.3,
+      "shots": []
+    },
+    {
+      "line": 22,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "install",
+      "ok": true,
+      "secs": 2.6,
+      "shots": []
+    },
+    {
+      "line": 23,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "clear",
+      "ok": true,
+      "secs": 0.4,
+      "shots": []
+    },
+    {
+      "line": 24,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 3.2,
+      "shots": [
+        "01-emulator-5556-s24-launch.png"
+      ]
+    },
+    {
+      "line": 25,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": true,
+      "secs": 3.2,
+      "shots": [
+        "02-emulator-5556-s25-waitFor.png"
+      ]
+    },
+    {
+      "line": 26,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "tap id:onboarding.restore",
+      "ok": true,
+      "secs": 3.3,
+      "shots": [
+        "03-emulator-5556-s26-tap-id_onboarding.restore.png"
+      ]
+    },
+    {
+      "line": 27,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "passkey 90 \"^Probe 2026-10-06\"",
+      "ok": true,
+      "secs": 22.2,
+      "shots": [
+        "04-emulator-5556-passkey-picker.png",
+        "05-emulator-5556-passkey-biometric.png",
+        "06-emulator-5556-s27-after-passkey.png"
+      ]
+    },
+    {
+      "line": 28,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "waitFor id:restore.go.home 120",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "07-emulator-5556-s28-waitFor.png"
+      ]
+    },
+    {
+      "line": 29,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "tap id:restore.go.home",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "08-emulator-5556-s29-tap-id_restore.go.home.png"
+      ]
+    },
+    {
+      "line": 30,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "open /funds",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "09-emulator-5556-s30-open.png"
+      ]
+    },
+    {
+      "line": 31,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "readText id:funds.address addrB \"^0x[0-9a-fA-F ]{40,60}$\" 30",
+      "ok": true,
+      "secs": 2.1,
+      "values": {
+        "addrB": "0x1bbD 7e33 33B9 9E76 18C9 21B2 67ee 246D 1425 040D"
+      },
+      "shots": [
+        "10-emulator-5556-s31-readText.png"
+      ]
+    },
+    {
+      "line": 32,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "squash addrB",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addrB": "0x1bbD7e3333B99E7618C921B267ee246D1425040D"
+      },
+      "shots": []
+    },
+    {
+      "line": 33,
+      "step": "07 restore the test user (mirror-b)",
+      "cmd": "assertVar addrB \"^0x1[bB][bB][dD]7[eE]3333\"",
+      "ok": true,
+      "secs": 0.0,
+      "values": {
+        "addrB": "0x1bbD7e3333B99E7618C921B267ee246D1425040D"
+      },
+      "shots": []
+    },
+    {
+      "line": 35,
+      "step": "08 alerts on (one passkey prompt signs the Firebase registration)",
+      "cmd": "step 08 alerts on (one passkey prompt signs the Firebase registration)",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 36,
+      "step": "08 alerts on (one passkey prompt signs the Firebase registration)",
+      "cmd": "open /settings",
+      "ok": true,
+      "secs": 1.7,
+      "shots": [
+        "11-emulator-5556-s36-open.png"
+      ]
+    },
+    {
+      "line": 37,
+      "step": "08 alerts on (one passkey prompt signs the Firebase registration)",
+      "cmd": "scrollTo id:settings.alerts.toggle",
+      "ok": true,
+      "secs": 10.9,
+      "shots": [
+        "12-emulator-5556-s37-scrollTo.png"
+      ]
+    },
+    {
+      "line": 38,
+      "step": "08 alerts on (one passkey prompt signs the Firebase registration)",
+      "cmd": "tap id:settings.alerts.toggle",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "13-emulator-5556-s38-tap-id_settings.alerts.toggle.png"
+      ]
+    },
+    {
+      "line": 39,
+      "step": "08 alerts on (one passkey prompt signs the Firebase registration)",
+      "cmd": "passkey 90",
+      "ok": false,
+      "error": "passkey approval failed: {'ok': False, 'events': [], 'texts': [], 'error': 'timeout'}",
+      "shots": [
+        "14-emulator-5556-passkey-timeout.png",
+        "15-emulator-5556-s39-after-passkey.png",
+        "16-emulator-5556-s39-FAILED.png"
+      ]
+    }
+  ]
+}

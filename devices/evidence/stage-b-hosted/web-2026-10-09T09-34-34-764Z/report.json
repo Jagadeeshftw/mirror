@@ -1,0 +1,269 @@
+{
+  "run": "2026-10-09T09-34-34-764Z",
+  "web": "https://mirror.0xo.in/app",
+  "engine": "https://engine-production-0fd2.up.railway.app",
+  "perpl": "Perpl testnet (chain 10143)",
+  "startedAt": "2026-10-09T09:34:34.764Z",
+  "checks": [
+    {
+      "name": "fresh account on the live web app: Create account with one passkey ceremony",
+      "ok": true,
+      "optional": false,
+      "ms": 2746,
+      "screenshot": "001-fresh-account-on-the-live-web-app-Create-account-with-one-passkey-cere.png",
+      "ceremonies": [
+        {
+          "op": "create",
+          "ok": true,
+          "gotFirst": true,
+          "gotSecond": true
+        }
+      ]
+    },
+    {
+      "name": "hosted engine: watch mode Live, no service banner, Run buttons enabled",
+      "ok": true,
+      "optional": false,
+      "ms": 2339,
+      "screenshot": "002-hosted-engine-watch-mode-Live-no-service-banner-Run-buttons-enabled.png",
+      "banner": false,
+      "source": "Live"
+    },
+    {
+      "name": "Run demo trade: the copy lands; copy detail shows the proof and builder 26's fee (checked onchain)",
+      "ok": true,
+      "optional": false,
+      "ms": 5556,
+      "screenshot": "003-Run-demo-trade-the-copy-lands-copy-detail-shows-the-proof-and-builder-.png",
+      "tx": "0xcb940adb1bd270c15dc81dc8be7205e37cf556bf9a04acadb627d2f7e8e94db2",
+      "builderFeeCNS": "166",
+      "fee": "Mirror fee (builder 26)\n0.0002 AUSD · 0.02% of opening size, 0 on closes",
+      "leaderFill": "82,599.1",
+      "yourFill": "82,599.1",
+      "deviation": "+0.0 bps"
+    },
+    {
+      "name": "the demo's close copy follows with no builder fee (checked onchain)",
+      "ok": true,
+      "optional": false,
+      "ms": 20359,
+      "screenshot": null,
+      "tx": "0x4eaa8bcd3c0e03b66c8b04de16e11ec11e92ccff7d7a055e51969817a4cc1262",
+      "builderFeeCNS": "0"
+    },
+    {
+      "name": "Run blocked trade: Blocked onchain; the detail shows the rule, its limit and the actual value",
+      "ok": true,
+      "optional": false,
+      "ms": 4772,
+      "screenshot": "004-Run-blocked-trade-Blocked-onchain-the-detail-shows-the-rule-its-limit-.png",
+      "tx": "0x0ab5d940387c260c535a4d84612cc8b6c1bce0811b7bb466c85a468dbdae5227",
+      "reason": "LeverageTooHigh",
+      "limit": "200",
+      "actual": "1000",
+      "title": "Blocked by your max leverage rule"
+    },
+    {
+      "name": "web test account",
+      "ok": true,
+      "address": "0x2A1DC222b05B4820Ed921662515c0Da251499da1",
+      "isNote": true
+    },
+    {
+      "name": "phone layout: a second fresh account, then 100 test AUSD of team funds (demo leader's Perpl account, not the tester pool)",
+      "ok": true,
+      "optional": false,
+      "ms": 14301,
+      "screenshot": "005-phone-layout-a-second-fresh-account-then-100-test-AUSD-of-team-funds-d.png",
+      "owner": "0x513A84F7037Ba8E3663f3f4853cb9637Bd30533e",
+      "withdrawTx": "0xa1c918282253bec7f86f36221d6547a2bc924a0c6141e10b2eae21c15d3b797c",
+      "transferTx": "0xf858e80be37f29f167766506a718e3ff48fa65eb98c672bb3b250c25f770de5a",
+      "wallet": "100.000000",
+      "opsAusdBefore": "2500.000000",
+      "opsAusdAfter": "2500.000000"
+    },
+    {
+      "name": "follow the demo leader with a permit deposit of 100 and match now: fee line before the one passkey prompt",
+      "ok": true,
+      "optional": false,
+      "ms": 16564,
+      "screenshot": "006-follow-the-demo-leader-with-a-permit-deposit-of-100-and-match-now-fee-.png",
+      "status": "Following",
+      "fee": "Mirror fee: 0.02% of opening size (builder 26), up to 0.0200 AUSD per copy at your max notional; never on closes; your contract caps it at 0.02%.",
+      "prompts": 1,
+      "account": "0x7289C1b1CF709330263BeFAe8fFc2d23D5BC32CD",
+      "deposited": "100.000000"
+    },
+    {
+      "name": "alerts on (offered after the first follow): a real Web Push subscription, registered with the owner's signature",
+      "ok": false,
+      "optional": false,
+      "ms": 94049,
+      "screenshot": "007-alerts-on-offered-after-the-first-follow-a-real-Web-Push-subscription-.png",
+      "error": "timed out: registered"
+    },
+    {
+      "name": "a real copied Perpl testnet trade with builder 26's fee; the Web Push arrives as the generic 'Mirror · New activity'",
+      "ok": false,
+      "optional": false,
+      "ms": 158955,
+      "screenshot": "008-a-real-copied-Perpl-testnet-trade-with-builder-26-s-fee-the-Web-Push-a.png",
+      "copyTx": "0x771fc2efea2ddb1c49fa1ee5b90e6ac2513deb64f35e7d9fadce68d6148b867c",
+      "builderFeeCNS": "166",
+      "lots": "1",
+      "notifications": []
+    },
+    {
+      "name": "stop following, keep my positions (one passkey prompt): leaderDetached set onchain by the account's contract",
+      "ok": true,
+      "optional": false,
+      "ms": 10831,
+      "screenshot": "009-stop-following-keep-my-positions-one-passkey-prompt-leaderDetached-set.png",
+      "status": "Stopped, positions kept"
+    },
+    {
+      "name": "the leader exits: the demo follower's close is copied, the detached web account keeps its position",
+      "ok": true,
+      "optional": false,
+      "ms": 9929,
+      "screenshot": null,
+      "kept": "1",
+      "before": "1",
+      "demoCloseTx": "0x4eaa8bcd3c0e03b66c8b04de16e11ec11e92ccff7d7a055e51969817a4cc1262"
+    },
+    {
+      "name": "close all (one passkey prompt): flat onchain",
+      "ok": true,
+      "optional": false,
+      "ms": 9639,
+      "screenshot": "010-close-all-one-passkey-prompt-flat-onchain.png",
+      "lots": "0"
+    },
+    {
+      "name": "withdraw (one passkey prompt): back in the wallet",
+      "ok": false,
+      "optional": false,
+      "ms": 15248,
+      "screenshot": "011-withdraw-one-passkey-prompt-back-in-the-wallet.png",
+      "error": "locator.click: Timeout 15000ms exceeded. | Call log: |   - waiting for locator('[data-testid=\"withdraw.continue\"]').first()"
+    },
+    {
+      "name": "send the test AUSD back to the ops wallet (one passkey prompt, no gas)",
+      "ok": false,
+      "optional": false,
+      "blocked": true,
+      "error": "not run: needs withdrawn from an earlier step"
+    },
+    {
+      "name": "the demo leader opens at 10x: the demo follower's 2x rule blocks the copy, shown on the Demo screen",
+      "ok": true,
+      "optional": false,
+      "ms": 41423,
+      "screenshot": "012-the-demo-leader-opens-at-10x-the-demo-follower-s-2x-rule-blocks-the-co.png",
+      "tx": "0x361774085f4ee2923529eee22aa1dced73c90b9d4fe5c659aaf0c9378c373f84",
+      "reason": "LeverageTooHigh",
+      "shownOnDemoScreen": true
+    }
+  ],
+  "shots": [
+    {
+      "file": "001-fresh-account-on-the-live-web-app-Create-account-with-one-passkey-cere.png",
+      "label": "fresh account on the live web app: Create account with one passkey ceremony",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "002-hosted-engine-watch-mode-Live-no-service-banner-Run-buttons-enabled.png",
+      "label": "hosted engine: watch mode Live, no service banner, Run buttons enabled",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "003-Run-demo-trade-the-copy-lands-copy-detail-shows-the-proof-and-builder-.png",
+      "label": "Run demo trade: the copy lands; copy detail shows the proof and builder 26's fee (checked onchain)",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "004-Run-blocked-trade-Blocked-onchain-the-detail-shows-the-rule-its-limit-.png",
+      "label": "Run blocked trade: Blocked onchain; the detail shows the rule, its limit and the actual value",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "005-phone-layout-a-second-fresh-account-then-100-test-AUSD-of-team-funds-d.png",
+      "label": "phone layout: a second fresh account, then 100 test AUSD of team funds (demo leader's Perpl account, not the tester pool)",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "006-follow-the-demo-leader-with-a-permit-deposit-of-100-and-match-now-fee-.png",
+      "label": "follow the demo leader with a permit deposit of 100 and match now: fee line before the one passkey prompt",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "007-alerts-on-offered-after-the-first-follow-a-real-Web-Push-subscription-.png",
+      "label": "alerts on (offered after the first follow): a real Web Push subscription, registered with the owner's signature",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "008-a-real-copied-Perpl-testnet-trade-with-builder-26-s-fee-the-Web-Push-a.png",
+      "label": "a real copied Perpl testnet trade with builder 26's fee; the Web Push arrives as the generic 'Mirror · New activity'",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "009-stop-following-keep-my-positions-one-passkey-prompt-leaderDetached-set.png",
+      "label": "stop following, keep my positions (one passkey prompt): leaderDetached set onchain by the account's contract",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "010-close-all-one-passkey-prompt-flat-onchain.png",
+      "label": "close all (one passkey prompt): flat onchain",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "011-withdraw-one-passkey-prompt-back-in-the-wallet.png",
+      "label": "withdraw (one passkey prompt): back in the wallet",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "012-the-demo-leader-opens-at-10x-the-demo-follower-s-2x-rule-blocks-the-co.png",
+      "label": "the demo leader opens at 10x: the demo follower's 2x rule blocks the copy, shown on the Demo screen",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  ],
+  "finishedAt": "2026-10-09T09:41:22.604Z",
+  "passed": 11,
+  "failed": 4
+}

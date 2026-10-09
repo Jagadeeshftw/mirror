@@ -1,0 +1,528 @@
+{
+  "flow": "/Users/jagadeesh/personal/projects/grants/monad/mirror/devices/e2e/flows/stage-b-hosted.flow",
+  "apk": "/Users/jagadeesh/personal/projects/grants/monad/mirror/app/dist/mirror-1.0.2-release.apk",
+  "package": "com.zeroxo.mirror",
+  "ok": false,
+  "summary": [
+    {
+      "step": "01 fresh account on mirror-a: create with one passkey prompt",
+      "ok": true,
+      "commands": 7
+    },
+    {
+      "step": "02 watch mode on the hosted engine: Live, Team-run demo account, Run buttons enabled, no service banner",
+      "ok": true,
+      "commands": 7
+    },
+    {
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "ok": true,
+      "commands": 15
+    },
+    {
+      "step": "04 the demo's close copy follows with no builder fee",
+      "ok": true,
+      "commands": 2
+    },
+    {
+      "step": "05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "ok": true,
+      "commands": 11
+    },
+    {
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "ok": false,
+      "commands": 5
+    }
+  ],
+  "commands": [
+    {
+      "line": 8,
+      "step": "01 fresh account on mirror-a: create with one passkey prompt",
+      "cmd": "step 01 fresh account on mirror-a: create with one passkey prompt",
+      "ok": true,
+      "secs": 10.8,
+      "shots": []
+    },
+    {
+      "line": 9,
+      "step": "01 fresh account on mirror-a: create with one passkey prompt",
+      "cmd": "device a",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 10,
+      "step": "01 fresh account on mirror-a: create with one passkey prompt",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 3.2,
+      "shots": [
+        "01-emulator-5554-s10-launch.png"
+      ]
+    },
+    {
+      "line": 11,
+      "step": "01 fresh account on mirror-a: create with one passkey prompt",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": true,
+      "secs": 2.6,
+      "shots": [
+        "02-emulator-5554-s11-waitFor.png"
+      ]
+    },
+    {
+      "line": 12,
+      "step": "01 fresh account on mirror-a: create with one passkey prompt",
+      "cmd": "tap id:onboarding.createAccount",
+      "ok": true,
+      "secs": 3.4,
+      "shots": [
+        "03-emulator-5554-s12-tap-id_onboarding.createAccount.png"
+      ]
+    },
+    {
+      "line": 13,
+      "step": "01 fresh account on mirror-a: create with one passkey prompt",
+      "cmd": "passkey 90",
+      "ok": true,
+      "secs": 16.7,
+      "shots": [
+        "04-emulator-5554-passkey-biometric.png",
+        "05-emulator-5554-s13-after-passkey.png"
+      ]
+    },
+    {
+      "line": 14,
+      "step": "01 fresh account on mirror-a: create with one passkey prompt",
+      "cmd": "waitFor id:home.screen 90",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "06-emulator-5554-s14-waitFor.png"
+      ]
+    },
+    {
+      "line": 16,
+      "step": "02 watch mode on the hosted engine: Live, Team-run demo account, Run buttons enabled, no service banner",
+      "cmd": "step 02 watch mode on the hosted engine: Live, Team-run demo account, Run buttons enabled, no service banner",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 17,
+      "step": "02 watch mode on the hosted engine: Live, Team-run demo account, Run buttons enabled, no service banner",
+      "cmd": "waitFor id:home.watch 60",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "07-emulator-5554-s17-waitFor.png"
+      ]
+    },
+    {
+      "line": 18,
+      "step": "02 watch mode on the hosted engine: Live, Team-run demo account, Run buttons enabled, no service banner",
+      "cmd": "expectResult id:watch.teamRun \"Team-run\" 30",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "08-emulator-5554-s18-expectResult.png"
+      ]
+    },
+    {
+      "line": 19,
+      "step": "02 watch mode on the hosted engine: Live, Team-run demo account, Run buttons enabled, no service banner",
+      "cmd": "expectResult id:watch.source \"Live\" 60",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "09-emulator-5554-s19-expectResult.png"
+      ]
+    },
+    {
+      "line": 20,
+      "step": "02 watch mode on the hosted engine: Live, Team-run demo account, Run buttons enabled, no service banner",
+      "cmd": "expectResult id:home.equity \"^0\\.00$\" 30",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "10-emulator-5554-s20-expectResult.png"
+      ]
+    },
+    {
+      "line": 21,
+      "step": "02 watch mode on the hosted engine: Live, Team-run demo account, Run buttons enabled, no service banner",
+      "cmd": "scrollTo id:watch.runDemo",
+      "ok": true,
+      "secs": 4.1,
+      "shots": [
+        "11-emulator-5554-s21-scrollTo.png"
+      ]
+    },
+    {
+      "line": 22,
+      "step": "02 watch mode on the hosted engine: Live, Team-run demo account, Run buttons enabled, no service banner",
+      "cmd": "expectResult id:watch.runDemo \"^Run demo trade$\" 90",
+      "ok": true,
+      "secs": 2.3,
+      "shots": [
+        "12-emulator-5554-s22-expectResult.png"
+      ]
+    },
+    {
+      "line": 24,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "step 03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 25,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "shell ${HOOK} demo-mark",
+      "ok": true,
+      "secs": 1.5,
+      "values": {
+        "demoMarkBlock": "69288276"
+      },
+      "shell": [
+        "VAR demoMarkBlock=69288276"
+      ],
+      "shots": [
+        "13-emulator-5554-s25-shell.png"
+      ]
+    },
+    {
+      "line": 26,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "tap id:watch.runDemo",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "14-emulator-5554-s26-tap-id_watch.runDemo.png"
+      ]
+    },
+    {
+      "line": 27,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "shell ${HOOK} demo-copy open",
+      "ok": true,
+      "secs": 3.5,
+      "values": {
+        "demo_open_tx": "0x8854\u20265285",
+        "demo_open_fee": "0.000166"
+      },
+      "shell": [
+        "VAR demo_open_tx=0x8854\u20265285\nVAR demo_open_fee=0.000166\n{\"ok\":true,\"tx\":\"0x88548be896edd61647eb30f3549308c714045cbac97e3fb6501bce7fad5b5285\",\"builderId\":26,\"builderFeeCNS\":\"166\"}"
+      ],
+      "shots": [
+        "15-emulator-5554-s27-shell.png"
+      ]
+    },
+    {
+      "line": 28,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "scrollTo \"idtext:watch\\.feed\\.\\d+~Open .*${demo_open_tx}\"",
+      "ok": true,
+      "secs": 11.0,
+      "shots": [
+        "16-emulator-5554-s28-scrollTo.png"
+      ]
+    },
+    {
+      "line": 29,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "expectResult \"idtext:watch\\.feed\\.\\d+~Open .*${demo_open_tx}\" \"fee 0\\.0*[1-9]\" 90",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "17-emulator-5554-s29-expectResult.png"
+      ]
+    },
+    {
+      "line": 30,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "tap \"idtext:watch\\.feed\\.\\d+~Open .*${demo_open_tx}\"",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "18-emulator-5554-s30-tap-idtext_watch_.feed_._d_Open_._0x8854_5285.png"
+      ]
+    },
+    {
+      "line": 31,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "waitFor id:copy.detail 15",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "19-emulator-5554-s31-waitFor.png"
+      ]
+    },
+    {
+      "line": 32,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "expectResult id:copy.proof.leaderFill \"^[0-9][0-9,]*\\.[0-9]$\" 15",
+      "ok": true,
+      "secs": 4.5,
+      "shots": [
+        "20-emulator-5554-s32-expectResult.png"
+      ]
+    },
+    {
+      "line": 33,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "expectResult id:copy.proof.yourFill \"^[0-9][0-9,]*\\.[0-9]$\" 15",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "21-emulator-5554-s33-expectResult.png"
+      ]
+    },
+    {
+      "line": 34,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "expectResult id:copy.proof.deviation \"bps\" 15",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "22-emulator-5554-s34-expectResult.png"
+      ]
+    },
+    {
+      "line": 35,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "expectResult id:copy.proof.yourTx \"${demo_open_tx}\" 15",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "23-emulator-5554-s35-expectResult.png"
+      ]
+    },
+    {
+      "line": 36,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "scrollTo id:copy.proof.fee",
+      "ok": true,
+      "secs": 4.8,
+      "shots": [
+        "24-emulator-5554-s36-scrollTo.png"
+      ]
+    },
+    {
+      "line": 37,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "readText id:copy.proof.fee feeOpen \"builder 26\\) \\| (0\\.0*[1-9][0-9]* (test )?AUSD)\" 15",
+      "ok": true,
+      "secs": 2.1,
+      "values": {
+        "feeOpen": "0.0002 AUSD"
+      },
+      "shots": [
+        "25-emulator-5554-s37-readText.png"
+      ]
+    },
+    {
+      "line": 38,
+      "step": "03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain",
+      "cmd": "tap id:copy.detail.close",
+      "ok": true,
+      "secs": 2.7,
+      "shots": [
+        "26-emulator-5554-s38-tap-id_copy.detail.close.png"
+      ]
+    },
+    {
+      "line": 40,
+      "step": "04 the demo's close copy follows with no builder fee",
+      "cmd": "step 04 the demo's close copy follows with no builder fee",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 41,
+      "step": "04 the demo's close copy follows with no builder fee",
+      "cmd": "shell ${HOOK} demo-copy close",
+      "ok": true,
+      "secs": 2.9,
+      "values": {
+        "demo_close_tx": "0x454f\u202661a2",
+        "demo_close_fee": "0.000000"
+      },
+      "shell": [
+        "VAR demo_close_tx=0x454f\u202661a2\nVAR demo_close_fee=0.000000\n{\"ok\":true,\"tx\":\"0x454fa4e480065f02b22fa87e29d7925373ed5da4db3e1af4326c59e39bd861a2\",\"builderId\":0,\"builderFeeCNS\":\"0\"}"
+      ],
+      "shots": [
+        "27-emulator-5554-s41-shell.png"
+      ]
+    },
+    {
+      "line": 43,
+      "step": "05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "cmd": "step 05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 44,
+      "step": "05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "cmd": "scrollTo id:watch.runBlocked up",
+      "ok": true,
+      "secs": 8.7,
+      "shots": [
+        "28-emulator-5554-s44-scrollTo.png"
+      ]
+    },
+    {
+      "line": 45,
+      "step": "05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "cmd": "expectResult id:watch.runDemo \"^Run demo trade$\" 120",
+      "ok": true,
+      "secs": 2.2,
+      "shots": [
+        "29-emulator-5554-s45-expectResult.png"
+      ]
+    },
+    {
+      "line": 46,
+      "step": "05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "cmd": "shell ${HOOK} demo-mark",
+      "ok": true,
+      "secs": 1.6,
+      "values": {
+        "demoMarkBlock": "69502118"
+      },
+      "shell": [
+        "VAR demoMarkBlock=69502118"
+      ],
+      "shots": [
+        "30-emulator-5554-s46-shell.png"
+      ]
+    },
+    {
+      "line": 47,
+      "step": "05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "cmd": "tap id:watch.runBlocked",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "31-emulator-5554-s47-tap-id_watch.runBlocked.png"
+      ]
+    },
+    {
+      "line": 48,
+      "step": "05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "cmd": "shell ${HOOK} demo-blocked",
+      "ok": true,
+      "secs": 2.6,
+      "values": {
+        "demo_blocked_tx": "0xd2b5\u2026ab45"
+      },
+      "shell": [
+        "VAR demo_blocked_tx=0xd2b5\u2026ab45\n{\"tx\":\"0xd2b56286a32bc898117046c06f150f9d3149149488d2c44da6d5229a99adab45\",\"reason\":\"LeverageTooHigh\",\"limit\":\"200\",\"actual\":\"1000\"}"
+      ],
+      "shots": [
+        "32-emulator-5554-s48-shell.png"
+      ]
+    },
+    {
+      "line": 49,
+      "step": "05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "cmd": "scrollTo \"idtext:watch\\.feed\\.\\d+~Not copied.*${demo_blocked_tx}\"",
+      "ok": true,
+      "secs": 6.6,
+      "shots": [
+        "33-emulator-5554-s49-scrollTo.png"
+      ]
+    },
+    {
+      "line": 50,
+      "step": "05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "cmd": "tap \"idtext:watch\\.feed\\.\\d+~Not copied.*${demo_blocked_tx}\"",
+      "ok": true,
+      "secs": 2.8,
+      "shots": [
+        "34-emulator-5554-s50-tap-idtext_watch_.feed_._d_Not_copied._0xd2b5_ab45.png"
+      ]
+    },
+    {
+      "line": 51,
+      "step": "05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "cmd": "waitFor id:blocked.detail 20",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "35-emulator-5554-s51-waitFor.png"
+      ]
+    },
+    {
+      "line": 52,
+      "step": "05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "cmd": "expectResult id:blocked.title \"max leverage\" 15",
+      "ok": true,
+      "secs": 2.1,
+      "shots": [
+        "36-emulator-5554-s52-expectResult.png"
+      ]
+    },
+    {
+      "line": 53,
+      "step": "05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers",
+      "cmd": "tap id:blocked.done",
+      "ok": true,
+      "secs": 2.9,
+      "shots": [
+        "37-emulator-5554-s53-tap-id_blocked.done.png"
+      ]
+    },
+    {
+      "line": 56,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "step 06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 57,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "device a",
+      "ok": true,
+      "secs": 0.0,
+      "shots": []
+    },
+    {
+      "line": 58,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "install",
+      "ok": true,
+      "secs": 0.8,
+      "shots": []
+    },
+    {
+      "line": 59,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "launch",
+      "ok": true,
+      "secs": 2.4,
+      "shots": [
+        "38-emulator-5554-s59-launch.png"
+      ]
+    },
+    {
+      "line": 60,
+      "step": "06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found",
+      "cmd": "waitFor id:onboarding.screen 60",
+      "ok": false,
+      "error": "visible timeout (60.0s): id:onboarding.screen",
+      "shots": [
+        "39-emulator-5554-s60-FAILED.png"
+      ]
+    }
+  ]
+}

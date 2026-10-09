@@ -1,15 +1,36 @@
-# Stage-B hosted, part 4: continues stage-b-hosted.flow after step 10 (run devices/run-stage-b-android.sh --hosted
-# --keep-emulators --flow devices/e2e/flows/stage-b-hosted-part4.flow). The test user is signed in on mirror-b with
-# 100 test AUSD deposited; on 9 Oct its account had been paused by an account stop the engine triggered on the empty
-# account right after "Follow again" (fixed in the engine since: no account stop on an account with no equity).
+# Stage-B hosted, part 4: continues stage-b-hosted.flow after step 10, on the same onchain state (run
+# devices/run-stage-b-android.sh --hosted --flow devices/e2e/flows/stage-b-hosted-part4.flow). The runner reinstalls the
+# app on both emulators, so the test user is restored again (07), alerts are turned on again for the new install's
+# Firebase token (08), and its account is resumed (10b): on 9 Oct it had been paused by an account stop the engine
+# triggered on the empty account right after "Follow again" (fixed in the engine since: no account stop on an account
+# with no equity). Then steps 11-16 as in the full flow.
 
-step 10b the test user resumes copying on the leader's profile (one passkey prompt): the stop no longer holds after the deposit
+step 07 restore the test user (mirror-b)
 device b
+install
+clear
 launch
+waitFor id:onboarding.screen 60
+tap id:onboarding.restore
+passkey 90 "^Probe 2026-10-06"
+waitFor id:restore.go.home 120
+tap id:restore.go.home
 open /funds
 readText id:funds.address addrB "^0x[0-9a-fA-F ]{40,60}$" 30
 squash addrB
 assertVar addrB "^0x1[bB][bB][dD]7[eE]3333"
+
+step 08 alerts on: Android's notification permission (asked only now), then one passkey prompt signs the Firebase registration
+open /settings
+scrollTo id:settings.alerts.toggle
+tap id:settings.alerts.toggle
+sleep 3
+tapIfPresent text:Allow
+passkey 90
+scrollTo id:settings.alerts.channel
+expectResult id:settings.alerts.channel "Registered · Android push" 90
+
+step 10b the test user resumes copying on the leader's profile (one passkey prompt): the stop no longer holds after the deposit
 open /leader/1000
 waitFor id:leader.screen 30
 expectResult id:follow.status "^Paused$" 60
@@ -68,10 +89,20 @@ passkey 90
 expectResult id:withdraw.status "^Confirmed$" 180
 shell ${HOOK} wallet ${addrB}
 
-# ---------- 4. a copy the demo follower's rule blocks ----------
 step 16 the demo leader opens at 10x: the demo follower's 2x rule blocks the copy onchain (watch feed, mirror-a)
 device a
+clear
 launch
+waitFor id:onboarding.screen 60
+tap id:onboarding.restore
+passkey 90 "^Mirror probe 2026-10-06"
+waitFor id:restore.go.home 120
+tap id:restore.go.home
+open /funds
+readText id:funds.address addr "^0x[0-9a-fA-F ]{40,60}$" 30
+squash addr
+assertVar addr "^0x3[aA][bB][fF]625[bB][eE]454"
+shell ${HOOK} follow-check ${addr}
 shell ${HOOK} demo-mark
 shell ${HOOK} leader-trade open 20 1000
 shell ${HOOK} demo-blocked
