@@ -86,10 +86,12 @@ export function BeamPath({
             </>
           ) : (
             <>
-              <motion.stop offset="0%" stopColor="black" animate={{ offset: ["-25%", "100%"] }} transition={t} />
-              <motion.stop offset="5%" stopColor="white" animate={{ offset: ["-20%", "105%"] }} transition={t} />
-              <motion.stop offset="15%" stopColor="white" animate={{ offset: ["-10%", "115%"] }} transition={t} />
-              <motion.stop offset="20%" stopColor="black" animate={{ offset: ["-5%", "120%"] }} transition={t} />
+              {/* `initial` gives each offset a value from the first frame: without it motion can render a frame
+                  before the first keyframe applies and write offset="undefined" (a console error). */}
+              <motion.stop stopColor="black" initial={{ offset: "-25%" }} animate={{ offset: ["-25%", "100%"] }} transition={t} />
+              <motion.stop stopColor="white" initial={{ offset: "-20%" }} animate={{ offset: ["-20%", "105%"] }} transition={t} />
+              <motion.stop stopColor="white" initial={{ offset: "-10%" }} animate={{ offset: ["-10%", "115%"] }} transition={t} />
+              <motion.stop stopColor="black" initial={{ offset: "-5%" }} animate={{ offset: ["-5%", "120%"] }} transition={t} />
             </>
           )}
         </linearGradient>

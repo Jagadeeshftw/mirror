@@ -202,10 +202,10 @@ try {
   await R.check("a real copied Perpl testnet trade with builder 26's fee (checked onchain)", page, async () => {
     await page.goto(`${WEB}/home`);
     state.pushes0 = (await pushes(page)).length;
-    hook("leader-trade", "open", 50);
+    const lt = hook("leader-trade", "open", 50);
     const c = hook("wait-copy", state.owner, "open");
     state.lots = hook("lots", state.owner, "lots").vars.lots;
-    return { ok: c.json.ok && Number(state.lots) > 0 && BigInt(c.json.builderFeeCNS ?? 0) > 0n, copyTx: c.json.tx, builderFeeCNS: c.json.builderFeeCNS, lots: state.lots };
+    return { ok: c.json.ok && Number(state.lots) > 0 && BigInt(c.json.builderFeeCNS ?? 0) > 0n, leaderTx: lt.json.hash, copyTx: c.json.tx, builderFeeCNS: c.json.builderFeeCNS, lots: state.lots };
   }, { needs: ["followAccount"] });
   await R.check("that copy's Web Push reaches the service worker and shows the generic 'Mirror · New activity'", page, async () => {
     const got = await until("web push received", async () => { const p = await pushes(page); return p.length > state.pushes0 && p; }, 150_000, 3000).catch(() => []);
@@ -224,10 +224,10 @@ try {
   }, { needs: ["lots"] });
   await R.check("the leader exits: the demo follower's close is copied, the detached web account keeps its position", null, async () => {
     hook("demo-mark");
-    hook("leader-trade", "close", 50);
+    const lt = hook("leader-trade", "close", 50);
     const d = hook("demo-copy", "close");
     const kept = hook("lots", state.owner, "lots").vars.lots;
-    return { ok: kept === state.lots && d.json.ok, kept, before: state.lots, demoCloseTx: d.json.tx, demoCloseFeeCNS: d.json.builderFeeCNS };
+    return { ok: kept === state.lots && d.json.ok, kept, before: state.lots, leaderTx: lt.json.hash, demoCloseTx: d.json.tx, demoCloseFeeCNS: d.json.builderFeeCNS };
   }, { needs: ["lots"] });
   await R.check("close all (one passkey prompt): flat onchain", page, async () => {
     await page.goto(`${WEB}/positions`);
@@ -251,12 +251,12 @@ try {
   // ---------------------------------------------------------------- 3. the demo follower's rule blocks a 10x copy
   if (PARTS.has("blocked")) await R.check("the demo leader opens at 10x: the demo follower's 2x rule blocks the copy, shown on the Demo screen", page, async () => {
     hook("demo-mark");
-    hook("leader-trade", "open", 20, 1000);
+    const lt = hook("leader-trade", "open", 20, 1000);
     const b = hook("demo-blocked");
     await page.goto(`${WEB}/demo`);
     const card = await until("blocked row on Demo", async () => { await page.reload(); await sleep(1500); return findCard(page, "demo.feed.", "Blocked", { contains: shortHash(b.json.tx) }).then((c) => c ?? findCard(page, "watch.feed.", "Blocked", { contains: shortHash(b.json.tx) })); }, 120_000, 5000).catch(() => null);
-    hook("leader-trade", "close", 20);
-    return { ok: !!card && /LeverageTooHigh/.test(String(b.json.reason)), tx: b.json.tx, reason: b.json.reason, shownOnDemoScreen: !!card };
+    const lc = hook("leader-trade", "close", 20);
+    return { ok: !!card && /LeverageTooHigh/.test(String(b.json.reason)), leaderTx: lt.json.hash, tx: b.json.tx, reason: b.json.reason, shownOnDemoScreen: !!card, leaderCloseTx: lc.json.hash };
   });
   await ph.context.close();
 } finally {
