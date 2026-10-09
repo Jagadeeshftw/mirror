@@ -66,7 +66,7 @@ describe("bundledConfig", () => {
   });
   it("names the service for the network", () => {
     expect(serviceName("testnet")).toBe("Mirror's testnet service");
-    expect(serviceDownLine("testnet")).toBe("Mirror's testnet service isn't live yet");
+    expect(serviceDownLine("testnet")).toBe("Mirror's testnet service isn't reachable right now");
     expect(serviceDownLine("mainnet")).toBe("Mirror's service isn't reachable right now");
   });
 });

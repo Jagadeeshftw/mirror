@@ -10,6 +10,10 @@ Kept current while Stage B runs. Last updated: 2026-10-09 01:40 IST.
 | 2 | `cd ~/personal/projects/grants/monad/mirror && bash scripts/railway-secrets.sh`, from this checkout (the one linked to Railway project `mirror-testnet`). On 9 Oct 00:50 IST none of its variables were set on Railway; the script works from here (its stdin mechanism was checked with a dummy variable, then removed). It prints a `set X on Y` line per variable. | The hosted engine, relayer, both indexers and the HyperSync proxy; then `bash scripts/railway-up.sh` |
 | 3 | More testnet MON (optional) | Ops wallet holds 63.14 MON: the 25-tester round needs about 22, demos at most about 8 a day |
 
+## Later tasks
+
+- Railway config-as-code (`railway.json` at the repo root) is deprecated and keeps working until 2026-12-01. Migrate to Railway's infrastructure-as-code (`railway config migrate`, `.railway/railway.ts`) before then; not now (owner's call, 9 Oct).
+
 ## Decisions taken without review
 
 - Docker dry-run containers `mirror-dry-*` and `mirror-dry2-*` (7, stopped) were left in place rather than removed, under the no-deletion rule; `docker rm` them when convenient.

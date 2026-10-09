@@ -83,7 +83,7 @@ export function DemoCard({ w, cfg, live }: { w: WatchData; cfg: AppConfig | unde
   );
 }
 
-export function RunButtons({ w, onRun, busy, error, down }: { w: WatchData; onRun: (k: "trade" | "blocked") => void; busy: "trade" | "blocked" | null; error: RunError | null; down?: boolean }) {
+export function RunButtons({ w, onRun, busy, error, down, row }: { w: WatchData; onRun: (k: "trade" | "blocked") => void; busy: "trade" | "blocked" | null; error: RunError | null; down?: boolean; /** side by side (laptop) */ row?: boolean }) {
   const disabled = down || w.busy || !!busy || w.source !== "api";
   const note = down || w.via === "rpc"
     ? runNote()
@@ -92,8 +92,10 @@ export function RunButtons({ w, onRun, busy, error, down }: { w: WatchData; onRu
       : `Uses the team's money on Perpl, never yours.${w.limits ? ` ${w.limits.perIpPerHour} runs per hour per network · ${w.limits.dailyRemaining} left today.` : ""}`;
   return (
     <View style={{ gap: 8 }}>
-      <Button title={w.busy ? "Demo trade running" : busy === "trade" ? "Starting" : "Run demo trade"} icon="feed" onPress={() => onRun("trade")} disabled={disabled} testID="watch.runDemo" />
-      <Button title={busy === "blocked" ? "Starting" : "Run blocked trade"} icon="ban" kind="out" onPress={() => onRun("blocked")} disabled={disabled} testID="watch.runBlocked" />
+      <View style={row ? { flexDirection: "row", gap: 10 } : { gap: 8 }}>
+        <Button title={w.busy ? "Demo trade running" : busy === "trade" ? "Starting" : "Run demo trade"} icon="feed" onPress={() => onRun("trade")} disabled={disabled} flex={row} testID="watch.runDemo" />
+        <Button title={busy === "blocked" ? "Starting" : "Run blocked trade"} icon="ban" kind="out" onPress={() => onRun("blocked")} disabled={disabled} flex={row} testID="watch.runBlocked" />
+      </View>
       <T size={12} color="mu" center testID="watch.runNote">
         {note}
       </T>

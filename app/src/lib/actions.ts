@@ -26,7 +26,7 @@ export type Progress = (key: string, state: StepState, info?: Partial<RelayResul
 
 /**
  * Every flow here ends at the relayer. Check that Mirror's service answers before any passkey prompt, so the user
- * never approves something that can't be sent. Throws ApiError(0, "relay_unavailable") with the "not live yet" text.
+ * never approves something that can't be sent. Throws ApiError(0, "relay_unavailable") with the "can't reach Mirror's service" text.
  */
 export async function ensureRelay(health: (timeoutMs: number) => Promise<unknown> = (t) => api.health(t)): Promise<void> {
   try {

@@ -75,5 +75,13 @@ export function serviceName(name: NetworkName = NETWORK): string {
 
 /** One line on why something that needs Mirror's service can't run right now. */
 export function serviceDownLine(name: NetworkName = NETWORK): string {
-  return name === "testnet" ? "Mirror's testnet service isn't live yet" : "Mirror's service isn't reachable right now";
+  // The hosted testnet service is live (9 Oct 2026): when it does not answer, it is down, not "not live yet".
+  return `${serviceName(name)} isn't reachable right now`;
+}
+
+/** The indexer's public, read-only GraphQL for this build's network (testnet), used by watch mode when the engine is down. */
+export function indexerUrl(name: NetworkName = NETWORK): string | null {
+  if (name === "localnet") return null;
+  const n: any = (shared.networks as any)[name];
+  return typeof n?.indexerGraphql === "string" && n.indexerGraphql ? n.indexerGraphql : null;
 }

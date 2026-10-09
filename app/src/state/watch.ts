@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError, streamUrl } from "../lib/api";
 import { failTitle } from "../lib/conn";
-import { serviceDownLine } from "../lib/network";
+import { indexerUrl, serviceDownLine } from "../lib/network";
+import { readWatchFromIndexer } from "../lib/watchIndexer";
 import { publicClient } from "../lib/chain";
 import { openSse } from "../lib/sse";
 import type { Address, DemoCycle, DemoState, FeedEvent, FeedPage, MirrorAccount } from "../lib/types";
@@ -59,6 +60,9 @@ export interface WatchData {
   scannedMinutes: number | null;
   /** RPC reads: the read failed (Monad unreachable). */
   rpcError: boolean;
+  /** Where the history in `events` came from when the engine is down: Mirror's indexer (plus the newest blocks from
+   *  Monad), or Monad alone (a bounded scan of the last minutes). */
+  history?: "indexer" | "rpc";
   isLoading: boolean;
 }
 
@@ -83,14 +87,27 @@ export function useWatch(opts: { backendDown?: boolean } = {}): WatchData {
     refetchInterval: 10_000,
     retry: 1,
   });
+  const idxUrl = indexerUrl();
+  const idx = useQuery({
+    queryKey: ["watchIndexer", idxUrl, rpcAccount],
+    queryFn: () => readWatchFromIndexer(idxUrl!, rpcAccount!, 30),
+    enabled: useRpc && !!idxUrl && !!rpcAccount,
+    refetchInterval: 15_000,
+    retry: 0,
+  });
   if (useRpc) {
+    // The indexer's history, topped up with the newest blocks read from Monad (the indexer can trail by seconds).
+    const fromRpc = rpc.data?.events ?? [];
+    const seen = new Set(fromRpc.map((e) => `${e.txHash}-${e.kind}`));
+    const merged = [...fromRpc, ...(idx.data ?? []).filter((e) => !seen.has(`${e.txHash}-${e.kind}`))].sort((a, b) => b.timestamp - a.timestamp);
     return {
-      source: rpc.data ? "rpc" : "none",
+      source: rpc.data || idx.data ? "rpc" : "none",
       via: "rpc",
+      history: idx.data?.length ? "indexer" : "rpc",
       account: rpcAccount,
       follower: null,
       equityCNS: rpc.data?.equityCNS ?? null,
-      events: rpc.data?.events ?? [],
+      events: merged,
       cycles: [],
       busy: false,
       limits: null,
@@ -98,8 +115,8 @@ export function useWatch(opts: { backendDown?: boolean } = {}): WatchData {
       block: rpc.data?.block ?? null,
       readAt: rpc.data?.readAt ?? null,
       scannedMinutes: rpc.data ? scannedMinutes(rpc.data) : null,
-      rpcError: rpc.isError && !rpc.data,
-      isLoading: rpc.isLoading && !!rpcAccount,
+      rpcError: rpc.isError && !rpc.data && !idx.data?.length,
+      isLoading: rpc.isLoading && idx.isLoading && !!rpcAccount,
     };
   }
   const events = ((feed.data as FeedPage | undefined)?.events ?? []).filter((e) => e.kind === "Mirrored" || e.kind === "Blocked" || e.kind === "EngineShrunk" || e.kind === "EngineSkipped");

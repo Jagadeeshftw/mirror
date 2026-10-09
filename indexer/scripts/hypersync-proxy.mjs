@@ -69,6 +69,14 @@ async function forward({ upstream, method, path, headers, body }) {
   return { status: res.status, headers: Object.fromEntries(res.headers), body: Buffer.from(await res.arrayBuffer()) };
 }
 
+// One line a minute with the requests forwarded in that minute, so the pace can be checked from the host's logs
+// without exposing the proxy (it carries the token).
+let sentAtLastLog = 0;
+setInterval(() => {
+  console.log(`hypersync proxy: ${sent - sentAtLastLog} req in the last minute (limit ${RPM}/min), queued ${queue.length}, throttled ${throttled} total`);
+  sentAtLastLog = sent;
+}, 60_000).unref();
+
 for (const { port, upstream } of ROUTES) createServer(async (req, res) => {
   if (req.url === "/__proxy/stats") {
     res.writeHead(200, { "content-type": "application/json" });

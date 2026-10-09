@@ -6,7 +6,8 @@ import React from "react";
 import { View } from "react-native";
 import { ausd, shortAddr } from "../../lib/format";
 import { VERSION_LABEL } from "../../lib/version";
-import { useFeedAll, useTotals } from "../../state/data";
+import { followLimits } from "../../lib/policy";
+import { useConfig, useFeedAll, useTotals } from "../../state/data";
 import { useSession } from "../../state/session";
 import { Icon, type IconName } from "../icons";
 import { BrandMark, Identicon, Meter, Press, Row, T } from "../kit";
@@ -51,7 +52,8 @@ export function LaptopFrame({ children }: { children: React.ReactNode }) {
   const blocked = feed.events.filter((e) => e.kind === "Blocked" && e.timestamp > Date.now() - 24 * 3600e3).length;
   const active = path.startsWith("/leader") ? "leaders" : path.replace(/^\//, "").split("/")[0] || "home";
   const deposited = totals?.deposited ?? 0n;
-  const cap = 25_000_000n * BigInt(Math.max(1, totals?.accounts.length ?? 1));
+  // The factory's per-account deposit cap from the network config (200 test AUSD on testnet), per follow account.
+  const cap = followLimits(useConfig().data).capCNS * BigInt(Math.max(1, totals?.accounts.length ?? 1));
   return (
     <View style={{ flex: 1, flexDirection: "row", backgroundColor: c.bg }}>
       <View testID="layout.laptop.sidebar" style={{ width: 240, backgroundColor: c.sf, borderRightWidth: 1, borderRightColor: c.bd, paddingVertical: 18, paddingHorizontal: 14, gap: 4 }}>

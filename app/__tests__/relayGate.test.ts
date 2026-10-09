@@ -30,7 +30,7 @@ describe("ensureRelay", () => {
     await expect(ensureRelay()).resolves.toBeUndefined();
     expect(mockHealth).toHaveBeenCalledWith(FAST_FAIL_MS);
   });
-  it("refused or timed out: relay_unavailable with the 'not live yet' text", async () => {
+  it("refused or timed out: relay_unavailable with the can't-reach-Mirror's-service text", async () => {
     mockHealth.mockRejectedValue(new ApiError(0, "network", "Can't reach Mirror"));
     const e = await ensureRelay().catch((x) => x);
     expect(e).toBeInstanceOf(ApiError);

@@ -258,7 +258,7 @@ export default function FollowSheet() {
       await qc.invalidateQueries({ queryKey: ["feed"] });
       setStep("done");
     } catch (e) {
-      if (e instanceof ApiError && e.code === "relay_unavailable") setError({ title: (e.body as any)?.title ?? "Not live yet", detail: e.message });
+      if (e instanceof ApiError && e.code === "relay_unavailable") setError({ title: (e.body as any)?.title ?? "Can't reach Mirror's service", detail: e.message });
       else if (e instanceof ApiError) setError({ title: e.code === "rate_limited" ? "Too many requests" : "The relayer rejected it", detail: `${e.message}${e.revertReason ? ` (${e.revertReason})` : ""}` });
       else {
         const d = describeError(e);

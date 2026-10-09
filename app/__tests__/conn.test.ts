@@ -108,7 +108,7 @@ describe("feedBanners", () => {
 
 describe("engine-down copy", () => {
   it("watch mode Run note says why, and that copies come from Monad", () => {
-    expect(runNote("testnet")).toBe("Mirror's testnet service isn't live yet; these copies are read straight from Monad.");
+    expect(runNote("testnet")).toBe("Mirror's testnet service isn't reachable right now; these copies are read straight from Monad.");
     expect(runNote("mainnet")).toMatch(/isn't reachable.*read straight from Monad/);
   });
   it("no copies in the scanned window is said plainly", () => {
@@ -117,18 +117,18 @@ describe("engine-down copy", () => {
     expect(noCopiesLine(180)).toBe("No copies in the last 3 hours");
     expect(noCopiesLine(null)).toBe("No copies in the last few minutes");
   });
-  it("leaders: a refused or 5xx backend is 'not live yet', a 4xx is a plain error", () => {
+  it("leaders: a refused or 5xx backend is 'can't reach', a 4xx is a plain error", () => {
     const t = leadersErrorCopy(new ApiError(0, "network", "x"), "testnet");
-    expect(t).toMatchObject({ down: true, title: "Leaders aren't live yet" });
-    expect(t.body).toMatch(/testnet service isn't live yet/);
+    expect(t).toMatchObject({ down: true, title: "Can't reach Mirror's service" });
+    expect(t.body).toMatch(/testnet service isn't reachable right now/);
     expect(leadersErrorCopy(new ApiError(502, "http_502", "x"), "mainnet")).toMatchObject({ down: true, title: "Can't reach Mirror's service" });
     expect(leadersErrorCopy(new ApiError(400, "bad", "x"), "testnet")).toMatchObject({ down: false, title: "Can't load leaders" });
   });
   it("the demo card explains why it can't run", () => {
-    expect(demoDownLine("testnet")).toMatch(/^Mirror's testnet service isn't live yet, so a demo can't be started\./);
+    expect(demoDownLine("testnet")).toMatch(/^Mirror's testnet service isn't reachable right now, so a demo can't be started\./);
   });
   it("banner bodies name the service and what is still read from Monad", () => {
-    expect(mirrorDownBody("account", "testnet")).toMatch(/testnet service isn't live yet.*read straight from Monad/);
+    expect(mirrorDownBody("account", "testnet")).toMatch(/testnet service isn't reachable right now.*read straight from Monad/);
     expect(mirrorDownBody("feed", "mainnet")).toMatch(/read straight from Monad/);
   });
 });
@@ -147,11 +147,11 @@ describe("relayGate", () => {
   it("ready once Mirror's service answers", () => {
     expect(relayGate({ ok: true, failed: false, checking: false })).toMatchObject({ ready: true });
   });
-  it("down: not live yet, nothing signed", () => {
+  it("down: can't reach the service, nothing signed", () => {
     const g = relayGate({ ok: false, failed: true, checking: false }, "testnet");
     expect(g.ready).toBe(false);
-    expect(g.title).toBe("Not live yet");
-    expect(g.body).toMatch(/^Mirror's testnet service isn't live yet, so this can't be sent\. Nothing was signed/);
+    expect(g.title).toBe("Can't reach Mirror's service");
+    expect(g.body).toMatch(/^Mirror's testnet service isn't reachable right now, so this can't be sent\. Nothing was signed/);
     expect(relayGate({ ok: false, failed: true, checking: false }, "mainnet").title).toBe("Can't reach Mirror's service");
   });
   it("still checking: not ready, not blocked", () => {

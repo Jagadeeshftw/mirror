@@ -11,7 +11,7 @@ import { Button, Card, ChipS, ErrorBanner, Note, Row, T } from "./kit";
 import type { RelayGate } from "../lib/conn";
 import { useColors } from "./theme";
 
-/** Leaders unavailable: a clear "not live yet / can't reach Mirror's service" card, or a plain error banner. */
+/** Leaders unavailable: a clear "can't reach Mirror's service" card, or a plain error banner. */
 export function LeadersError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   const copy = leadersErrorCopy(error);
   if (!copy.down) return <ErrorBanner testID="leaders.error" title={copy.title} body={copy.body} onRetry={onRetry} />;
@@ -49,7 +49,7 @@ export function DemoTryCard({ down, style }: { down: boolean; style?: object }) 
             {down ? demoDownLine() : "Watch a copy land on the team-run demo account"}
           </T>
         </View>
-        <ChipS label={down ? "Not live yet" : "Demo"} tone={down ? "neutral" : "ac"} />
+        <ChipS label={down ? "Unavailable" : "Demo"} tone={down ? "neutral" : "ac"} />
       </Row>
     </Card>
   );

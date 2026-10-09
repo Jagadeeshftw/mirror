@@ -105,18 +105,18 @@ export function relayGate(h: { ok: boolean; failed: boolean; checking: boolean }
     return {
       ready: false,
       checking: false,
-      title: network === "testnet" ? "Not live yet" : "Can't reach Mirror's service",
+      title: "Can't reach Mirror's service",
       body: `${serviceDownLine(network)}, so this can't be sent. Nothing was signed; you'll be asked for your passkey once it can go through.`,
     };
   }
   return { ready: false, checking: true, title: "Checking Mirror's service", body: "One moment: your passkey is only asked for once Mirror's service answers." };
 }
 
-/** Leaders screen error: "not live yet / can't reach Mirror's service" when the backend is down, else a plain error. */
+/** Leaders screen error: "can't reach Mirror's service" when the backend is down, else a plain error. */
 export function leadersErrorCopy(err: unknown, network: NetworkName = NETWORK): { down: boolean; title: string; body: string } {
   const c = classifyError(err);
   const down = c.source === "mirror" && (c.status === 0 || (c.status ?? 0) >= 500);
-  if (down) return { down, title: network === "testnet" ? "Leaders aren't live yet" : failTitle("mirror"), body: mirrorDownBody("leaders", network) };
+  if (down) return { down, title: failTitle("mirror"), body: mirrorDownBody("leaders", network) };
   return { down, title: "Can't load leaders", body: "Mirror's service answered with an error. Try again in a moment." };
 }
 

@@ -354,10 +354,13 @@ export function FeedItem({ e, cfg, onBlockedPress, onCopyPress, highlight, testI
 }
 
 /** Compact row for Home "Recent copies". */
-export function RecentRow({ e, cfg, onPress }: { e: FeedEvent; cfg: AppConfig | undefined; onPress?: () => void }) {
+/** Compact copy row (laptop Home "Recent copies"). `withTx` adds the transaction link and says "Not copied" on blocked
+ *  rows (the laptop watch feed); `testID` overrides the row's test id. */
+export function RecentRow({ e, cfg, onPress, withTx, testID }: { e: FeedEvent; cfg: AppConfig | undefined; onPress?: () => void; withTx?: boolean; testID?: string }) {
   const m = mkt(cfg, e.perpId);
+  const blocked = e.kind === "Blocked";
   return (
-    <Press testID={`recent.${e.id}`} onPress={onPress} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, paddingHorizontal: 14 }}>
+    <Press testID={testID ?? `recent.${e.id}`} onPress={onPress} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, paddingHorizontal: 14 }}>
       <MarketBadge symbol={m?.symbol ?? "?"} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Row gap={6}>
@@ -368,23 +371,36 @@ export function RecentRow({ e, cfg, onPress }: { e: FeedEvent; cfg: AppConfig | 
           <T size={13} color="mu">
             {orderAction(e.orderType ?? 0)}
           </T>
+          {withTx && blocked ? (
+            <T size={13} w={600} color="neg">
+              Not copied
+            </T>
+          ) : null}
         </Row>
-        <T size={12} color="mu">
+        <T size={12} color="mu" lines={1}>
           <T size={12} mono color="mu">
-            {shortAddr(e.leaderAddress)}
+            {leaderName(e) || shortAddr(e.leaderAddress)}
           </T>{" "}
           · {ago(e.timestamp)} ago
+          {withTx && e.txHash ? " · " : ""}
+          {withTx && e.txHash ? <TxLink hash={e.txHash} onPress={() => openTx(cfg, e.txHash)} /> : null}
         </T>
       </View>
       {e.kind === "Blocked" ? (
         <ChipS label={e.blocked ? (e.blocked.reason === "MarketHeldByOtherLeader" ? "Market held" : (RULES[e.blocked.reason] ?? "Blocked")) : "Blocked"} tone="neg" icon="ban" />
       ) : (
         <View style={{ alignItems: "flex-end" }}>
-          <T size={12} mono>
-            {((e.latencyMs ?? 0) / 1000).toFixed(2)} s{e.latencyBlocks ? ` · ${e.latencyBlocks} blocks` : ""}
-          </T>
+          {e.latencyMs !== undefined || e.latencyBlocks ? (
+            <T size={12} mono>
+              {e.latencyMs !== undefined ? `${(e.latencyMs / 1000).toFixed(2)} s` : ""}
+              {e.latencyMs !== undefined && e.latencyBlocks ? " · " : ""}
+              {e.latencyBlocks ? `${e.latencyBlocks} block${e.latencyBlocks === 1 ? "" : "s"}` : ""}
+            </T>
+          ) : (
+            <T size={12} color="mu">{e.commitState[0].toUpperCase() + e.commitState.slice(1)}</T>
+          )}
           <T size={12} color="mu" mono={!!e.proof}>
-            {e.proof ? `${bpsText(fillDeviationBps(e.proof, e.orderType ?? 0))} bps` : e.commitState[0].toUpperCase() + e.commitState.slice(1)}
+            {e.proof ? `${bpsText(fillDeviationBps(e.proof, e.orderType ?? 0))} bps` : e.latencyMs !== undefined || e.latencyBlocks ? e.commitState[0].toUpperCase() + e.commitState.slice(1) : ""}
           </T>
         </View>
       )}

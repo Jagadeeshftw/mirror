@@ -44,7 +44,8 @@ if [ $CHECK_ONLY = 0 ]; then
   railway redeploy --service hasura-mainnet --yes >/dev/null 2>&1 || true
   railway up indexer --path-as-root --service indexer-testnet --detach -m "indexer testnet $(git rev-parse --short HEAD)"
   railway up indexer --path-as-root --service indexer-mainnet --detach -m "indexer mainnet $(git rev-parse --short HEAD)"
-  railway up . --service engine --detach -m "engine $(git rev-parse --short HEAD)"
+  # From the repo root without a path argument ("railway up ." fails with "prefix not found").
+  railway up --service engine --detach -m "engine $(git rev-parse --short HEAD)"
 fi
 
 echo "waiting for the engine at $ENGINE_URL/v1/health (up to 10 min)"
