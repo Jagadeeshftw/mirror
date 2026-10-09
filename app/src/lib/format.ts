@@ -50,6 +50,11 @@ export function ausd(cns: bigint | string | number | null | undefined, dp = 2): 
   return formatFixed(toBig(cns), AUSD_DECIMALS, dp);
 }
 
+/** The exact amount for an amount field ("Max"): "99.987654", "100". Never rounded, so it never exceeds the balance. */
+export function ausdExact(cns: bigint | string | number | null | undefined): string {
+  return formatFixed(toBig(cns), AUSD_DECIMALS, AUSD_DECIMALS, { grouping: false }).replace(/\.?0+$/, "");
+}
+
 /** "+0.92" / "−0.45" from raw CNS. */
 export function ausdSigned(cns: bigint | string | number | null | undefined, dp = 2): string {
   const v = toBig(cns);

@@ -12,6 +12,7 @@ Kept current while Stage B runs. Last updated: 2026-10-09 01:40 IST.
 
 ## Later tasks
 
+- When the mainnet indexer reports `isReady: true` (https://hasura-mainnet-production.up.railway.app/v1/graphql, `_meta`; about 7 hours after 9 Oct 09:00 UTC at the free token's pace), set `NEXT_PUBLIC_INDEXER_URL` to that URL on Vercel and redeploy, so /perpl's indexer panels use it. Until then /perpl reads Perpl from the RPC (current, not partial).
 - Railway config-as-code (`railway.json` at the repo root) is deprecated and keeps working until 2026-12-01. Migrate to Railway's infrastructure-as-code (`railway config migrate`, `.railway/railway.ts`) before then; not now (owner's call, 9 Oct).
 
 ## Decisions taken without review

@@ -1,57 +1,5 @@
-# Stage-B end-to-end on PUBLIC Monad testnet against the HOSTED engine (https://engine-production-0fd2.up.railway.app),
-# on Android emulators mirror-a / mirror-b, with the release APK testers get (app/scripts/build-apk.sh, testnet).
-# Run with devices/run-stage-b-android.sh --hosted. ${HOOK} = localnet/stage-b-hook.mjs with ENGINE_URL set.
-# Accounts: a brand-new passkey account on mirror-a (no funds); the demo follower's owner 0x3aBF…6C78 restored on
-# mirror-a; the test user 0x1bbD…040D restored on mirror-b (149.73 test AUSD in its wallet).
-
-# ---------- 1. a fresh account with no funds ----------
-step 01 fresh account on mirror-a: create with one passkey prompt
-device a
-launch
-waitFor id:onboarding.screen 60
-tap id:onboarding.createAccount
-passkey 90
-waitFor id:home.screen 90
-
-step 02 watch mode on the hosted engine: Live, Team-run demo account, Run buttons enabled, no service banner
-waitFor id:home.watch 60
-expectResult id:watch.teamRun "Team-run" 30
-expectResult id:watch.source "Live" 60
-expectResult id:home.equity "^0\.00$" 30
-scrollTo id:watch.runDemo
-expectResult id:watch.runDemo "^Run demo trade$" 90
-
-step 03 Run demo trade from the unfunded account: the copy lands with builder 26's fee onchain
-shell ${HOOK} demo-mark
-tap id:watch.runDemo
-shell ${HOOK} demo-copy open
-scrollTo "idtext:watch\.feed\.\d+~Open .*${demo_open_tx}"
-expectResult "idtext:watch\.feed\.\d+~Open .*${demo_open_tx}" "fee 0\.0*[1-9]" 90
-tap "idtext:watch\.feed\.\d+~Open .*${demo_open_tx}"
-waitFor id:copy.detail 15
-expectResult id:copy.proof.leaderFill "^[0-9][0-9,]*\.[0-9]$" 15
-expectResult id:copy.proof.yourFill "^[0-9][0-9,]*\.[0-9]$" 15
-expectResult id:copy.proof.deviation "bps" 15
-expectResult id:copy.proof.yourTx "${demo_open_tx}" 15
-scrollTo id:copy.proof.fee
-readText id:copy.proof.fee feeOpen "builder 26\) \| (0\.0*[1-9][0-9]* (test )?AUSD)" 15
-tap id:copy.detail.close
-
-step 04 the demo's close copy follows with no builder fee
-shell ${HOOK} demo-copy close
-
-step 05 Run blocked trade from the unfunded account: Blocked onchain with the rule and the numbers
-scrollTo id:watch.runBlocked up
-expectResult id:watch.runDemo "^Run demo trade$" 120
-shell ${HOOK} demo-mark
-tap id:watch.runBlocked
-shell ${HOOK} demo-blocked
-scrollTo "idtext:watch\.feed\.\d+~Not copied.*${demo_blocked_tx}"
-tap "idtext:watch\.feed\.\d+~Not copied.*${demo_blocked_tx}"
-waitFor id:blocked.detail 20
-expectResult id:blocked.title "max leverage" 15
-tap id:blocked.done
-
+# Stage-B hosted end-to-end, part 2: continues after steps 01-05 of stage-b-hosted.flow, which passed in run
+# stage-b-hosted-android-20261009-144615 (fresh unfunded account, demo trade with builder 26's fee, close, blocked).
 # ---------- 2. restore from a passkey ----------
 step 06 restore the demo follower's owner from its passkey (mirror-a): same address, its follow account found
 device a

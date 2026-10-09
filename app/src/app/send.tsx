@@ -8,7 +8,7 @@ import { TextInput, View } from "react-native";
 import { isAddress } from "viem";
 import { sendAusd } from "../lib/actions";
 import { ApiError } from "../lib/api";
-import { ausd, parseUnits, shortAddr } from "../lib/format";
+import { ausd, ausdExact, parseUnits, shortAddr } from "../lib/format";
 import type { Address, RelayResult } from "../lib/types";
 import { describeError } from "../lib/wallet";
 import { useConfig, useWallet } from "../state/data";
@@ -111,7 +111,7 @@ export default function Send() {
           <T size={13} w={500} color="mu" style={{ flex: 1 }}>
             AUSD
           </T>
-          <Chip label={`Max ${ausd(wallet.cns)}`} onPress={() => setAmount(ausd(wallet.cns))} testID="send.max" height={30} />
+          <Chip label={`Max ${ausd(wallet.cns)}`} onPress={() => setAmount(ausdExact(wallet.cns))} testID="send.max" height={30} />
         </Field>
         <T size={12} color="mu">
           From your wallet {shortAddr(me.address)} · {ausd(wallet.cns)} AUSD available. Funds inside your follows stay there; withdraw first to send them.

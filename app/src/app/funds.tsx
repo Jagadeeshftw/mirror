@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { Share, View } from "react-native";
 import { deposit, type StepState } from "../lib/actions";
 import { ApiError } from "../lib/api";
-import { ausd, groupedAddress, parseUnits, shortAddr, toBig } from "../lib/format";
+import { ausd, ausdExact, groupedAddress, parseUnits, shortAddr, toBig } from "../lib/format";
 import { followLimits } from "../lib/policy";
 import type { RelayResult } from "../lib/types";
 import { describeError } from "../lib/wallet";
@@ -187,7 +187,7 @@ export default function AddFunds() {
               </Field>
               <Row gap={6}>
                 <Chip label={`Max · wallet ${ausd(wallet)}`} on={amt === maxDep} onPress={() => setAmount("")} />
-                <Chip label={`Cap room ${ausd(room)}`} onPress={() => setAmount(ausd(room))} />
+                <Chip label={`Cap room ${ausd(room)}`} onPress={() => setAmount(ausdExact(room))} />
               </Row>
             </View>
             <Card style={{ paddingHorizontal: 14, paddingVertical: 4 }}>

@@ -1,4 +1,4 @@
-import { ago, ausd, ausdSigned, bps, formatFixed, groupedAddress, latency, leverage, lots, notionalCNS, parseUnits, pctSigned, price, shortAddr, usdCompact } from "../src/lib/format";
+import { ago, ausd, ausdExact, ausdSigned, bps, formatFixed, groupedAddress, latency, leverage, lots, notionalCNS, parseUnits, pctSigned, price, shortAddr, usdCompact } from "../src/lib/format";
 
 describe("AUSD (6 decimals)", () => {
   it("formats raw units", () => {
@@ -7,6 +7,13 @@ describe("AUSD (6 decimals)", () => {
     expect(ausd("1234567890123")).toBe("1,234,567.89");
     expect(ausd(0n)).toBe("0.00");
     expect(ausd("5", 6)).toBe("0.000005");
+  });
+  it("gives Max buttons the exact amount, never rounded past the balance", () => {
+    expect(ausdExact(99_996_000n)).toBe("99.996"); // ausd() would show 100.00, more than the balance
+    expect(parseUnits(ausdExact(99_987_654n), 6)).toBe(99_987_654n);
+    expect(ausdExact(100_000_000n)).toBe("100");
+    expect(ausdExact(1_234_500_000n)).toBe("1234.5");
+    expect(ausdExact(0n)).toBe("0");
   });
   it("signs with a true minus", () => {
     expect(ausdSigned("920000")).toBe("+0.92");

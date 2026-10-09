@@ -3,7 +3,10 @@
 // Chrome with a CDP virtual authenticator (passkeys with PRF), no localnet and no mocks. Chain-side steps go through
 // localnet/stage-b-hook.mjs (reads, the demo leader's own Perpl orders, and team funds for the web test account).
 //
-//   ENGINE_URL=https://engine-production-0fd2.up.railway.app node localnet/e2e-live-web.mjs [--headed]
+//   ENGINE_URL=https://engine-production-0fd2.up.railway.app node localnet/e2e-live-web.mjs [--parts laptop,phone,blocked]
+//
+// Chrome runs headed, with background networking on: Web Push needs Chrome's real push service, which headless Chrome
+// doesn't have. `--headless` runs without a window, and the Web Push checks then fail.
 //
 // 1. A brand-new account with no funds (laptop layout): watch mode on the hosted engine, Run demo trade (copy with
 //    builder 26's fee onchain), the close (no fee), Run blocked trade (Blocked with the rule).
@@ -46,12 +49,58 @@ function hook(...args) {
 const disabled = async (page, id) => (await page.locator(tid(id)).getAttribute("aria-disabled")) === "true";
 const isVisible = (page, id) => page.locator(tid(id)).first().isVisible().catch(() => false);
 
-const browser = await chromium.launch({ channel: "chrome", headless: !process.argv.includes("--headed") });
+const argAt = process.argv.indexOf("--parts");
+const PARTS = new Set((argAt > 0 ? process.argv[argAt + 1] : "laptop,phone,blocked").split(","));
+// Records the service worker's "mirror-push" pings (sent on every Web Push it receives) across reloads of the tab.
+const PUSH_LOG = () => {
+  try {
+    navigator.serviceWorker?.addEventListener("message", (e) => {
+      if (e.data?.type !== "mirror-push") return;
+      const a = JSON.parse(sessionStorage.getItem("__mirrorPushes") || "[]");
+      a.push(Date.now());
+      sessionStorage.setItem("__mirrorPushes", JSON.stringify(a));
+    });
+  } catch {}
+};
+/** Withdraws everything from the follow account to the owner's wallet (one passkey prompt). */
+async function withdrawAll(page) {
+  await page.goto(`${WEB}/withdraw`);
+  // "Max" fills in what is withdrawable at the time of the tap: wait until the balance has loaded.
+  await until("withdrawable loaded", async () => /Max [1-9]/.test(await text(page, "withdraw.max", 3000).catch(() => "")), 60_000, 1000);
+  await click(page, "withdraw.max");
+  await click(page, "withdraw.continue", 20_000);
+  await visible(page, "withdraw.sheet");
+  await click(page, "withdraw.confirm");
+  const status = await until("withdraw status", async () => { const t = await text(page, "withdraw.status", 3000).catch(() => ""); return /Confirmed|Sent/.test(t) && t; }, 150_000, 1500);
+  const w = await until("wallet credited", async () => { const v = hook("wallet", state.owner).vars.walletAusd; return Number(v) > 99 && v; }, 60_000, 3000).catch(() => hook("wallet", state.owner).vars.walletAusd);
+  state.withdrawn = Number(w) > 0 ? w : null;
+  return { ok: /Confirmed/.test(status) && Number(w) > 99, status, wallet: w };
+}
+
+/** Sends the whole wallet back to the ops wallet with Send's "Max" (one passkey prompt, no gas). */
+async function sendBack(page) {
+  await page.goto(`${WEB}/send`);
+  await until("wallet loaded", async () => /Max [1-9]/.test(await text(page, "send.max", 3000).catch(() => "")), 60_000, 1000);
+  await page.locator(tid("send.address.input")).fill(OPS);
+  await click(page, "send.max");
+  const amount = await page.locator(tid("send.amount.input")).inputValue().catch(() => null);
+  await click(page, "send.confirm", 20_000);
+  const status = await until("send status", async () => { const t = await text(page, "send.status", 3000).catch(() => ""); return /Sent|Confirmed/.test(t) && t; }, 150_000, 1500);
+  const left = await until("wallet empty", async () => { const v = hook("wallet", state.owner).vars.walletAusd; return Number(v) === 0 && v; }, 60_000, 3000).catch(() => hook("wallet", state.owner).vars.walletAusd);
+  state.returned = Number(left) === 0;
+  return { ok: /Sent|Confirmed/.test(status) && Number(left) === 0, status, amount, walletLeft: left, returned: state.withdrawn };
+}
+const pushes = (page) => page.evaluate(() => JSON.parse(sessionStorage.getItem("__mirrorPushes") || "[]")).catch(() => []);
+const shownNotifications = (page) => page.evaluate(async () => (await (await navigator.serviceWorker.getRegistration()).getNotifications()).map((x) => ({ title: x.title, body: x.body }))).catch(() => []);
+
+const browser = await chromium.launch({ channel: "chrome", headless: process.argv.includes("--headless"), ignoreDefaultArgs: ["--disable-background-networking"] });
 try {
+  let page;
+  if (PARTS.has("laptop")) {
   // ---------------------------------------------------------------- 1. fresh, unfunded (laptop)
   const lap = await openDevice(browser, LAPTOP, { serviceWorkers: "allow" });
   R.pageErrors = () => lap.consoleLog.filter((l) => l.startsWith("pageerror"));
-  let page = lap.page;
+  page = lap.page;
   await R.check("fresh account on the live web app: Create account with one passkey ceremony", page, async () => {
     await page.goto(`${WEB}/welcome`);
     await click(page, "onboarding.createAccount", 30_000);
@@ -99,14 +148,17 @@ try {
   state.address = await (async () => { await page.goto(`${WEB}/funds`); return (await text(page, "funds.address", 30_000)).replace(/\s+/g, ""); })().catch(() => null);
   R.note("web test account", { address: state.address });
   await lap.context.close();
+  }
 
   // ---------------------------------------------------------------- 2. funded flows (phone layout, same passkey)
   // A virtual authenticator's passkey cannot be moved to another context with its PRF secret (Chrome's virtual
   // authenticator limit), so the funded part creates its own account in the phone layout.
   const ph = await openDevice(browser, PHONE, { serviceWorkers: "allow" });
   await ph.context.grantPermissions(["notifications"], { origin: "https://mirror.0xo.in" });
+  await ph.context.addInitScript(PUSH_LOG);
   R.pageErrors = () => ph.consoleLog.filter((l) => l.startsWith("pageerror"));
   page = ph.page;
+  if (PARTS.has("phone")) {
   await R.check("phone layout: a second fresh account, then 100 test AUSD of team funds (demo leader's Perpl account, not the tester pool)", page, async () => {
     await page.goto(`${WEB}/welcome`);
     await click(page, "onboarding.createAccount", 30_000);
@@ -136,21 +188,30 @@ try {
     return { ok: status !== "Failed" && /26/.test(fee) && prompts === 1 && Number(fc.vars.deposited) === 100, status, fee, prompts, account: fc.vars.followAccount, deposited: fc.vars.deposited };
   }, { needs: ["owner"] });
   await R.check("alerts on (offered after the first follow): a real Web Push subscription, registered with the owner's signature", page, async () => {
+    const before = (await ph.webauthnLog()).length;
     if (await isVisible(page, "follow.alerts.enable")) await click(page, "follow.alerts.enable");
     else { if (await isVisible(page, "follow.done")) await click(page, "follow.done"); await page.goto(`${WEB}/settings`); await click(page, "settings.alerts.toggle", 30_000); }
-    const channel = await until("registered", async () => { await page.goto(`${WEB}/settings`); const t = await text(page, "settings.alerts.channel", 5000).catch(() => ""); return /Registered/.test(t) && t; }, 90_000, 4000);
+    // Stay on this page while the app subscribes, the owner signs (one passkey prompt) and the server registers it.
+    const signed = await until("registration signed", async () => (await ph.webauthnLog()).slice(before).find((c) => c.op === "get" && c.ok === true), 60_000, 1000);
     const endpoint = await page.evaluate(async () => (await (await navigator.serviceWorker.getRegistration())?.pushManager.getSubscription())?.endpoint ?? null);
+    await sleep(6000);
+    const channel = await until("registered", async () => { await page.goto(`${WEB}/settings`); const t = await text(page, "settings.alerts.channel", 5000).catch(() => ""); return /Registered/.test(t) && t; }, 60_000, 4000);
     state.push = !!endpoint;
-    return { ok: /Web Push/i.test(channel) && !!endpoint, channel, pushService: endpoint ? new URL(endpoint).host : null };
+    return { ok: /Web Push/i.test(channel) && !!endpoint && !!signed, channel, pushService: endpoint ? new URL(endpoint).host : null, prompts: (await ph.webauthnLog()).length - before };
   }, { needs: ["followAccount"] });
-  await R.check("a real copied Perpl testnet trade with builder 26's fee; the Web Push arrives as the generic 'Mirror · New activity'", page, async () => {
-    const notes0 = await page.evaluate(async () => (await (await navigator.serviceWorker.getRegistration()).getNotifications()).length).catch(() => 0);
+  await R.check("a real copied Perpl testnet trade with builder 26's fee (checked onchain)", page, async () => {
+    await page.goto(`${WEB}/home`);
+    state.pushes0 = (await pushes(page)).length;
     hook("leader-trade", "open", 50);
     const c = hook("wait-copy", state.owner, "open");
     state.lots = hook("lots", state.owner, "lots").vars.lots;
-    const notes = await until("web push shown", async () => { const n = await page.evaluate(async () => (await (await navigator.serviceWorker.getRegistration()).getNotifications()).map((x) => ({ title: x.title, body: x.body }))).catch(() => []); return n.length > notes0 && n; }, 150_000, 3000).catch(() => []);
-    return { ok: c.json.ok && Number(state.lots) > 0 && notes.length > 0 && notes.every((n) => n.title === "Mirror" && n.body === "New activity"), copyTx: c.json.tx, builderFeeCNS: c.json.builderFeeCNS, lots: state.lots, notifications: notes };
+    return { ok: c.json.ok && Number(state.lots) > 0 && BigInt(c.json.builderFeeCNS ?? 0) > 0n, copyTx: c.json.tx, builderFeeCNS: c.json.builderFeeCNS, lots: state.lots };
   }, { needs: ["followAccount"] });
+  await R.check("that copy's Web Push reaches the service worker and shows the generic 'Mirror · New activity'", page, async () => {
+    const got = await until("web push received", async () => { const p = await pushes(page); return p.length > state.pushes0 && p; }, 150_000, 3000).catch(() => []);
+    const notes = await shownNotifications(page);
+    return { ok: got.length > state.pushes0 && notes.some((n) => n.title === "Mirror" && n.body === "New activity"), pushesReceived: Math.max(0, got.length - state.pushes0), notifications: notes };
+  }, { needs: ["push", "lots"] });
   await R.check("stop following, keep my positions (one passkey prompt): leaderDetached set onchain by the account's contract", page, async () => {
     await page.goto(`${WEB}/leader/1000`);
     await click(page, "leader.stopFollow", 30_000);
@@ -162,10 +223,11 @@ try {
     return { ok: true, status };
   }, { needs: ["lots"] });
   await R.check("the leader exits: the demo follower's close is copied, the detached web account keeps its position", null, async () => {
+    hook("demo-mark");
     hook("leader-trade", "close", 50);
-    const d = hook("wait-copy", DEMO_OWNER, "close");
+    const d = hook("demo-copy", "close");
     const kept = hook("lots", state.owner, "lots").vars.lots;
-    return { ok: kept === state.lots && d.json.ok, kept, before: state.lots, demoCloseTx: d.json.tx };
+    return { ok: kept === state.lots && d.json.ok, kept, before: state.lots, demoCloseTx: d.json.tx, demoCloseFeeCNS: d.json.builderFeeCNS };
   }, { needs: ["lots"] });
   await R.check("close all (one passkey prompt): flat onchain", page, async () => {
     await page.goto(`${WEB}/positions`);
@@ -175,29 +237,19 @@ try {
     const lots = await until("flat", async () => { const v = hook("lots", state.owner, "lots").vars.lots; return v === "0" && v; }, 150_000, 4000);
     return { ok: lots === "0", lots };
   }, { needs: ["lots"] });
-  await R.check("withdraw (one passkey prompt): back in the wallet", page, async () => {
-    await page.goto(`${WEB}/withdraw`);
-    await click(page, "withdraw.max", 30_000);
-    await click(page, "withdraw.continue");
-    await visible(page, "withdraw.sheet");
-    await click(page, "withdraw.confirm");
-    const status = await until("withdraw status", async () => { const t = await text(page, "withdraw.status", 3000).catch(() => ""); return /Confirmed|Sent/.test(t) && t; }, 150_000, 1500);
-    const w = hook("wallet", state.owner).vars.walletAusd;
-    state.withdrawn = w;
-    return { ok: /Confirmed/.test(status) && Number(w) > 99, status, wallet: w };
-  }, { needs: ["lots"] });
-  await R.check("send the test AUSD back to the ops wallet (one passkey prompt, no gas)", page, async () => {
-    await page.goto(`${WEB}/send`);
-    await page.locator(tid("send.address.input")).fill(OPS);
-    await click(page, "send.max", 20_000);
-    await click(page, "send.confirm");
-    const status = await until("send status", async () => { const t = await text(page, "send.status", 3000).catch(() => ""); return /Sent|Confirmed/.test(t) && t; }, 150_000, 1500);
-    const left = hook("wallet", state.owner).vars.walletAusd;
-    return { ok: /Sent|Confirmed/.test(status) && Number(left) === 0, status, walletLeft: left, returned: state.withdrawn };
-  }, { needs: ["withdrawn"] });
+  await R.check("withdraw (one passkey prompt): back in the wallet", page, async () => withdrawAll(page), { needs: ["lots"] });
+  await R.check("send the test AUSD back to the ops wallet (one passkey prompt, no gas)", page, async () => sendBack(page), { needs: ["withdrawn"] });
+  // Team funds never stay behind in a test account whose passkey goes away with this browser: one more try.
+  if (state.owner && !state.returned) {
+    const again = { withdraw: null, send: null };
+    try { if (!state.withdrawn) again.withdraw = await withdrawAll(page); again.send = await sendBack(page); } catch (e) { again.error = String(e.message ?? e).split("\n")[0]; }
+    const left = { wallet: hook("wallet", state.owner).vars.walletAusd, followAccount: state.followAccount ? hook("follow-check", state.owner).vars : null };
+    R.note("recovery: withdraw and send the team funds back", { ...again, left });
+  }
+  }
 
   // ---------------------------------------------------------------- 3. the demo follower's rule blocks a 10x copy
-  await R.check("the demo leader opens at 10x: the demo follower's 2x rule blocks the copy, shown on the Demo screen", page, async () => {
+  if (PARTS.has("blocked")) await R.check("the demo leader opens at 10x: the demo follower's 2x rule blocks the copy, shown on the Demo screen", page, async () => {
     hook("demo-mark");
     hook("leader-trade", "open", 20, 1000);
     const b = hook("demo-blocked");

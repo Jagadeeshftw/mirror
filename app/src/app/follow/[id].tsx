@@ -15,7 +15,7 @@ import { LeaderLossSection, ModeChoice, SplitSection, type FollowMode } from "..
 import { useLeaderNames } from "../../ui/budgets";
 import { api, ApiError } from "../../lib/api";
 import { ACTION, encodeSetPolicy, validatePolicy } from "../../lib/contracts";
-import { ausd, bps, cnsToNumber, dateLong, leverage, lots as fmtLots, parseUnits, price as fmtPrice, shortAddr, toBig } from "../../lib/format";
+import { ausd, ausdExact, bps, cnsToNumber, dateLong, leverage, lots as fmtLots, parseUnits, price as fmtPrice, shortAddr, toBig } from "../../lib/format";
 import { sealNote } from "../../lib/notifyKey";
 import { ALL_MARKETS, BETA_CAP_CNS, EXPIRY_PRESETS, MIN_FOLLOW_CNS, SLIPPAGE_PRESETS, buildPolicy, defaultForm, followLimits, formErrors, ratioPresets, suggestRatioBps, type FollowForm } from "../../lib/policy";
 import type { FeedEvent, FollowQuote, MirrorAccount, QuoteRow, RelayResult } from "../../lib/types";
@@ -524,7 +524,7 @@ export default function FollowSheet() {
             <Chip
               label={`Max ${ausd(walletAvail < limits.capCNS ? walletAvail : limits.capCNS)}`}
               on={allocCNS === (walletAvail < limits.capCNS ? walletAvail : limits.capCNS)}
-              onPress={() => set("allocationAusd", ausd(walletAvail < limits.capCNS ? walletAvail : limits.capCNS))}
+              onPress={() => set("allocationAusd", ausdExact(walletAvail < limits.capCNS ? walletAvail : limits.capCNS))}
               testID="follow.amount.max"
             />
           </Row>

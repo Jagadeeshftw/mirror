@@ -7,7 +7,7 @@ import { TextInput, View } from "react-native";
 import { isAddress } from "viem";
 import { withdrawTo } from "../lib/actions";
 import { ApiError } from "../lib/api";
-import { ausd, parseUnits, shortAddr, toBig } from "../lib/format";
+import { ausd, ausdExact, parseUnits, shortAddr, toBig } from "../lib/format";
 import type { Address, RelayResult } from "../lib/types";
 import { describeError } from "../lib/wallet";
 import { useConfig, useTotals } from "../state/data";
@@ -156,7 +156,7 @@ export default function Withdraw() {
           <Row gap={6}>
             <Chip label="25%" onPress={() => setAmount(ausd(withdrawable / 4n))} testID="withdraw.pct.25" />
             <Chip label="50%" onPress={() => setAmount(ausd(withdrawable / 2n))} testID="withdraw.pct.50" />
-            <Chip label={`Max ${ausd(withdrawable)}`} on={amt === withdrawable} onPress={() => setAmount(ausd(withdrawable, 6).replace(/0+$/, "").replace(/\.$/, ""))} testID="withdraw.max" />
+            <Chip label={`Max ${ausd(withdrawable)}`} on={amt === withdrawable} onPress={() => setAmount(ausdExact(withdrawable))} testID="withdraw.max" />
           </Row>
         </View>
         <Card style={{ paddingHorizontal: 14, paddingVertical: 4 }}>
